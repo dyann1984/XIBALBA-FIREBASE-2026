@@ -4,8 +4,20 @@ Formato: captura de pantalla de la aplicación con voz en off. Todo lo que se ve
 es la aplicación real ejecutándose; los casos salen de `data/demo-cases.json` y
 se cargan con un clic desde «Nuevo análisis».
 
-**Antes de grabar:** `npm run dev`, ventana a 1440×900, menú lateral visible,
-historial vacío (borra el historial si quedó de una prueba anterior).
+**Antes de grabar:** ventana a 1440×900, menú lateral visible, historial vacío
+(bórralo si quedó de una prueba anterior).
+
+Puedes grabar sobre la **aplicación desplegada**,
+<https://xibalba-firebase-2026.vercel.app>, en lugar de `npm run dev`. Se ve
+exactamente igual y tiene una ventaja para el jurado: la URL que aparece en el
+video es la misma que ellos pueden abrir. Comprobado punto por punto en
+`docs/informe-lanzamiento.md`.
+
+En los dos casos la etiqueta superior dirá **«IA · SIN CONFIGURAR»** mientras no
+exista la clave de App Check, y el botón será «Auditar solo en este
+dispositivo». El guion está escrito para funcionar así; si consigues la clave
+antes de grabar, el minuto 1:50 gana el segundo botón y el caso de control pasa
+de gris a verde.
 
 ---
 

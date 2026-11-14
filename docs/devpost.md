@@ -4,6 +4,21 @@ Texto listo para pegar. Las secciones siguen la plantilla habitual de Devpost.
 
 ---
 
+## Enlaces del proyecto
+
+| Campo de Devpost | Valor |
+|---|---|
+| **Try it out** | <https://xibalba-firebase-2026.vercel.app> |
+| **Repositorio** | `https://github.com/dyann1984/XIBALBA-FIREBASE-2026` (privado: ábrelo o invita a los jueces antes de enviar) |
+| Guía de evaluación | `docs/jueces.md` |
+
+En la aplicación aparece **«IA · SIN CONFIGURAR»**: la clave de App Check no
+está cargada en el despliegue, así que la interpretación de IA no se activa y se
+dice en pantalla. Menciónalo en la descripción en lugar de dejar que lo
+descubran: es coherente con la regla del proyecto, que es no afirmar lo que no
+puede demostrar. Lo que el jurado prueba es la auditoría determinista completa,
+que es la mayor parte del trabajo.
+
 ## Nombre
 
 **XIBALBÁ AI** — Inteligencia de protección contra el fraude digital.

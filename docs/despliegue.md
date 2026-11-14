@@ -2,14 +2,25 @@
 
 Fecha: 14 de noviembre de 2026.
 
-> **Estado real: nada está desplegado.** No se ha creado ningún proyecto en
-> Vercel, no se ha ejecutado `firebase deploy` y no se ha tocado ninguna
-> configuración en la consola de Firebase. Este documento deja el despliegue
-> **preparado**; ejecutarlo requiere tu autorización.
+> **Estado real: la aplicación está desplegada y es pública.**
+> <https://xibalba-firebase-2026.vercel.app> responde 200 sin autenticación.
 >
-> El código **sí** está publicado, en privado:
-> [`dyann1984/XIBALBA-FIREBASE-2026`](https://github.com/dyann1984/XIBALBA-FIREBASE-2026),
-> rama por omisión `release/xibalba-2026`, commit `fb3f123`.
+> | | |
+> |---|---|
+> | Proyecto de Vercel | `xibalba-firebase-2026` (creado el 14/11/2026) |
+> | Despliegue | `dpl_FfEfeRyDFi35apaNpAMowtUerjVK`, estado *Ready* |
+> | Objetivo | **production** — asignado por la plataforma, no solicitado |
+> | Variables de entorno | **ninguna**, a propósito |
+> | Repositorio | [`dyann1984/XIBALBA-FIREBASE-2026`](https://github.com/dyann1984/XIBALBA-FIREBASE-2026), privado |
+>
+> El despliegue se lanzó con `vercel deploy`, sin `--prod`, pidiendo una vista
+> previa. Vercel respondió: *«This is the project's first deployment, so it was
+> assigned to production»*. Un proyecto nuevo necesita un despliegue de
+> producción y el primero siempre lo ocupa. No se promocionó nada: a partir del
+> segundo, `vercel deploy` sin `--prod` genera vistas previas.
+>
+> Sigue **sin** ejecutarse `firebase deploy` y sin tocarse la consola de
+> Firebase.
 
 ## 0. Antes de nada: el bloqueante
 
@@ -53,6 +64,15 @@ constancia de la versión usada. No necesita ningún secreto.
 Primera ejecución, en **Node v24.22.2**: typecheck sin errores, **175 / 175
 pruebas**, build «Compiled successfully», conclusión **success**. Lo que sigue
 sin cubrirse es este equipo, que continúa en Node 22.23.4.
+
+**Un ajuste pendiente en Vercel.** El panel del proyecto `xibalba-firebase-2026`
+muestra **26.x** como versión de Node: es el valor por omisión que Vercel asigna
+hoy a los proyectos nuevos. Según su documentación, `engines.node` del
+`package.json` —que aquí dice `24.x`— **sobrescribe** ese ajuste, pero el
+registro de construcción no imprimió ninguna línea con la versión usada, así que
+**no se puede afirmar cuál corrió**. El build terminó correctamente en cualquier
+caso. Para quitar la duda: *Settings → Build and Deployment → Node.js Version →
+**24.x***. Es un clic, y conviene darlo antes de la presentación.
 
 ```bash
 gh run list --branch release/xibalba-2026
@@ -147,16 +167,28 @@ instalación y build. Las cabeceras de seguridad no se configuran ahí: las emit
 `next.config.ts`, de modo que son las mismas en local, en vista previa y en
 producción.
 
-Después del primer despliegue:
+Después del primer despliegue (**ya comprobado** sobre
+<https://xibalba-firebase-2026.vercel.app>):
 
 1. Añade el dominio asignado a la clave de reCAPTCHA Enterprise (paso 2.4).
-2. Comprueba las cabeceras:
-   `curl -I https://<tu-dominio>` debe devolver `Content-Security-Policy`,
-   `Strict-Transport-Security`, `X-Frame-Options: DENY`,
-   `Referrer-Policy: no-referrer` y
-   `Permissions-Policy: camera=(self), microphone=()…`.
-3. Comprueba que `/api/app-check-debug` responde **404**.
-4. Comprueba que `/api/audit/external` responde **401** sin token de App Check.
+   **Pendiente**, y no se puede hacer hasta que exista la clave.
+2. Cabeceras: `curl -I` devuelve `Content-Security-Policy` (con los dos hosts de
+   App Check), `Strict-Transport-Security`, `X-Frame-Options: DENY`,
+   `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`,
+   `X-Content-Type-Options: nosniff` y
+   `Permissions-Policy: camera=(self), microphone=()…`. ✔
+3. `POST /api/app-check-debug` → **404**. ✔
+4. `POST /api/audit/external`, y aquí hay un matiz que conviene no confundir
+   con un fallo:
+   - **desde fuera del navegador → 403.** La capa anti-CSRF exige
+     `sec-fetch-site: same-origin`, cabecera que solo pone un navegador. `curl`
+     nunca pasará de aquí, con token o sin él.
+   - **desde la propia página → 503**, con el mensaje «El servidor no conoce el
+     número de proyecto, así que no puede verificar tokens de App Check». Sin
+     variables de entorno, el servidor no puede verificar y por eso **rechaza**.
+     Falla cerrado. ✔
+   - El **401** que esperaba este documento aparece cuando sí hay configuración
+     y el token recibido es inválido o ha caducado.
 
 ## 5. Firebase Hosting (alternativa)
 

@@ -3,6 +3,16 @@
 Protección contra fraudes digitales con inteligencia artificial híbrida.
 Proyecto independiente para **#BuildHybridAI 2026**.
 
+> ### ▶ Pruébalo: <https://xibalba-firebase-2026.vercel.app>
+>
+> Sin instalar nada y sin registrarse. El recorrido de evaluación, con qué
+> mirar en cada pantalla, está en **[`docs/jueces.md`](docs/jueces.md)**.
+>
+> La aplicación muestra «IA · SIN CONFIGURAR» a propósito: la clave de App Check
+> no está cargada en el despliegue, así que la interpretación de IA no se activa
+> y se dice en pantalla en lugar de disimularlo. Lo que funciona —y es la mayor
+> parte— es la auditoría determinista, entera en tu dispositivo.
+
 XIBALBÁ analiza un mensaje, un enlace, una transcripción de llamada o una
 solicitud de dinero y responde con un semáforo, la evidencia que lo sostiene y
 lo que **no** pudo comprobar. La auditoría determinista se ejecuta siempre en el
@@ -87,6 +97,7 @@ credencial al repositorio.
 
 | Documento | De qué trata |
 |---|---|
+| [`docs/jueces.md`](docs/jueces.md) | Recorrido de evaluación para el jurado |
 | [`docs/integracion-release-2026.md`](docs/integracion-release-2026.md) | Cómo se integraron las dos ramas de finalización |
 | [`docs/auditoria-finalizacion.md`](docs/auditoria-finalizacion.md) | Matriz de funcionalidades con su estado real |
 | [`docs/architecture.md`](docs/architecture.md) | Arquitectura y capas de análisis |

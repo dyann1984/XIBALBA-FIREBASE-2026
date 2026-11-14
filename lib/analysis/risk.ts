@@ -68,8 +68,20 @@ export type Coverage = {
   pendingExternal: string[];
 };
 
+export type AuditSubject =
+  | 'url'
+  | 'mensaje'
+  /** Transcripción de una llamada (CAMAZOTZ). */
+  | 'transcripcion'
+  /** Contenido financiero: depósitos, créditos, inversiones (VUCUB CAMÉ). */
+  | 'financiero'
+  /** Archivo de audio cuyo contenido aún no se ha transcrito. */
+  | 'audio'
+  | 'imagen'
+  | 'mixto';
+
 export type Audit = {
-  subject: 'url' | 'mensaje' | 'imagen' | 'mixto';
+  subject: AuditSubject;
   indicators: AuditIndicator[];
   coverage: Coverage;
   limitation: string;

@@ -2,7 +2,18 @@
 import { useState } from "react";
 import type { Audit, AuditIndicator, Severity } from "@/lib/analysis/risk";
 import type { Assessment } from "@/lib/analysis/guardian";
+import { AGENT_NAMES, type AgentId } from "@/lib/analysis/coordinator";
 import { ChevronDown } from "lucide-react";
+
+/**
+ * Agentes que aportaron esta evidencia. La auditoría coordinada las trae
+ * atribuidas; una auditoría de un solo agente no, y entonces no se muestra
+ * nada en lugar de atribuirla a quien no participó.
+ */
+function agentsOf(item: AuditIndicator): AgentId[] {
+  const value = (item as { agents?: unknown }).agents;
+  return Array.isArray(value) ? (value.filter((id) => typeof id === "string" && id in AGENT_NAMES) as AgentId[]) : [];
+}
 
 const SEVERITY_ORDER: Record<Severity, number> = {
   critico: 0,
@@ -52,6 +63,7 @@ function Group({
 }
 
 function Indicator({ item }: { item: AuditIndicator }) {
+  const agents = agentsOf(item);
   return (
     <article className={`indicator status-${item.status.replace(/\s+/g, "-")} sev-${item.severity}`}>
       <header>
@@ -61,6 +73,11 @@ function Indicator({ item }: { item: AuditIndicator }) {
           {item.severity !== "informativo" && item.status === "sospechoso" && (
             <span className={`chip chip-sev-${item.severity}`}>severidad {item.severity}</span>
           )}
+          {agents.map((id) => (
+            <span key={id} className="chip chip-agent">
+              {AGENT_NAMES[id]}
+            </span>
+          ))}
         </span>
       </header>
       <p className="indicator-evidence">{item.evidence}</p>

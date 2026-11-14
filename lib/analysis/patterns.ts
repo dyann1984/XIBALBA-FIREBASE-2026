@@ -55,9 +55,28 @@ export function normalizeText(value: string): string {
   return normalizeWithMap(value).text;
 }
 
+/**
+ * Enmascara las secuencias largas de dígitos de un fragmento citado.
+ *
+ * Una evidencia se muestra en la interfaz y se entrega al modelo como hecho
+ * comprobado: si el fragmento citado contiene una CLABE o una tarjeta, el
+ * número completo viajaría con ella. Se deja solo el final, suficiente para
+ * reconocer el dato sin reproducirlo.
+ *
+ * Las comprobaciones aritméticas de `finance.ts` trabajan sobre el texto
+ * original, no sobre esta versión, así que enmascarar aquí no les quita nada.
+ */
+function redactLongDigitRuns(value: string): string {
+  return value.replace(/\d(?:[\d\s-]{10,27})\d/g, (run) => {
+    const digits = run.replace(/\D/g, '');
+    if (digits.length < 12) return run;
+    return `${'*'.repeat(digits.length - 4)}${digits.slice(-4)}`;
+  });
+}
+
 /** Recorta y colapsa un fragmento para mostrarlo como evidencia citada. */
 export function quoteFragment(value: string, max = 120): string {
-  const clean = value.replace(/\s+/g, ' ').trim();
+  const clean = redactLongDigitRuns(value.replace(/\s+/g, ' ').trim());
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 

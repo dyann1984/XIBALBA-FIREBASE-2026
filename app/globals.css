@@ -89,6 +89,8 @@
 .chip-error { color: #e0b57a; border-color: #5a4529; }
 .chip-sev-critico, .chip-sev-alto { color: #ff9f9f; border-color: #5e2b35; }
 .chip-sev-medio { color: #e8c66d; border-color: #5c4a22; }
+.chip-agent { color: #7fe3e0; border-color: #2a4d50; background: #0d2024; }
+.detail-sub { display: flex; align-items: center; gap: 7px; margin: 16px 0 5px; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--cyan); }
 .indicator-evidence { margin: 8px 0 0 !important; font-size: 11.5px !important; color: #c3d3ce !important; line-height: 1.65; }
 .indicator dl { margin: 9px 0 0; display: grid; gap: 5px; }
 .indicator dt { font-size: 8.5px; letter-spacing: .9px; text-transform: uppercase; color: #6c8380; }
@@ -113,6 +115,18 @@
 .thumb-meta small { font-size: 10px; color: #7c918c; }
 .thumbs li button { background: none; border: 1px solid #4a2b30; color: #ff9f9f; border-radius: 4px; padding: 7px; display: grid; place-items: center; }
 
+/* --- Audio de llamada (CAMAZOTZ) --- */
+.audio-card { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; border: 1px solid #243639; border-radius: 5px; padding: 9px; background: #0a1317; }
+.audio-card audio { flex: 1 1 220px; min-width: 180px; height: 34px; }
+.audio-card > button { background: none; border: 1px solid #4a2b30; color: #ff9f9f; border-radius: 4px; padding: 7px; display: grid; place-items: center; }
+.pending-notice { border-left: 2px solid var(--gold); padding-left: 9px; color: #d9c89a; }
+.notice svg { vertical-align: -2px; }
+
+/* --- Agentes que participaron --- */
+.agent-reasons { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 5px; }
+.agent-reasons li { font-size: 10.5px; color: #8fa5a2; line-height: 1.45; border-left: 1px solid #243639; padding-left: 9px; }
+.agent-reasons b { color: var(--cyan); letter-spacing: .04em; }
+
 /* --- Guardián 3D --- */
 .guardian-panel { align-items: stretch; }
 .guardian-stage { flex: 0 0 290px; width: 290px; min-height: 330px; position: relative; border: 1px solid #1f3a3d; border-radius: 8px; overflow: hidden; background: radial-gradient(ellipse at 50% 42%, #10343a 0%, #0a1b21 48%, #070f13 100%); transition: border-color .4s, box-shadow .4s; }
@@ -124,6 +138,9 @@
 .guardian-stage.loading { display: grid; place-items: center; }
 .guardian-fallback { position: absolute; inset: 0; display: grid; place-items: center; color: var(--gold); font-size: 2.4rem; }
 .guardian-answer { border-top: 1px solid #243639; margin-top: 12px !important; padding-top: 12px; }
+.guardian-thread { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 12px; }
+.guardian-thread > li > strong { display: block; font-size: 11px; color: var(--cyan); letter-spacing: .02em; }
+.guardian-thread .guardian-answer { border-top: none; margin-top: 5px !important; padding-top: 0; }
 .guardian-body button { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; }
 
 @media (max-width: 900px) {

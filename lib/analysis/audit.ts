@@ -1,5 +1,9 @@
 import { parse } from 'tldts';
-import { contentPatterns, normalizeWithMap, quoteFragment } from './patterns.ts';
+import { contentPatterns, normalizeWithMap, quoteFragment, type ContentPattern } from './patterns.ts';
+import { voicePatterns } from './voice.ts';
+import { financePatterns } from './finance-patterns.ts';
+import { findFinancialIdentifiers } from './finance.ts';
+import { describeTranscription, type PreparedAudio, type Transcription } from './audio.ts';
 import type {
   Audit,
   AuditIndicator,
@@ -205,7 +209,7 @@ function builder(checkedAt: string): Builder {
 // ---------------------------------------------------------------------------
 
 /** Comprobaciones locales que `auditUrl` ejecuta siempre, hallen o no señales. */
-const URL_LOCAL_CHECKS = 18;
+export const URL_LOCAL_CHECKS = 18;
 
 export function auditUrl(input: string, now = new Date()): Audit {
   const checkedAt = now.toISOString();
@@ -657,27 +661,25 @@ export function extractUrls(text: string): string[] {
   return result;
 }
 
-export function auditMessage(input: string, now = new Date()): Audit {
-  const checkedAt = now.toISOString();
-  const build = builder(checkedAt);
-  const source = 'Comparación local contra el catálogo de patrones de fraude';
-  const { text, map } = normalizeWithMap(input);
-
-  build.add({
-    id: 'contenido-recibido',
-    indicator: 'Contenido analizado',
-    category: 'contenido',
-    classification: 'determinista',
-    status: 'verificado',
-    severity: 'informativo',
-    evidence: `Texto de ${input.length} caracteres y ${input.trim() ? input.trim().split(/\s+/).length : 0} palabras, analizado íntegramente en el dispositivo.`,
-    source,
-    recommendation: 'Comparte solo el contenido necesario para el análisis.',
-    limitation: 'El texto no permite verificar la identidad real del remitente.',
-  });
-
-  for (const pattern of contentPatterns) {
-      if (pattern.all && !pattern.all.every((expression) => expression.test(text))) continue;
+/**
+ * Recorre un catálogo de patrones y añade una evidencia por coincidencia,
+ * citando el fragmento literal del texto original, con acentos.
+ *
+ * Extraído de `auditMessage` para poder aplicar varios catálogos sobre el
+ * mismo texto: una transcripción se analiza con el catálogo general y con el
+ * de voz, y un mensaje financiero con el general y el financiero.
+ */
+function matchCatalogue(
+  catalogue: ContentPattern[],
+  input: string,
+  text: string,
+  map: number[],
+  build: ReturnType<typeof builder>,
+  source: string,
+): number {
+  let found = 0;
+  for (const pattern of catalogue) {
+    if (pattern.all && !pattern.all.every((expression) => expression.test(text))) continue;
     let match: RegExpExecArray | null = null;
     for (const expression of pattern.any) {
       match = expression.exec(text);
@@ -698,9 +700,23 @@ export function auditMessage(input: string, now = new Date()): Audit {
       recommendation: pattern.recommendation,
       limitation: pattern.limitation,
     });
+    found += 1;
   }
+  return found;
+}
 
-  const urls = extractUrls(input);
+/**
+ * Añade las evidencias de los enlaces escritos en un texto. Ninguno se abre:
+ * cada uno pasa por `auditUrl`, que es análisis puramente sintáctico. Solo se
+ * conservan las señales relevantes, con el prefijo `enlace:` en el id para que
+ * no choquen con las del texto.
+ */
+function addLinkIndicators(
+  urls: string[],
+  build: ReturnType<typeof builder>,
+  now: Date,
+  source: string,
+): void {
   for (const candidate of urls.slice(0, 5)) {
     let nested: Audit;
     try {
@@ -732,6 +748,67 @@ export function auditMessage(input: string, now = new Date()): Audit {
       });
     }
   }
+}
+
+/**
+ * HUN CAMÉ dentro de un contenido que no es una URL suelta: analiza los
+ * enlaces escritos en un texto, sin abrir ninguno.
+ *
+ * Existe aparte para que la auditoría coordinada pueda atribuir esas
+ * evidencias a su agente. Los ids coinciden con los que `auditMessage` genera,
+ * así que cuando los dos participan la evidencia se muestra una sola vez,
+ * atribuida a ambos.
+ */
+export function auditTextLinks(input: string, now = new Date()): Audit {
+  const checkedAt = now.toISOString();
+  const build = builder(checkedAt);
+  const source = 'Análisis local de los enlaces escritos en el texto';
+  const urls = extractUrls(input);
+  addLinkIndicators(urls, build, now, source);
+
+  const checks = urls.length ? URL_LOCAL_CHECKS : 0;
+  return {
+    // Con enlaces el objeto analizado incluye una URL, y eso impide por
+    // construcción que la auditoría se considere agotada localmente.
+    subject: urls.length ? 'url' : 'mensaje',
+    indicators: build.indicators,
+    coverage: {
+      label: urls.length
+        ? `Analizados ${Math.min(urls.length, 5)} de ${urls.length} enlace(s), solo de forma sintáctica. Ninguno se abrió.`
+        : 'No se encontraron enlaces en el texto.',
+      checksRun: checks,
+      checksTotal: checks + (urls.length ? URL_PENDING_EXTERNAL.length : 0),
+      pendingExternal: urls.length ? URL_PENDING_EXTERNAL : [],
+    },
+    limitation: urls.length
+      ? 'El destino real de cada enlace queda sin comprobar: una URL desconocida no puede calificarse como segura.'
+      : 'No había enlaces que analizar en el texto.',
+  };
+}
+
+export function auditMessage(input: string, now = new Date()): Audit {
+  const checkedAt = now.toISOString();
+  const build = builder(checkedAt);
+  const source = 'Comparación local contra el catálogo de patrones de fraude';
+  const { text, map } = normalizeWithMap(input);
+
+  build.add({
+    id: 'contenido-recibido',
+    indicator: 'Contenido analizado',
+    category: 'contenido',
+    classification: 'determinista',
+    status: 'verificado',
+    severity: 'informativo',
+    evidence: `Texto de ${input.length} caracteres y ${input.trim() ? input.trim().split(/\s+/).length : 0} palabras, analizado íntegramente en el dispositivo.`,
+    source,
+    recommendation: 'Comparte solo el contenido necesario para el análisis.',
+    limitation: 'El texto no permite verificar la identidad real del remitente.',
+  });
+
+  matchCatalogue(contentPatterns, input, text, map, build, source);
+
+  const urls = extractUrls(input);
+  addLinkIndicators(urls, build, now, source);
 
   if (urls.length) {
     build.add({
@@ -764,6 +841,355 @@ export function auditMessage(input: string, now = new Date()): Audit {
     },
     limitation:
       'El catálogo de patrones es parcial: la ausencia de coincidencias no demuestra que el mensaje sea legítimo.',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CAMAZOTZ · transcripción de llamada
+// ---------------------------------------------------------------------------
+
+const TRANSCRIPT_PENDING_EXTERNAL = [
+  'identidad real de quien llamó',
+  'número de origen de la llamada',
+];
+
+/**
+ * Audita una transcripción. Aplica el catálogo general y el de voz, porque
+ * una llamada combina señales de ambos: pedir el NIP está en el general,
+ * exigir que no cuelgues solo tiene sentido hablando.
+ */
+export function auditTranscript(input: string, now = new Date()): Audit {
+  const checkedAt = now.toISOString();
+  const build = builder(checkedAt);
+  const source = 'Comparación local contra los catálogos de patrones de fraude y de llamadas';
+  const { text, map } = normalizeWithMap(input);
+
+  const words = input.trim() ? input.trim().split(/\s+/).length : 0;
+  build.add({
+    id: 'transcripcion-recibida',
+    indicator: 'Transcripción analizada',
+    category: 'contenido',
+    classification: 'determinista',
+    status: 'verificado',
+    severity: 'informativo',
+    evidence: `Transcripción de ${input.length} caracteres y ${words} palabras, analizada íntegramente en el dispositivo.`,
+    source,
+    recommendation: 'Comparte solo lo necesario de la conversación.',
+    limitation:
+      'Es lo que se escribió o se reconoció del audio, no una grabación verificada. No permite identificar a quien llamó.',
+  });
+
+  matchCatalogue(contentPatterns, input, text, map, build, source);
+  matchCatalogue(voicePatterns, input, text, map, build, source);
+
+  // Lo que una transcripción nunca puede decir, y conviene dejar escrito.
+  for (const pending of TRANSCRIPT_PENDING_EXTERNAL) {
+    build.add({
+      id: `transcripcion-pendiente-${pending.replace(/\s+/g, '-')}`,
+      indicator: `No comprobado: ${pending}`,
+      category: 'externo',
+      classification: 'pendiente-externo',
+      status: 'no verificado',
+      severity: 'informativo',
+      evidence: `La transcripción no permite establecer ${pending}.`,
+      source,
+      recommendation:
+        'El número que aparece en la pantalla puede falsificarse. No lo tomes como prueba de quién llamó.',
+      limitation:
+        'Esta herramienta no accede al registro de llamadas ni a datos de la operadora, por diseño.',
+    });
+  }
+
+  const urls = extractUrls(input);
+  if (urls.length) {
+    build.add({
+      id: 'transcripcion-con-enlaces',
+      indicator: 'La transcripción menciona enlaces',
+      category: 'contenido',
+      classification: 'determinista',
+      status: 'no concluyente',
+      severity: 'informativo',
+      evidence: `Se detectaron ${urls.length} enlace(s) en la transcripción; ninguno se abrió.`,
+      source,
+      recommendation: 'Analiza el enlace por separado antes de abrirlo.',
+      limitation: 'El destino real del enlace queda sin comprobar.',
+    });
+  }
+
+  const checks = contentPatterns.length + voicePatterns.length + 1;
+  return {
+    subject: 'transcripcion',
+    indicators: build.indicators,
+    coverage: {
+      label: 'Transcripción completa analizada localmente con los catálogos general y de llamadas.',
+      checksRun: checks,
+      checksTotal: checks + TRANSCRIPT_PENDING_EXTERNAL.length + (urls.length ? URL_PENDING_EXTERNAL.length : 0),
+      pendingExternal: urls.length
+        ? [...TRANSCRIPT_PENDING_EXTERNAL, ...URL_PENDING_EXTERNAL]
+        : TRANSCRIPT_PENDING_EXTERNAL,
+    },
+    limitation:
+      'El catálogo es parcial y la transcripción no acredita la identidad de quien llamó: la ausencia de coincidencias no demuestra que la llamada fuera legítima.',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CAMAZOTZ · archivo de audio
+// ---------------------------------------------------------------------------
+
+/**
+ * Audita un archivo de audio. Solo emite metadatos locales y el estado de la
+ * transcripción. **Nunca afirma haber escuchado el audio.**
+ */
+export function auditAudio(
+  audio: Pick<PreparedAudio, 'name' | 'mimeType' | 'size' | 'durationSeconds'>,
+  transcription: Transcription,
+  now = new Date(),
+): Audit {
+  const checkedAt = now.toISOString();
+  const build = builder(checkedAt);
+  const source = 'Metadatos leídos en el dispositivo';
+
+  const duration =
+    audio.durationSeconds !== undefined
+      ? ` · ${Math.floor(audio.durationSeconds / 60)} min ${audio.durationSeconds % 60} s`
+      : ' · duración no legible';
+
+  build.add({
+    id: `audio-${audio.name}`,
+    indicator: 'Archivo de audio recibido',
+    category: 'contenido',
+    classification: 'determinista',
+    status: 'verificado',
+    severity: 'informativo',
+    evidence: `«${quoteFragment(audio.name, 48)}» · ${audio.mimeType} · ${(audio.size / 1024).toFixed(0)} KB${duration}. Permanece en memoria y no se guarda.`,
+    source,
+    recommendation: 'Comparte solo el fragmento relevante de la llamada.',
+    limitation:
+      'Son los metadatos del archivo. No dicen nada sobre lo que se dijo en la llamada ni sobre quién habló.',
+  });
+
+  const available = transcription.status === 'disponible';
+  build.add({
+    id: 'audio-transcripcion',
+    indicator: available ? 'Transcripción automática del audio' : 'Transcripción del audio pendiente',
+    category: 'contenido',
+    classification: available ? 'ia' : 'pendiente-externo',
+    status: available ? 'no concluyente' : 'no verificado',
+    severity: 'informativo',
+    evidence: describeTranscription(transcription),
+    source: available ? (transcription.engine ?? 'motor no informado') : source,
+    recommendation: available
+      ? 'Revisa que la transcripción coincida con lo que recuerdas antes de confiar en el análisis.'
+      : 'Escribe tú lo que recuerdes de la llamada y analízalo como transcripción.',
+    limitation: available
+      ? 'Es texto reconocido por una máquina, no una cita textual: una palabra mal reconocida puede inventar o borrar una señal.'
+      : 'Sin transcripción no se analizó ni una palabra del audio. El contenido de la llamada está sin revisar.',
+  });
+
+  const pendingExternal = available
+    ? ['exactitud de la transcripción automática']
+    : ['transcripción del contenido del audio'];
+
+  return {
+    subject: 'audio',
+    indicators: build.indicators,
+    coverage: {
+      label: available
+        ? 'Metadatos leídos y transcripción automática obtenida; su exactitud no está verificada.'
+        : 'Solo metadatos del archivo. El contenido del audio no se analizó.',
+      checksRun: 2,
+      checksTotal: 3,
+      pendingExternal,
+    },
+    limitation: available
+      ? 'El análisis se hizo sobre una transcripción automática, que puede diferir de lo que se dijo.'
+      : 'No se analizó el contenido del audio: no hay transcripción.',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// VUCUB CAMÉ · contenido financiero
+// ---------------------------------------------------------------------------
+
+/**
+ * Audita contenido financiero: catálogo general, catálogo financiero y las
+ * comprobaciones aritméticas de CLABE y Luhn.
+ *
+ * Las evidencias **nunca** contienen un número completo: solo la versión
+ * enmascarada que produce `finance.ts`.
+ */
+export function auditFinancial(input: string, now = new Date()): Audit {
+  const checkedAt = now.toISOString();
+  const build = builder(checkedAt);
+  const source = 'Comparación local contra los catálogos de fraude y comprobación aritmética';
+  const mathSource = 'Cálculo del dígito verificador en el dispositivo';
+  const { text, map } = normalizeWithMap(input);
+
+  const words = input.trim() ? input.trim().split(/\s+/).length : 0;
+  build.add({
+    id: 'financiero-recibido',
+    indicator: 'Contenido financiero analizado',
+    category: 'contenido',
+    classification: 'determinista',
+    status: 'verificado',
+    severity: 'informativo',
+    evidence: `Texto de ${input.length} caracteres y ${words} palabras, analizado íntegramente en el dispositivo.`,
+    source,
+    recommendation: 'No compartas números de cuenta o tarjeta completos más allá de lo necesario.',
+    limitation: 'El texto no permite verificar a quién pertenece ninguna cuenta.',
+  });
+
+  matchCatalogue(contentPatterns, input, text, map, build, source);
+  matchCatalogue(financePatterns, input, text, map, build, source);
+
+  // --- Aritmética ---------------------------------------------------------
+  const found = findFinancialIdentifiers(input);
+
+  for (const masked of found.invalidClabes) {
+    build.add({
+      id: `clabe-invalida-${masked}`,
+      indicator: 'CLABE con dígito verificador incorrecto',
+      category: 'financiero',
+      classification: 'determinista',
+      status: 'sospechoso',
+      severity: 'alto',
+      evidence: `El número ${masked} tiene 18 dígitos pero su dígito verificador no cuadra: no es una CLABE válida.`,
+      source: mathSource,
+      recommendation:
+        'Nadie que espere cobrarte de verdad te da una CLABE inválida. Puede ser un número inventado o mal copiado: no transfieras.',
+      limitation:
+        'También puede ser un error de transcripción al copiar el número. Verifícalo con la persona por un canal que ya conocías.',
+    });
+  }
+
+  if (found.validClabes.length) {
+    build.add({
+      id: 'clabe-valida',
+      indicator: 'CLABE con estructura válida',
+      category: 'financiero',
+      classification: 'determinista',
+      status: 'verificado',
+      severity: 'informativo',
+      evidence: `Se detectó ${found.validClabes.length} CLABE(s) cuyo dígito verificador cuadra: ${found.validClabes.join(', ')}. Institución(es) según el código: ${found.institutions.join(', ')}.`,
+      source: mathSource,
+      recommendation:
+        'Dato de contexto: no lo tomes como prueba de que la cuenta sea legítima ni de que pertenezca a quien dice el mensaje.',
+      limitation:
+        'Que el verificador cuadre solo significa que el número está bien formado. La cuenta de un estafador también lo cumple, y esta comprobación no dice de quién es la cuenta ni en qué banco está, porque el catálogo de instituciones no se ha incorporado.',
+    });
+  }
+
+  if (found.validClabes.length + found.invalidClabes.length >= 2) {
+    build.add({
+      id: 'clabe-multiple',
+      indicator: 'Se mencionan varias cuentas distintas',
+      category: 'financiero',
+      classification: 'determinista',
+      status: 'sospechoso',
+      severity: 'medio',
+      evidence: `El texto contiene ${found.validClabes.length + found.invalidClabes.length} números de cuenta distintos.`,
+      source: mathSource,
+      recommendation:
+        'Varias cuentas en un mismo mensaje es un patrón de reenvío de fraude. Confirma el dato por el canal oficial antes de pagar.',
+      limitation: 'Puede ocurrir en una conversación legítima que corrige un dato.',
+    });
+  }
+
+  for (const masked of found.invalidCards) {
+    build.add({
+      id: `tarjeta-invalida-${masked}`,
+      indicator: 'Número de tarjeta que no pasa la validación de Luhn',
+      category: 'financiero',
+      classification: 'determinista',
+      status: 'sospechoso',
+      severity: 'medio',
+      evidence: `El número ${masked} tiene longitud de tarjeta pero no cumple el algoritmo de Luhn.`,
+      source: mathSource,
+      recommendation: 'No es un número de tarjeta válido. Desconfía del origen del mensaje.',
+      limitation:
+        'Puede ser un número de referencia, un folio o un identificador que no es una tarjeta.',
+    });
+  }
+
+  if (found.validCards.length) {
+    build.add({
+      id: 'tarjeta-presente',
+      indicator: 'El texto contiene un número de tarjeta',
+      category: 'financiero',
+      classification: 'determinista',
+      status: 'sospechoso',
+      severity: 'medio',
+      evidence: `Se detectó ${found.validCards.length} número(s) con estructura de tarjeta válida: ${found.validCards.join(', ')}.`,
+      source: mathSource,
+      recommendation:
+        'Un número de tarjeta no debe viajar por mensaje. Si es tuyo, bórralo de la conversación; si te lo enviaron, no lo reenvíes.',
+      limitation:
+        'Que pase Luhn solo significa que está bien formado: no indica que la tarjeta exista, esté activa ni a quién pertenece.',
+    });
+  }
+
+  if (found.cryptoAddresses.length) {
+    build.add({
+      id: 'cripto-direccion',
+      indicator: 'Dirección con forma de monedero de criptomoneda',
+      category: 'financiero',
+      classification: 'determinista',
+      status: 'sospechoso',
+      severity: 'alto',
+      evidence: `Se detectó una dirección con forma de monedero: ${found.cryptoAddresses.join(', ')}.`,
+      source: 'Comprobación de formato en el dispositivo',
+      recommendation:
+        'Un pago en criptomoneda no se puede revertir ni reclamar a nadie. Es el medio preferido del fraude por esa razón.',
+      limitation:
+        'Solo se comprobó la forma de la cadena. No se consultó ninguna cadena de bloques: no se sabe si la dirección existe, ni su saldo, ni su historial.',
+    });
+  }
+
+  const urls = extractUrls(input);
+  if (urls.length) {
+    build.add({
+      id: 'financiero-con-enlaces',
+      indicator: 'El contenido financiero incluye enlaces',
+      category: 'contenido',
+      classification: 'determinista',
+      status: 'no concluyente',
+      severity: 'informativo',
+      evidence: `Se detectaron ${urls.length} enlace(s); ninguno se abrió.`,
+      source,
+      recommendation: 'No abras enlaces de pago recibidos por mensaje: entra tú a la aplicación oficial.',
+      limitation: 'El destino real del enlace queda sin comprobar.',
+    });
+  }
+
+  // Si hay una cuenta, una tarjeta o un monedero en juego, la titularidad
+  // queda sin comprobar y eso impide el verde. El cálculo demuestra que el
+  // número está bien formado, nunca de quién es: exactamente el mismo
+  // razonamiento que impide declarar segura una URL que resuelve en el DNS.
+  const identifiers =
+    found.validClabes.length +
+    found.invalidClabes.length +
+    found.validCards.length +
+    found.invalidCards.length +
+    found.cryptoAddresses.length;
+  const financialPending = identifiers
+    ? ['titularidad de la cuenta o del medio de pago', 'recepción real del pago']
+    : [];
+
+  const checks = contentPatterns.length + financePatterns.length + 4;
+  return {
+    subject: 'financiero',
+    indicators: build.indicators,
+    coverage: {
+      label:
+        'Texto completo analizado localmente, con comprobación aritmética de CLABE y Luhn. No se consultó ninguna institución.',
+      checksRun: checks,
+      checksTotal:
+        checks + financialPending.length + (urls.length ? URL_PENDING_EXTERNAL.length : 0),
+      pendingExternal: [...financialPending, ...(urls.length ? URL_PENDING_EXTERNAL : [])],
+    },
+    limitation:
+      'No se consultó ninguna institución financiera ni padrón regulatorio. Una cuenta bien formada no es una cuenta legítima, y esta herramienta no puede confirmar que un pago se haya recibido.',
   };
 }
 

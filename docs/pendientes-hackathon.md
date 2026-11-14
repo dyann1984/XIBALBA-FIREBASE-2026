@@ -30,8 +30,9 @@ desplegar.
 |---|---|
 | Remoto de GitHub configurado | **No hay remoto.** Comandos en `docs/despliegue.md`, sección 6 |
 | Comprobar que `.env.local` no está en el historial de Git | Pendiente de ejecutar; `.gitignore` ya lo cubre |
-| Decidir qué rama se publica (`master`, `finalizacion-mvp`) | Pendiente |
-| Decidir si se fusiona la rama paralela `codex/finalizacion-xibalba` | **Pendiente.** Otra sesión trabajó en esta misma carpeta y dejó el commit `bb49ea6` (lectura limitada del cuerpo HTTP y errores del proveedor que ya no se reenvían al cliente). No toca los mismos ficheros que `finalizacion-mvp` y las dos pasan juntas, pero la fusión es decisión tuya |
+| Decidir qué rama se publica | **Resuelto:** `release/xibalba-2026`, la integración de las dos finalizaciones. También conviene publicar `master` y las dos ramas de origen, para que el historial quede comprobable |
+| Fusionar la rama paralela `codex/finalizacion-xibalba` | **Hecho.** Integrada en `release/xibalba-2026` (commit final `5042342`), sin conflictos y con la regresión de la fusión corregida y probada. Acta en `docs/integracion-release-2026.md` |
+| Fijar `release/xibalba-2026` como rama de producción en Vercel | Pendiente. Si se deja `master`, se desplegaría la fase 5 sin ninguna de las dos finalizaciones |
 | Revisar que el logo puede acompañar al código en el repositorio público | Pendiente: el logo **no** está bajo la licencia MIT del código |
 
 ## 3. Verificaciones de contenido antes de presentar
@@ -67,7 +68,8 @@ real recibido por una persona**.
 | **WHOIS `.mx`** | Adaptador preparado y deshabilitado; `.mx` no publica RDAP |
 | **DNS y RDAP para el público** | Implementados y verificados, deshabilitados tras `XIBALBA_EXTERNAL_AUDITS`. Habilitarlos exige decidir límites de consumo |
 | **Duración del audio** | No siempre se lee; se informa «duración no legible» en lugar de inventarla |
-| **Node 24.12 en el equipo local** | Aquí hay Node 22.23.4. `@firebase/ai` exige 24.12; el entorno de despliegue debe cumplirlo |
+| **Node 24.12 en el equipo local** | Aquí hay Node 22.23.4. `@firebase/ai` exige 24.12; el entorno de despliegue debe cumplirlo. `engines` ya fija `24.x`, pero **la suite nunca se ha ejecutado en Node 24**: ver `docs/node-dependencias.md` |
+| **No hay `lint`** | El proyecto no tiene ESLint instalado ni script `lint`. Añadirlo a esta altura significa dependencias nuevas sin autorización; la comprobación estática de hoy es `tsc --noEmit` en modo estricto |
 
 ## 5. Lo que deliberadamente no se va a hacer
 
@@ -87,8 +89,9 @@ No son pendientes: son decisiones.
 
 ## 6. Comprobación final, el día de la presentación
 
-- [ ] `npm run typecheck`, `npm test` y `npm run build` en verde (162 pruebas en
-      `finalizacion-mvp`; 166 si se fusiona la rama paralela).
+- [ ] Estás en `release/xibalba-2026` (`git rev-parse --abbrev-ref HEAD`).
+- [ ] `npm run typecheck`, `npm test` y `npm run build` en verde (**175 pruebas**
+      en la rama de integración).
 - [ ] `npm run dev` levanta y el caso de demostración de la llamada da **rojo**
       con 8 señales.
 - [ ] El caso de control da **gris**.

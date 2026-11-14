@@ -6,22 +6,25 @@ terminal.
 
 ## 1. Suite automatizada
 
-`npm test` → `node --experimental-strip-types --test tests/*.test.mjs`
+`npm test` → `node --test tests/*.test.mjs`
 
 ```
-# tests 166
-# pass 166
+# tests 175
+# pass 175
 # fail 0
 ```
 
-> **Qué rama aporta qué.** Esa ejecución se hizo sobre el árbol de trabajo tal
-> como está, que contiene también el trabajo de una sesión paralela
-> (`codex/finalizacion-xibalba`, commit `bb49ea6`: lectura limitada del cuerpo
-> HTTP y mensajes de error del proveedor que ya no se reenvían al cliente). La
-> rama `finalizacion-mvp` aporta **162** de esas 166; las otras **4** son
-> `tests/limited-body.test.mjs`, de la rama paralela. Las dos ramas no tocan los
-> mismos ficheros y pasan juntas; decidir si se fusionan es una decisión
-> pendiente, anotada en `docs/pendientes-hackathon.md`.
+> **Qué rama aporta qué.** La ejecución se hizo sobre `release/xibalba-2026`, la
+> integración de `finalizacion-mvp` (Claude) y `codex/finalizacion-xibalba`
+> (Codex). De las 175: **162** vienen de `finalizacion-mvp`, **4** de la rama de
+> Codex (`tests/limited-body.test.mjs`) y **9** son nuevas de la integración
+> (`tests/integracion.test.mjs`), escritas para el riesgo que nació al juntar
+> las dos ramas. Acta completa en `docs/integracion-release-2026.md`.
+>
+> El comando ya no lleva `--experimental-strip-types`: desde Node 22.18 la
+> eliminación de tipos está activada por omisión y depender del flag haría que
+> `npm test` fallara con «bad option» si Node lo retirase. Mismas 175 pruebas en
+> verde con el comando nuevo. Ver `docs/node-dependencias.md`.
 
 Desglose medido fichero a fichero:
 
@@ -32,8 +35,9 @@ Desglose medido fichero a fichero:
 | `tests/phase3.test.mjs` | 24 |
 | `tests/security.test.mjs` | 21 |
 | `tests/finalizacion.test.mjs` | **20 (nuevas)** |
+| `tests/integracion.test.mjs` | **9 (nuevas, de la fusión)** |
 | `tests/audit.test.mjs` | 4 |
-| `tests/limited-body.test.mjs` | 4 (rama paralela) |
+| `tests/limited-body.test.mjs` | 4 (rama de Codex) |
 | `tests/phase1.test.mjs` | 4 |
 
 Las 142 anteriores siguen en verde: el catálogo de instituciones y el cambio de

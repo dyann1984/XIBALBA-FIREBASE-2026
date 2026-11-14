@@ -60,7 +60,7 @@ El guion de la demostración está en [`docs/guion-video.md`](docs/guion-video.m
 | `lib/security/` | Verificación real de los tokens de Firebase App Check |
 | `lib/history.ts` | Historial local: guarda el resultado, nunca el contenido |
 | `data/` | Catálogo RDAP y casos de demostración |
-| `tests/` | 162 pruebas con `node --test` |
+| `tests/` | 175 pruebas con `node --test` |
 
 Los cinco agentes —CAMAZOTZ (llamadas), IXBALANQUÉ (mensajes), VUCUB CAMÉ
 (dinero), HUN CAMÉ (enlaces) y EL GUARDIÁN (coordinación)— están descritos con
@@ -87,6 +87,7 @@ credencial al repositorio.
 
 | Documento | De qué trata |
 |---|---|
+| [`docs/integracion-release-2026.md`](docs/integracion-release-2026.md) | Cómo se integraron las dos ramas de finalización |
 | [`docs/auditoria-finalizacion.md`](docs/auditoria-finalizacion.md) | Matriz de funcionalidades con su estado real |
 | [`docs/architecture.md`](docs/architecture.md) | Arquitectura y capas de análisis |
 | [`docs/fase5-agentes.md`](docs/fase5-agentes.md) | Los cinco agentes y sus límites |
@@ -94,6 +95,7 @@ credencial al repositorio.
 | [`docs/historial.md`](docs/historial.md) | Historial local y diseño del historial en la nube |
 | [`docs/seguridad-endpoint.md`](docs/seguridad-endpoint.md) | App Check, CSRF y límites del endpoint |
 | [`docs/seguridad-dependencias.md`](docs/seguridad-dependencias.md) | Avisos de dependencias y por qué se fijaron |
+| [`docs/node-dependencias.md`](docs/node-dependencias.md) | Node 24, `engines` y compatibilidad de dependencias |
 | [`docs/despliegue.md`](docs/despliegue.md) | Cómo desplegar (nada desplegado todavía) |
 | [`docs/pruebas-finalizacion.md`](docs/pruebas-finalizacion.md) | Pruebas ejecutadas y sus resultados reales |
 | [`docs/pendientes-hackathon.md`](docs/pendientes-hackathon.md) | Lo que falta antes de presentar |

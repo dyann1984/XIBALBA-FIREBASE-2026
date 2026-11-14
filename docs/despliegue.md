@@ -24,17 +24,25 @@ esa clave exista. Ver el paso 2.
 ## 1. Node.js
 
 `@firebase/ai@3.1.0` declara `engines: {"node": ">=24.12.0"}`. El entorno de
-despliegue debe usar **Node 24.x**.
+despliegue debe usar **Node 24.x**, y este proyecto ya lo fija así:
 
-- En Vercel, 24.x es hoy la versión por omisión para builds y funciones, y
-  también se puede fijar en *Project Settings → Build and Deployment → Node.js
-  Version*. Conviene fijarla explícitamente: el campo `engines` de este
-  proyecto es un rango (`>=24.12.0`), no la forma `24.x` que Vercel lee para
-  sobrescribir el ajuste del proyecto.
-- En el equipo donde se desarrolló esta fase hay **Node 22.23.4**, por debajo
-  del mínimo. `npm test`, `npm run typecheck` y `npm run build` pasan igualmente
-  porque no ejecutan el SDK de Firebase en el servidor, pero conviene subir la
-  versión local antes de probar la ruta de IA de punta a punta.
+```json
+"engines": { "node": "24.x" }
+```
+
+El detalle importa. Vercel lee `engines.node` y **sobrescribe** con él el ajuste
+del proyecto, resolviendo un rango al major más nuevo que soporta. El valor
+anterior, `>=24.12.0`, lo satisface también Node 26, que Vercel ya ofrece: el
+runtime del despliegue habría podido cambiar de versión mayor sin que nadie
+tocara el repositorio. Con `24.x` queda determinista. Ver
+[`node-dependencias.md`](node-dependencias.md).
+
+En el equipo donde se desarrollaron estas fases hay **Node 22.23.4**, por debajo
+del mínimo declarado. `npm test`, `npm run typecheck` y `npm run build` pasan
+ahí porque ninguno ejecuta el SDK de Firebase en el servidor, pero **nadie ha
+ejecutado la suite en Node 24**: es un hueco de verificación real, no un
+problema conocido. Conviene correr `npm ci && npm test && npm run build` una vez
+en Node 24.x antes de la demostración.
 
 ## 2. Firebase (consola, una sola vez)
 
@@ -114,13 +122,25 @@ decidirlo a conciencia y documentar el coste.
 
 ## 6. GitHub
 
-El repositorio es local y **no tiene remoto**. Para publicarlo:
+El repositorio es local y **no tiene remoto**. La rama que se despliega es
+`release/xibalba-2026`: la integración de `finalizacion-mvp` (Claude) y
+`codex/finalizacion-xibalba` (Codex), descrita en
+[`integracion-release-2026.md`](integracion-release-2026.md). Para publicarlo:
 
 ```bash
 git remote add origin https://github.com/<usuario>/<repositorio>.git
 git push -u origin master
-git push origin finalizacion-mvp
+git push origin release/xibalba-2026
+git push origin finalizacion-mvp codex/finalizacion-xibalba
 ```
+
+Las dos ramas de origen se publican también a propósito: son los padres del
+commit de integración y dejan el historial comprobable para los jueces.
+
+En Vercel, apunta el proyecto a `release/xibalba-2026` como *Production Branch*
+(*Settings → Git*), o enlázalo desde esa rama con `vercel link`. Si se deja
+`master`, el despliegue serviría la fase 5 sin ninguna de las dos
+finalizaciones.
 
 Antes de publicar, comprueba que `.env.local` no está en el historial:
 
@@ -132,7 +152,9 @@ No debe devolver nada. `.gitignore` ya lo cubre.
 
 ## 7. Lista de comprobación antes de `--prod`
 
-- [ ] Node 24.x fijado en el proyecto de despliegue.
+- [ ] Node 24.x fijado en el proyecto de despliegue (`engines` ya lo declara).
+- [ ] Suite ejecutada una vez **en Node 24.x**, no solo en 22.
+- [ ] `release/xibalba-2026` fijada como rama de producción en Vercel.
 - [ ] `npm run typecheck`, `npm test` y `npm run build` en verde.
 - [ ] Variables de entorno cargadas, **sin** las dos de depuración.
 - [ ] Dominio de producción registrado en la clave de reCAPTCHA Enterprise.

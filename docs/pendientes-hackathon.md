@@ -68,7 +68,7 @@ real recibido por una persona**.
 | **WHOIS `.mx`** | Adaptador preparado y deshabilitado; `.mx` no publica RDAP |
 | **DNS y RDAP para el público** | Implementados y verificados, deshabilitados tras `XIBALBA_EXTERNAL_AUDITS`. Habilitarlos exige decidir límites de consumo |
 | **Duración del audio** | No siempre se lee; se informa «duración no legible» en lugar de inventarla |
-| **Node 24.12 en el equipo local** | Aquí hay Node 22.23.4. `@firebase/ai` exige 24.12; el entorno de despliegue debe cumplirlo. `engines` ya fija `24.x`, pero **la suite nunca se ha ejecutado en Node 24**: ver `docs/node-dependencias.md` |
+| **Node 24.12 en el equipo local** | Aquí hay Node 22.23.4. `engines` fija `24.x` y la suite **ya pasa en Node 24.22.2** en CI (175/175), así que el despliegue está cubierto; lo que falta es el equipo local. Ver `docs/node-dependencias.md` |
 | **No hay `lint`** | El proyecto no tiene ESLint instalado ni script `lint`. Añadirlo a esta altura significa dependencias nuevas sin autorización; la comprobación estática de hoy es `tsc --noEmit` en modo estricto |
 
 ## 5. Lo que deliberadamente no se va a hacer

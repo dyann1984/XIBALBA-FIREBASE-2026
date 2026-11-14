@@ -45,9 +45,20 @@ Se publicaron 90 ficheros. El único binario es `public/xibalba-logo.jpg`.
 | Seis casos demo en la app real | rojo · rojo · rojo · rojo · rojo · **gris** |
 | App Check (`/diagnostico-app-check`) | «entregó un token válido al SDK» |
 
-**En Node 24: pendiente de la primera ejecución.** `.github/workflows/ci.yml`
-la ejecuta automáticamente en cada empujón a `release/**`. Antes de autorizar el
-lanzamiento, comprueba que terminó en verde:
+**Remoto, Node v24.22.2** (GitHub Actions, ejecución
+[`43637879826`](https://github.com/dyann1984/XIBALBA-FIREBASE-2026/actions/runs/43637879826)):
+
+| | |
+|---|---|
+| `npm ci` | sin fallos |
+| `npm run typecheck` | sin errores |
+| `npm test` | **175 / 175**, 0 fallos |
+| `npm run build` | «Compiled successfully in 10.5s» |
+| Conclusión del flujo | **success** |
+
+Con eso, **el hueco de Node 24 está cerrado con evidencia**, no con suposiciones:
+la misma suite pasa en la versión que el proyecto declara y que el despliegue va
+a usar. `.github/workflows/ci.yml` la repite en cada empujón a `release/**`.
 
 ```bash
 gh run list --branch release/xibalba-2026
@@ -59,27 +70,26 @@ en modo estricto.
 
 ## 4. Lo que falta para lanzar, en orden
 
-1. **Confirmar la verificación en Node 24** (pestaña *Actions*). Es el único
-   hueco de verificación conocido.
-2. **Crear el proyecto en Vercel** con la integración de GitHub y fijar
+1. **Crear el proyecto en Vercel** con la integración de GitHub y fijar
    `release/xibalba-2026` como rama de producción. Pasos en
    [`despliegue.md`](despliegue.md), sección 4A. Requiere tu consentimiento en
    la aplicación de GitHub de Vercel: no se puede hacer por línea de órdenes.
-3. **Desplegar la vista previa** y abrirla. Funcionará con la auditoría
+2. **Desplegar la vista previa** y abrirla. Funcionará con la auditoría
    determinista completa y mostrará «IA · SIN CONFIGURAR».
-4. **Generar la clave de App Check** en la consola de Firebase y cargarla en
+3. **Generar la clave de App Check** en la consola de Firebase y cargarla en
    Vercel, si quieres enseñar la interpretación de IA en vivo. Solo tú puedes
    hacerlo.
-5. **Registrar el dominio desplegado** en la clave de reCAPTCHA Enterprise. Es
+4. **Registrar el dominio desplegado** en la clave de reCAPTCHA Enterprise. Es
    el fallo más común y solo aparece después de desplegar.
-6. **Publicar las reglas de Firestore** tal como están, que deniegan todo:
+5. **Publicar las reglas de Firestore** tal como están, que deniegan todo:
    `firebase deploy --only firestore:rules`.
-7. **Autorizar producción** (`vercel --prod` o *Promote to Production*).
+6. **Autorizar producción** (`vercel --prod` o *Promote to Production*).
 
 ## 5. Lo que sigue sin resolverse, dicho sin adornos
 
-- La suite **nunca se ha ejecutado en Node 24 localmente**. El flujo de CI lo
-  cubre, pero hasta que corra una vez, el dato no existe.
+- La suite pasa en Node 24 **en CI** (Ubuntu), no en este equipo, que sigue con
+  Node 22.23.4. Es la combinación que importa para el despliegue, pero si vas a
+  demostrar en vivo desde esta máquina, lo que corre aquí es Node 22.
 - `NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY` está vacía: sin ella la
   interpretación de IA no se habilita y `/api/audit/external` responde 401. **No
   se desactivó App Check** para disimularlo: se eligió que la aplicación diga la

@@ -13,18 +13,25 @@ se desinstaló ninguna versión de Node. Los dos cambios son del repositorio
 | Declarada en `engines.node` | **24.x** |
 | Exigida por `@firebase/ai@3.1.0` | `>=24.12.0` |
 | Instalada en el equipo de desarrollo | **22.23.4** |
-| Usada para typecheck, 175 pruebas y build | **22.23.4** |
+| Usada localmente para typecheck, 175 pruebas y build | **22.23.4** |
+| Usada en CI para lo mismo | **24.22.2** |
 
-Esa última fila es el hueco honesto de esta revisión: **la suite no se ha
-ejecutado nunca en Node 24**. Pasa en 22.23.4 porque ninguna de las tres tareas
+Durante la integración, esa diferencia era el hueco honesto de la revisión: todo
+se había comprobado en una versión distinta de la que se despliega. **Ya está
+cerrado**, y sin tocar el entorno global de nadie:
+`.github/workflows/ci.yml` ejecuta `npm ci`, typecheck, las 175 pruebas y el
+build en Node 24.x en cada empujón a `release/**`.
+
+Primera ejecución, en **Node v24.22.2**: `npm ci` sin fallos, typecheck sin
+errores, **175 / 175 pruebas**, build «Compiled successfully in 10.5s»,
+conclusión del flujo **success**.
+
+Que pase también en 22.23.4 tiene explicación: ninguna de las tres tareas
 ejecuta el SDK de Firebase en el servidor —la IA corre en el navegador y las
 rutas de API solo usan `node:crypto` y `fetch`—, así que el mínimo de
-`@firebase/ai` no se toca en tiempo de build. No es una garantía: es que el
-camino que exige Node 24 no se recorre durante la verificación.
-
-Subir el Node local resolvería el hueco, pero es un cambio del entorno global y
-requiere autorización. Queda como paso pendiente en
-[`despliegue.md`](despliegue.md).
+`@firebase/ai` no se toca en tiempo de build. Lo que queda por decir es que el
+equipo local sigue en Node 22: si la demostración se hace desde aquí, eso es lo
+que corre.
 
 ## 2. `engines`: de `>=24.12.0` a `24.x`
 
@@ -103,7 +110,8 @@ para no alterar un árbol ya verificado.
 
 - Dos cambios, ambos en `package.json`: `engines` determinista y `test` sin flag
   experimental. Verificados: typecheck limpio, 175/175, build de producción en
-  verde.
-- Un hueco real y declarado: la verificación corrió en Node 22.23.4, no en el
-  Node 24 que el proyecto exige.
+  verde, **en Node 22.23.4 y en Node 24.22.2**.
+- El hueco de verificación que dejó la integración está cerrado con evidencia en
+  CI, no con suposiciones. Lo que persiste es que el equipo local sigue en Node
+  22: subirlo es un cambio del entorno global y requiere autorización.
 - Ninguna actualización mayor aplicada, y ninguna necesaria para desplegar.

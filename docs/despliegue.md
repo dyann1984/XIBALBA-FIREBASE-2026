@@ -45,11 +45,14 @@ del mínimo declarado. `npm test`, `npm run typecheck` y `npm run build` pasan
 ahí porque ninguno ejecuta el SDK de Firebase en el servidor, pero localmente
 **nadie ha ejecutado la suite en Node 24**.
 
-Ese hueco se cierra sin tocar el entorno global: `.github/workflows/ci.yml`
-ejecuta `npm ci`, `npm run typecheck`, `npm test` y `npm run build` **en Node
-24.x** en cada empujón a `release/**`, y deja constancia de la versión usada. No
-necesita ningún secreto. Mira el resultado en la pestaña *Actions* del
-repositorio antes de autorizar el lanzamiento:
+Ese hueco **ya está cerrado** sin tocar el entorno global:
+`.github/workflows/ci.yml` ejecuta `npm ci`, `npm run typecheck`, `npm test` y
+`npm run build` **en Node 24.x** en cada empujón a `release/**`, y deja
+constancia de la versión usada. No necesita ningún secreto.
+
+Primera ejecución, en **Node v24.22.2**: typecheck sin errores, **175 / 175
+pruebas**, build «Compiled successfully», conclusión **success**. Lo que sigue
+sin cubrirse es este equipo, que continúa en Node 22.23.4.
 
 ```bash
 gh run list --branch release/xibalba-2026
@@ -211,7 +214,7 @@ No debe devolver nada. `.gitignore` ya lo cubre.
 ## 7. Lista de comprobación antes de `--prod`
 
 - [ ] Node 24.x fijado en el proyecto de despliegue (`engines` ya lo declara).
-- [ ] Suite ejecutada una vez **en Node 24.x**, no solo en 22.
+- [x] Suite ejecutada **en Node 24.x** (CI, v24.22.2: 175/175).
 - [ ] `release/xibalba-2026` fijada como rama de producción en Vercel.
 - [ ] `npm run typecheck`, `npm test` y `npm run build` en verde.
 - [ ] Variables de entorno cargadas, **sin** las dos de depuración.

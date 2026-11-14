@@ -24,9 +24,19 @@ import type { NextConfig } from "next";
 
 const development = process.env.NODE_ENV === "development";
 
-/** Orígenes de Firebase que el SDK necesita de verdad. */
+/**
+ * Orígenes de Firebase que el SDK necesita de verdad.
+ *
+ * `content-firebaseappcheck.googleapis.com` no es un adorno: es el host real
+ * al que el SDK de App Check pide el token, tanto en el intercambio de
+ * depuración como con reCAPTCHA Enterprise. Se descubrió al probar la política
+ * contra el servidor de desarrollo, donde la consola mostró la petición
+ * bloqueada. Sin esta entrada, App Check falla en producción y con él la
+ * interpretación de IA.
+ */
 const FIREBASE_ENDPOINTS = [
   "https://firebaseappcheck.googleapis.com",
+  "https://content-firebaseappcheck.googleapis.com",
   "https://firebasevertexai.googleapis.com",
   "https://generativelanguage.googleapis.com",
   "https://firestore.googleapis.com",

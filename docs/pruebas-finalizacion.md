@@ -138,11 +138,32 @@ Comprobado además dentro de la página:
 justo lo que la interfaz promete; la cámara sigue disponible porque adjuntar una
 foto es una función real.
 
-> **Hallazgo durante esta verificación.** La primera versión de la política de
+> **Hallazgo 1 durante esta verificación.** La primera versión de la política de
 > permisos llevaba `camera=()` y habría roto el botón «Usar cámara» de
 > `ImageAttachments.tsx` en producción. Se detectó al revisar el código que
 > llama a `getUserMedia`, antes de desplegar nada, y se corrigió a
 > `camera=(self)`.
+>
+> **Hallazgo 2, el importante.** La primera `connect-src` listaba
+> `firebaseappcheck.googleapis.com`, pero el SDK de App Check pide el token a
+> **`content-firebaseappcheck.googleapis.com`**. La consola del navegador mostró
+> la petición bloqueada por la propia CSP: esa política habría dejado App Check
+> —y con él la interpretación de IA— **roto en producción**. Se añadió el host
+> real y se verificó de punta a punta.
+
+### Verificación de App Check bajo la CSP corregida
+
+`/diagnostico-app-check` (la página de diagnóstico que ya traía el proyecto),
+con el token de depuración local configurado en `.env.local`:
+
+```
+App Check entregó un token válido al SDK. El intercambio terminó correctamente.
+```
+
+Cero violaciones de CSP en la consola. Es la prueba de que la política permite
+exactamente lo que Firebase necesita y nada más. Esto verifica el **intercambio
+del token en local**; no verifica la ruta de producción, que depende de la clave
+de sitio de reCAPTCHA Enterprise, todavía vacía.
 
 ## 4. Lo que NO se probó, y por qué
 

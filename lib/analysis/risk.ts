@@ -17,12 +17,27 @@ export type Severity = 'critico' | 'alto' | 'medio' | 'bajo' | 'informativo';
 
 /**
  * Clasificación obligatoria de cada evidencia:
- *  A. `determinista`      — hecho comprobado localmente sobre el dato recibido.
- *  B. `ia`                — interpretación del modelo, no verificada.
- *  C. `pendiente-externo` — comprobación que requiere red y está deshabilitada.
- *  D. `error`             — la comprobación no pudo ejecutarse.
+ *  A.  `determinista`        — hecho comprobado localmente sobre el dato recibido.
+ *  A′. `verificado-externo`  — hecho obtenido de un registro público (DNS, RDAP),
+ *                              con fuente y fecha citables. Puede elevar el
+ *                              riesgo; nunca puede demostrar seguridad.
+ *  B.  `ia`                  — interpretación del modelo, no verificada.
+ *  C.  `pendiente-externo`   — comprobación que requiere red y no se realizó.
+ *  D.  `error`               — la comprobación no pudo ejecutarse.
  */
-export type EvidenceClass = 'determinista' | 'ia' | 'pendiente-externo' | 'error';
+export type EvidenceClass =
+  | 'determinista'
+  | 'verificado-externo'
+  | 'ia'
+  | 'pendiente-externo'
+  | 'error';
+
+/** Clases cuya evidencia es un hecho comprobado, no una interpretación. */
+export const VERIFIED_CLASSES: readonly EvidenceClass[] = ['determinista', 'verificado-externo'];
+
+function isVerified(item: AuditIndicator): boolean {
+  return item.classification === 'determinista' || item.classification === 'verificado-externo';
+}
 
 export type IndicatorStatus =
   | 'verificado'
@@ -110,11 +125,12 @@ export function severityOf(indicator: AuditIndicator): Severity {
   return indicator.status === 'sospechoso' ? indicator.severity : 'informativo';
 }
 
-/** Puntúa únicamente las evidencias deterministas marcadas como sospechosas. */
+/**
+ * Puntúa las evidencias comprobadas (locales A y externas verificadas A′)
+ * marcadas como sospechosas. La interpretación de la IA no entra aquí.
+ */
 export function deterministicVerdict(audit: Audit): DeterministicVerdict {
-  const suspicious = audit.indicators.filter(
-    (item) => item.classification === 'determinista' && item.status === 'sospechoso',
-  );
+  const suspicious = audit.indicators.filter((item) => isVerified(item) && item.status === 'sospechoso');
   const score = suspicious.reduce((total, item) => total + WEIGHT[item.severity], 0);
   const level: DeterministicVerdict['level'] =
     score >= 45 ? 'alto' : score >= 15 ? 'medio' : 'no concluyente';
@@ -127,7 +143,14 @@ export function deterministicVerdict(audit: Audit): DeterministicVerdict {
     score,
     suspicious: suspicious.length,
     topSignals,
-    locallyExhaustive: audit.coverage.pendingExternal.length === 0,
+    // Una URL (o un contenido que la incluya) nunca se agota localmente: aunque
+    // DNS y RDAP hayan respondido, siguen sin comprobarse el certificado, la
+    // reputación, las redirecciones y el contenido publicado. Resolver en el
+    // DNS o tener años de antigüedad no basta para declarar un sitio seguro.
+    locallyExhaustive:
+      audit.subject !== 'url' &&
+      audit.subject !== 'mixto' &&
+      audit.coverage.pendingExternal.length === 0,
   };
 }
 
@@ -184,16 +207,10 @@ export function combineRisk(audit: Audit, ai?: { risk: AiRiskLevel } | null): Co
   }
 
   const criticalCount = audit.indicators.filter(
-    (item) =>
-      item.classification === 'determinista' &&
-      item.status === 'sospechoso' &&
-      item.severity === 'critico',
+    (item) => isVerified(item) && item.status === 'sospechoso' && item.severity === 'critico',
   ).length;
   const highCount = audit.indicators.filter(
-    (item) =>
-      item.classification === 'determinista' &&
-      item.status === 'sospechoso' &&
-      item.severity === 'alto',
+    (item) => isVerified(item) && item.status === 'sospechoso' && item.severity === 'alto',
   ).length;
 
   let confidence: CombinedRisk['confidence'];

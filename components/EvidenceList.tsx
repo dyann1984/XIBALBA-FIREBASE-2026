@@ -98,6 +98,9 @@ export default function EvidenceList({
   aiError: string | null;
 }) {
   const deterministic = audit.indicators.filter((i) => i.classification === "determinista").sort(byRelevance);
+  const external = audit.indicators
+    .filter((i) => i.classification === "verificado-externo")
+    .sort(byRelevance);
   const pending = audit.indicators.filter((i) => i.classification === "pendiente-externo");
   const failed = audit.indicators.filter((i) => i.classification === "error");
   const aiItems = assessment?.evidence ?? [];
@@ -116,6 +119,24 @@ export default function EvidenceList({
           <p className="evidence-empty">No se ejecutó ninguna comprobación determinista.</p>
         )}
       </Group>
+
+      {external.length > 0 && (
+        <Group
+          letter="A′"
+          title="Registros públicos consultados"
+          caption="Hechos obtenidos de DNS y RDAP, con fuente y fecha. No acreditan legitimidad."
+          count={external.length}
+        >
+          {external.map((item) => (
+            <Indicator key={item.id} item={item} />
+          ))}
+          <p className="evidence-note">
+            Estas consultas se hicieron a registros públicos y resolutores independientes. Nunca se
+            contactó con el sitio analizado. Que un dominio resuelva o tenga años de antigüedad no
+            demuestra que sea seguro.
+          </p>
+        </Group>
+      )}
 
       <Group
         letter="B"
@@ -154,7 +175,7 @@ export default function EvidenceList({
       <Group
         letter="C"
         title="Pendiente de comprobación externa"
-        caption="Consultas de red deshabilitadas en esta versión. Su ausencia limita la conclusión."
+        caption="Consultas que no se realizaron o que el registro no ofrece. Su ausencia limita la conclusión."
         count={pending.length + audit.coverage.pendingExternal.length}
         open={false}
       >
@@ -169,8 +190,8 @@ export default function EvidenceList({
           <Indicator key={item.id} item={item} />
         ))}
         <p className="evidence-note">
-          No se consultaron reputación, certificados, titularidad ni destino final. No se inventa
-          ninguno de esos datos: simplemente no están disponibles.
+          Lo que aparece aquí no se comprobó. No se inventa ninguno de esos datos: simplemente no
+          están disponibles.
         </p>
       </Group>
 

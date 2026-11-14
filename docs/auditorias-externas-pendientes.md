@@ -1,6 +1,17 @@
 # Matriz de auditorías externas pendientes
 
-Fecha: 13 de noviembre de 2026. Estado actual: **todas deshabilitadas**.
+Fecha: 13 de noviembre de 2026.
+
+Estado actual: **DNS y RDAP (fase 1) están implementados**, con las consultas
+reales apagadas por omisión (`XIBALBA_EXTERNAL_AUDITS` no activo). Las otras
+cuatro siguen **deshabilitadas y sin implementar**. El detalle de lo construido,
+y la limitación abierta de App Check en el servidor, están en
+`docs/plan-dns-rdap.md`, sección 13.
+
+En México la fase 1 queda **incompleta por causa ajena**: el registro de `.mx`
+no publica servidor RDAP, así que la antigüedad y la titularidad de un dominio
+mexicano permanecen en la categoría C. El adaptador WHOIS previsto está escrito
+pero deshabilitado.
 
 El motor de la fase 3 es exclusivamente local. Las comprobaciones de esta
 matriz son las que hoy se declaran en la categoría **C (pendiente de

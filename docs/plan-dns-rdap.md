@@ -1,6 +1,9 @@
 # Plan técnico · auditorías reales de DNS y RDAP
 
-Estado: **diseño. No implementado, no ejecutado.** Fecha: 13 de noviembre de 2026.
+Estado: **implementado y probado en local, con las consultas reales apagadas por
+omisión.** Fecha de diseño: 13 de noviembre de 2026. Véase la sección 13 para lo
+que quedó construido, lo que cambió respecto a este diseño y lo que sigue sin
+verificarse.
 
 Fase 1 de la matriz de `docs/auditorias-externas-pendientes.md`. Se eligen DNS
 y RDAP primero porque son **gratuitos, abiertos y sin contrato ni clave de
@@ -276,3 +279,119 @@ No se hace handshake TLS, no se consulta reputación, no se siguen
 redirecciones, **no se visita el sitio**, no se contrata ningún servicio y no
 se activa facturación. Nada de la fase 1 requiere contrato, clave de API ni
 pago.
+
+
+---
+
+## 13. Lo que quedó implementado (13 de noviembre de 2026)
+
+### 13.1 El hallazgo sobre «.mx», verificado
+
+Se comprobó de forma independiente y el dato **se confirma**:
+
+| Fuente consultada | Fecha | Resultado |
+|---|---|---|
+| `https://data.iana.org/rdap/dns.json` | 13 nov 2026 | Versión 1.0, publicación `2026-10-28T22:00:04Z`, 592 servicios, 1203 TLD. **`mx` no aparece.** |
+| `https://www.iana.org/domains/root/db/mx.html` | 13 nov 2026 | Campo «RDAP Base URLs»: `-` (vacío). Campo «WHOIS Server»: `whois.mx`. |
+
+Consecuencia que amplía el hallazgo: **tampoco tienen RDAP** `cl`, `co`, `es`,
+`us` ni `io`. Y dos TLD (`kg`, `mg`) solo publican `http://`, que este cliente
+**rechaza** en lugar de degradar la conexión. Del bootstrap quedan utilizables
+**1201 TLD por HTTPS**.
+
+Por tanto RDAP **no puede ser la única vía** de antigüedad y titularidad. El
+diseño se adaptó así:
+
+- Para un TLD sin servidor RDAP, `lookupRdap` devuelve `status: "no-disponible"`
+  citando la publicación del bootstrap como fuente. No se inventa un servidor.
+- Para `.mx` y `.com.mx`, el orquestador deriva al **adaptador WHOIS**, que está
+  **deshabilitado** y devuelve `status: "deshabilitada"` con su motivo.
+- En la interfaz ambos casos aparecen en la **categoría C** como
+  **«No verificable»**, nunca como un dato.
+
+> Estas consultas a IANA son las **únicas** consultas externas realmente
+> realizadas. Todas las pruebas automatizadas son simuladas, con `fetch`
+> inyectado (`tests/external.test.mjs`). No se mezclan.
+
+### 13.2 Condiciones para habilitar WHOIS `.mx`
+
+`WHOIS_MX_ENABLED` está en `false` en `lib/external/whois-mx.ts`. Para
+encenderlo hay que verificar y dejar escrito aquí:
+
+1. **Condiciones de uso de NIC México** para consulta automatizada: frecuencia
+   permitida, atribución exigida, usos prohibidos.
+2. **Conectividad real al puerto 43** desde el entorno de despliegue. WHOIS es
+   TCP en claro; el runtime Edge no abre sockets, así que exige runtime Node.
+3. **Qué campos devuelve de verdad** y cuáles redacta. Las etiquetas que hoy
+   reconoce el analizador son tolerantes a propósito: hasta ver una respuesta
+   real **no se afirma** que el registro publique fecha de creación.
+
+Mientras tanto el analizador `parseWhoisMx` ya está escrito y probado con
+respuestas de ejemplo, de modo que habilitarlo sea un cambio de una línea más
+la verificación de arriba.
+
+### 13.3 Archivos
+
+| Archivo | Papel |
+|---|---|
+| `lib/external/net-guard.ts` | Clasificación de IP y validación de URL de salida (SSRF) |
+| `lib/external/hostname.ts` | Puerta única de validación de host |
+| `lib/external/types.ts` | Contrato `ExternalResult<T>`, hechos DNS y de registro |
+| `lib/external/doh.ts` | Cliente DNS-over-HTTPS, proveedores en lista cerrada |
+| `lib/external/rdap.ts` | Cliente RDAP sobre el bootstrap de IANA |
+| `lib/external/rdap-servers.generated.ts` | Mapa TLD → servidor, **generado** |
+| `lib/external/whois-mx.ts` | Adaptador WHOIS `.mx`, **deshabilitado** |
+| `lib/external/cache.ts` | Caché con vencimiento y limitador de solicitudes |
+| `lib/external/interpret-dns.ts` | Hechos DNS → evidencia |
+| `lib/external/interpret-rdap.ts` | Hechos de registro → evidencia |
+| `lib/external/index.ts` | Orquestador, interruptor y fusión con la auditoría local |
+| `app/api/audit/external/route.ts` | Endpoint, runtime Node |
+| `scripts/generate-rdap-servers.mjs` | Regenera el mapa desde `data/rdap-bootstrap.json` |
+| `tests/external.test.mjs` | 36 pruebas, todas simuladas |
+
+El mapa de servidores **se genera** en lugar de importar el JSON en tiempo de
+ejecución: así no hay lectura de disco en el servidor, no se depende de
+atributos de importación (`with { type: "json" }`, que no sobreviven al modo
+«strip-only» de Node ni al empaquetador) y el mapa queda revisable en el
+control de versiones. Se comprobó que **no llega al paquete del cliente**.
+
+### 13.4 Interruptor: apagado por omisión
+
+`EXTERNAL_AUDITS_ENABLED` solo es verdadero si el entorno declara
+`XIBALBA_EXTERNAL_AUDITS=1`. Apagado, **no sale ni una petición**: cada
+comprobación devuelve `deshabilitada` y la interfaz muestra «No verificable».
+Así la función queda lista sin que el comportamiento actual cambie hasta que se
+decida encenderla.
+
+### 13.5 Cambios respecto al diseño
+
+| Diseño (secciones 1–12) | Implementación | Por qué |
+|---|---|---|
+| RDAP: «máximo 2 redirecciones, solo https, solo host público» | `redirect: "error"`: **ninguna** redirección | Más estricto y más simple de auditar. Si un registro redirige, el dato se declara no verificable en lugar de seguir la URL de un tercero |
+| Semáforo: quitar etiquetas de `pendingExternal` al comprobarlas | Igual, **y además** `locallyExhaustive` es siempre `false` para los sujetos `url` y `mixto` | Garantía estructural: aunque algún día se resolvieran las siete etiquetas, una URL no podría ponerse en verde |
+| Endpoint: «App Check obligatorio» | Mismo origen + formato de JWT + límite de solicitudes | **La firma del token NO se verifica.** Véase 13.6 |
+
+### 13.6 Limitación abierta: App Check en el servidor
+
+El endpoint **no verifica criptográficamente** el token de App Check. Hacerlo
+exige `firebase-admin` y una clave de cuenta de servicio, es decir una
+credencial nueva, que no está autorizada en este proyecto. Hoy la cabecera solo
+demuestra que el cliente la envió.
+
+La protección real del endpoint es, por ahora: **mismo origen**
+(`sec-fetch-site` + `origin`), **límite de solicitudes** y **validación estricta
+del host**. No debe presentarse como «App Check aplicado en el servidor».
+
+### 13.7 Privacidad
+
+No se registra la dirección IP ni el dominio consultado. El limitador usa un
+resumen SHA-256 irreversible y truncado de la IP, con sal de proceso, solo en
+memoria y por un minuto. Las cachés viven en memoria y se pierden en cada
+despliegue, como recomendaba la sección 11.
+
+### 13.8 Qué sigue sin comprobarse
+
+Certificado TLS, reputación en listas de amenazas, redirecciones y destino
+final, y contenido publicado en el sitio. Siguen en la categoría C y así se
+muestran. La antigüedad y la titularidad quedan comprobadas **solo** en los
+1201 TLD con RDAP por HTTPS; en México, no.

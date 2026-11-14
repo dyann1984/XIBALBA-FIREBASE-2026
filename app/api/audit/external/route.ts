@@ -1,39 +1,39 @@
 // Auditoría externa de un dominio: DNS y RDAP sobre registros públicos.
 //
-// Runtime Node, no Edge: el adaptador WHOIS previsto para «.mx» necesita
-// sockets TCP, que Edge no ofrece.
+// Runtime Node, no Edge: la verificación de firma usa `node:crypto` y el
+// adaptador WHOIS previsto para «.mx» necesitaría sockets TCP.
 //
-// LO QUE ESTA RUTA SÍ COMPRUEBA
-//   · Que la petición venga del propio origen (sec-fetch-site + origin), lo
-//     que cierra el uso cruzado desde otro sitio.
-//   · Que traiga una cabecera de App Check con forma de JWT.
-//   · Un límite de solicitudes por minuto, global y por cliente.
-//   · Que el host recibido sea un dominio válido y enrutable.
+// AUTENTICACIÓN
+//   El token de Firebase App Check se verifica **de verdad**: firma RS256
+//   contra el JWKS público de App Check, emisor, audiencia, tipo y caducidad.
+//   Véase `lib/security/app-check.ts`. No requiere cuenta de servicio.
 //
-// LO QUE NO COMPRUEBA, Y CONVIENE SABERLO
-//   La firma del token de App Check NO se verifica criptográficamente. Hacerlo
-//   exige `firebase-admin` y una clave de cuenta de servicio, es decir, una
-//   credencial nueva que no está autorizada en este proyecto. Mientras eso no
-//   exista, la cabecera solo demuestra que el cliente la envió, no que sea
-//   legítima: la protección real de esta ruta es el mismo origen y el límite
-//   de solicitudes. Está documentado en docs/plan-dns-rdap.md y no debe
-//   presentarse como App Check aplicado en el servidor.
+//   El mismo origen NO es la autenticación. Se comprueba además, como capa
+//   anti-CSRF, pero un token de App Check inválido se rechaza venga de donde
+//   venga, y un token válido es lo único que concede acceso.
 //
-// PRIVACIDAD
-//   No se registra la dirección IP ni el host consultado. El limitador usa un
-//   resumen irreversible y truncado de la IP, solo en memoria y por un minuto.
+// LÍMITES Y PRIVACIDAD
+//   Límite de solicitudes por cliente. No se registra la dirección IP ni el
+//   dominio consultado: el limitador usa un resumen SHA-256 irreversible y
+//   truncado de la IP, con sal de proceso, solo en memoria y por un minuto.
+//
+// PENDIENTE DOCUMENTADO
+//   Protección contra reenvío (tokens de un solo uso). Es una función beta que
+//   solo existe en los Admin SDK y exige credenciales administradas. No se
+//   simula: un token válido y no caducado puede reutilizarse dentro de su
+//   vigencia, y el límite de solicitudes es lo único que acota ese abuso.
 
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import { runExternalAudit } from "@/lib/external";
+import { runExternalAudit, EXTERNAL_AUDITS_ENABLED } from "@/lib/external";
+import { verifyAppCheckToken } from "@/lib/security/app-check";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_BYTES = 1024;
-const JWT_SHAPE = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
 
-/** Sal de proceso: hace que el resumen no sea reversible entre reinicios. */
+/** Sal de proceso: hace que el resumen de la IP no sea reversible ni estable. */
 const SALT = createHash("sha256").update(String(process.hrtime.bigint())).digest("hex");
 
 function rateKeyFor(request: Request): string {
@@ -42,17 +42,25 @@ function rateKeyFor(request: Request): string {
   return createHash("sha256").update(`${SALT}:${ip}`).digest("hex").slice(0, 16);
 }
 
+function respond(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store, private",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}
+
 function deny(status: number, message: string) {
-  return NextResponse.json(
-    { error: message },
-    { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } },
-  );
+  return respond({ error: message }, status);
 }
 
 export async function POST(request: Request) {
   const url = new URL(request.url);
 
-  // Mismo origen. Sin esto, cualquier página podría usar esta ruta como proxy.
+  // Capa anti-CSRF, no autenticación. Se comprueba primero porque es barata.
   if (
     request.headers.get("sec-fetch-site") !== "same-origin" ||
     request.headers.get("origin") !== url.origin
@@ -60,10 +68,13 @@ export async function POST(request: Request) {
     return deny(403, "Petición rechazada: debe originarse en la misma aplicación.");
   }
 
-  const appCheck =
-    request.headers.get("x-firebase-appcheck") ?? request.headers.get("X-Firebase-AppCheck");
-  if (!appCheck || !JWT_SHAPE.test(appCheck)) {
-    return deny(401, "Falta la credencial de App Check o no tiene el formato esperado.");
+  // Autenticación real: firma, emisor, audiencia y caducidad del token.
+  const verification = await verifyAppCheckToken(request.headers.get("x-firebase-appcheck"));
+  if (!verification.ok) {
+    // 503 cuando el fallo es del servidor (configuración o claves públicas
+    // inalcanzables); 401 cuando el problema es la credencial recibida.
+    const serverSide = verification.code === "configuracion" || verification.code === "jwks";
+    return deny(serverSide ? 503 : 401, verification.reason);
   }
 
   const raw = await request.text();
@@ -85,25 +96,19 @@ export async function POST(request: Request) {
   // de clase C (pendiente) o D (error).
   const audit = await runExternalAudit(host, { rateKey: rateKeyFor(request) });
 
-  return NextResponse.json(
-    {
-      indicators: audit.indicators,
-      resolved: audit.resolved,
-      dns: audit.dns ? { status: audit.dns.status, source: audit.dns.source, reason: audit.dns.reason ?? null } : null,
-      registration: audit.registration
-        ? {
-            status: audit.registration.status,
-            source: audit.registration.source,
-            reason: audit.registration.reason ?? null,
-          }
-        : null,
-    },
-    {
-      headers: {
-        "Cache-Control": "no-store, private",
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "no-referrer",
-      },
-    },
-  );
+  return respond({
+    enabled: EXTERNAL_AUDITS_ENABLED,
+    indicators: audit.indicators,
+    resolved: audit.resolved,
+    dns: audit.dns
+      ? { status: audit.dns.status, source: audit.dns.source, reason: audit.dns.reason ?? null }
+      : null,
+    registration: audit.registration
+      ? {
+          status: audit.registration.status,
+          source: audit.registration.source,
+          reason: audit.registration.reason ?? null,
+        }
+      : null,
+  });
 }

@@ -69,21 +69,45 @@ export function interpretDns(result: ExternalResult<DnsFacts>): AuditIndicator[]
     return indicators;
   }
 
-  indicators.push({
-    ...base,
-    id: 'dns-resolucion',
-    indicator: 'El dominio resuelve en el DNS',
-    classification: 'verificado-externo',
-    status: 'verificado',
-    severity: 'informativo',
-    evidence:
-      `«${facts.host}» resuelve a ${facts.addresses.length} dirección(es) IP` +
-      (facts.ttlSeconds !== null ? ` con TTL mínimo de ${facts.ttlSeconds} s` : '') +
-      `. Servidores de nombres: ${facts.nameServers.length ? facts.nameServers.join(', ') : 'no publicados'}.`,
-    recommendation: 'Dato de contexto: no lo tomes como prueba de que el sitio sea legítimo.',
-    limitation:
-      'Que un dominio resuelva solo significa que alguien lo configuró. No indica titularidad, antigüedad ni reputación, y no reduce el riesgo.',
-  });
+  // El DNS devuelve los nombres con punto final; se quita para mostrarlos.
+  const nameServers = facts.nameServers.map((value) => value.replace(/\.$/, ''));
+  const servers = nameServers.length
+    ? nameServers.join(', ')
+    : 'no publicados en este nombre (es lo habitual en un subdominio: se publican en el dominio base)';
+
+  if (facts.addresses.length === 0) {
+    // Estado real y distinto: el nombre existe en el DNS pero no publica
+    // dirección. Decir «resuelve a 0 direcciones» sería engañoso.
+    indicators.push({
+      ...base,
+      id: 'dns-sin-direccion',
+      indicator: 'El dominio existe pero no publica dirección IP',
+      classification: 'verificado-externo',
+      status: 'no concluyente',
+      severity: 'informativo',
+      evidence: `«${facts.host}» está dado de alta en el DNS, pero no devuelve ninguna dirección IP. Servidores de nombres: ${servers}.`,
+      recommendation:
+        'No se puede saber a dónde llevaría el enlace. Verifica la dirección por el canal oficial.',
+      limitation:
+        'Es frecuente y legítimo: muchos dominios publican la dirección solo en «www» o en un subdominio, no en el nombre base.',
+    });
+  } else {
+    indicators.push({
+      ...base,
+      id: 'dns-resolucion',
+      indicator: 'El dominio resuelve en el DNS',
+      classification: 'verificado-externo',
+      status: 'verificado',
+      severity: 'informativo',
+      evidence:
+        `«${facts.host}» resuelve a ${facts.addresses.length} dirección(es) IP` +
+        (facts.ttlSeconds !== null ? ` con TTL mínimo de ${facts.ttlSeconds} s` : '') +
+        `. Servidores de nombres: ${servers}.`,
+      recommendation: 'Dato de contexto: no lo tomes como prueba de que el sitio sea legítimo.',
+      limitation:
+        'Que un dominio resuelva solo significa que alguien lo configuró. No indica titularidad, antigüedad ni reputación, y no reduce el riesgo.',
+    });
+  }
 
   if (facts.nonPublicAddresses.length) {
     const detail = facts.nonPublicAddresses.map((entry) => `${entry.ip} (${entry.cls})`).join(', ');
@@ -101,18 +125,26 @@ export function interpretDns(result: ExternalResult<DnsFacts>): AuditIndicator[]
     });
   }
 
+  // El TTL corto NO se marca como sospechoso.
+  //
+  // La verificación real contra dominios de referencia (14 nov 2026) encontró
+  // «example.com» con TTL de 26 s, servido por Cloudflare. Marcarlo como señal
+  // produciría un falso positivo en buena parte de los sitios legítimos, que
+  // hoy están detrás de una red de distribución de contenido. Se conserva como
+  // contexto porque sigue siendo útil leído junto a otras evidencias, pero no
+  // puntúa hacia riesgo.
   if (facts.ttlSeconds !== null && facts.ttlSeconds < 60) {
     indicators.push({
       ...base,
       id: 'dns-ttl-muy-bajo',
-      indicator: 'Tiempo de vida DNS muy corto',
+      indicator: 'Tiempo de vida DNS corto',
       classification: 'verificado-externo',
-      status: 'sospechoso',
-      severity: 'bajo',
+      status: 'no concluyente',
+      severity: 'informativo',
       evidence: `El registro tiene un TTL de ${facts.ttlSeconds} s, por debajo de 60 s.`,
-      recommendation: 'Señal débil: considérala solo junto con otras evidencias.',
+      recommendation: 'Dato de contexto. Por sí solo no significa nada.',
       limitation:
-        'Las redes de distribución de contenido y los balanceadores legítimos también usan TTL muy cortos. Por sí sola no indica fraude.',
+        'No puntúa hacia riesgo: las redes de distribución de contenido y los balanceadores legítimos usan TTL así de cortos de forma habitual.',
     });
   }
 

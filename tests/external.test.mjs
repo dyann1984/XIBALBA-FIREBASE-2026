@@ -12,7 +12,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { auditUrl, combineRisk } from '../lib/analysis/audit.ts';
+import { auditUrl, auditMessage, combineRisk } from '../lib/analysis/audit.ts';
+import { RISK_LABEL, LIGHT_LABEL, trafficLight } from '../lib/analysis/risk.ts';
 import { classifyIp, assertSafeOutboundUrl } from '../lib/external/net-guard.ts';
 import { validateHostForLookup } from '../lib/external/hostname.ts';
 import { lookupDns, DOH_PROVIDERS } from '../lib/external/doh.ts';
@@ -41,14 +42,14 @@ const PUBLIC_IP = '93.184.216.34';
 const TYPE_CODE = { A: 1, AAAA: 28, NS: 2, MX: 15 };
 
 /** `fetch` falso que responde a DoH según un mapa de registros. */
-function fakeDoh(records, { status = 0, calls = [] } = {}) {
+function fakeDoh(records, { status = 0, calls = [], ttl = 300 } = {}) {
   return async (url) => {
     calls.push(url);
     const type = new URL(url).searchParams.get('type');
     const data = records[type] ?? [];
     const body = JSON.stringify({
       Status: status,
-      Answer: data.map((value) => ({ name: 'x', type: TYPE_CODE[type], TTL: 300, data: value })),
+      Answer: data.map((value) => ({ name: 'x', type: TYPE_CODE[type], TTL: ttl, data: value })),
     });
     return { ok: true, status: 200, text: async () => body };
   };
@@ -464,6 +465,48 @@ test('un dominio inexistente o apuntando a rangos internos sí eleva el riesgo',
   assert.equal(flagged.severity, 'alto');
 });
 
+test('un TTL corto es contexto, no señal: regresión del falso positivo de Cloudflare', async () => {
+  // La verificación real contra example.com (14 nov 2026) devolvió TTL de 26 s
+  // en un dominio legítimo servido por Cloudflare. Marcarlo como sospechoso era
+  // un falso positivo sobre buena parte de los sitios legítimos.
+  const dns = await lookupDns('tienda.com', {
+    fetch: fakeDoh({ A: [PUBLIC_IP] }, { ttl: 26 }),
+    now: NOW,
+  });
+  const indicators = interpretDns(dns);
+  const ttl = indicators.find((item) => item.id === 'dns-ttl-muy-bajo');
+  assert.ok(ttl, 'el TTL corto se sigue reportando');
+  assert.notEqual(ttl.status, 'sospechoso', 'pero nunca como sospechoso');
+  assert.equal(ttl.severity, 'informativo');
+  assert.equal(indicators.filter((item) => item.status === 'sospechoso').length, 0);
+
+  // Y no mueve el veredicto de una URL por sí solo.
+  const audit = applyExternalAudit(auditUrl('https://tienda.com/'), {
+    indicators,
+    resolved: ['resolución DNS'],
+    dns,
+    registration: null,
+  });
+  assert.equal(combineRisk(audit, null).deterministic.score, 0);
+});
+
+test('un dominio que existe pero no publica dirección se declara así, no como «0 direcciones»', async () => {
+  // Caso real: banxico.org.mx responde NOERROR sin registros A en el nombre base.
+  const dns = await lookupDns('banxico.org.mx', {
+    fetch: fakeDoh({ NS: ['extnsl.banxico.org.mx.'] }),
+    now: NOW,
+  });
+  const indicators = interpretDns(dns);
+  const found = indicators.find((item) => item.id === 'dns-sin-direccion');
+  assert.ok(found, 'debe emitirse el indicador específico');
+  assert.equal(found.status, 'no concluyente');
+  assert.equal(found.severity, 'informativo');
+  assert.match(found.evidence, /no devuelve ninguna dirección/i);
+  assert.equal(indicators.some((item) => item.id === 'dns-resolucion'), false);
+  // Y el punto final del DNS no se muestra al usuario.
+  assert.ok(!found.evidence.includes('.mx.,') && !found.evidence.endsWith('.mx..'));
+});
+
 test('un fallo de DNS se clasifica como error (D), no como señal de riesgo', async () => {
   const indicators = interpretDns(await lookupDns('ejemplo.com', { fetch: failingFetch, now: NOW }));
   assert.equal(indicators[0].classification, 'error');
@@ -741,6 +784,104 @@ test('fusionar evidencia externa no modifica la auditoría original', async () =
 
   // Otra auditoría recién creada no debe haber heredado la mutación.
   assert.deepEqual(auditUrl('https://otro.com/').coverage.pendingExternal, pendingBefore);
+});
+
+// ---------------------------------------------------------------------------
+// Calidad del semáforo (prioridad 3)
+// ---------------------------------------------------------------------------
+
+test('riesgo, confianza y cobertura son tres dimensiones separadas', async () => {
+  resetExternalState();
+  const audit = auditUrl('https://tienda-desconocida.com/');
+  const external = await runExternalAudit('tienda-desconocida.com', {
+    force: true,
+    useCache: false,
+    now: NOW,
+    fetch: routed({ A: [PUBLIC_IP] }, rdapBody()),
+  });
+  const risk = combineRisk(applyExternalAudit(audit, external), null);
+
+  // Nivel de riesgo: una de cuatro etiquetas, con texto propio.
+  assert.ok(['bajo', 'medio', 'alto', 'no concluyente'].includes(risk.riskLevel));
+  assert.ok(RISK_LABEL[risk.riskLevel].length > 0);
+
+  // Confianza: independiente del nivel, con su razón escrita.
+  assert.ok(['alta', 'media', 'baja'].includes(risk.confidence));
+  assert.ok(risk.confidenceReason.length > 0);
+
+  // Cobertura: números, no adjetivos, y lo que falta por nombre.
+  assert.ok(risk.coverage.checksRun > 0);
+  assert.ok(risk.coverage.checksTotal >= risk.coverage.checksRun);
+  assert.ok(Array.isArray(risk.coverage.pendingExternal));
+
+  // Y son distintas de verdad: riesgo no concluyente con cobertura parcial
+  // y confianza baja, tres valores que no se derivan uno de otro.
+  assert.equal(risk.riskLevel, 'no concluyente');
+  assert.ok(risk.coverage.pendingExternal.length > 0);
+});
+
+test('un resultado no concluyente se presenta como gris y con su propia etiqueta', () => {
+  const risk = combineRisk(auditUrl('https://sitio-cualquiera.com/'), null);
+  assert.equal(risk.riskLevel, 'no concluyente');
+  assert.equal(risk.light, 'gris');
+  assert.equal(RISK_LABEL['no concluyente'], 'No concluyente');
+  assert.match(LIGHT_LABEL.gris, /insuficiente/i);
+  // No se cuela por el mapa directo: cualquier valor desconocido da gris.
+  for (const value of [null, undefined, '', 'seguro', 'no concluyente']) {
+    assert.equal(trafficLight(value), 'gris');
+  }
+  // Y se explica por qué.
+  assert.ok(risk.rationale.some((line) => /no demuestra seguridad|comprobaciones/i.test(line)));
+});
+
+test('la IA sola nunca produce verde ni confianza alta sobre una URL', () => {
+  const audit = auditUrl('https://parece-inofensivo.com/');
+  for (const aiRisk of ['bajo', 'medio', 'alto']) {
+    const risk = combineRisk(audit, { risk: aiRisk });
+    assert.notEqual(risk.light, 'verde', `IA ${aiRisk} no puede dar verde`);
+    assert.notEqual(risk.confidence, 'alta', `IA ${aiRisk} no puede dar confianza alta`);
+  }
+  // Un nivel alto que viene solo del modelo se señala como tal.
+  const onlyAi = combineRisk(audit, { risk: 'alto' });
+  assert.equal(onlyAi.riskLevel, 'alto');
+  assert.ok(onlyAi.rationale.some((line) => /solo del modelo|sin respaldo determinista/i.test(line)));
+});
+
+test('ninguna combinación de evidencia externa benigna consigue el verde', async () => {
+  // Se recorren todas las respuestas benignas posibles del registro: con
+  // RDAP, sin RDAP, con fecha redactada, con error y sin consulta.
+  const bodies = [
+    rdapBody(),
+    rdapBody({ events: [{ eventAction: 'registration', eventDate: '1995-01-01T00:00:00Z' }] }),
+    rdapBody({ events: [], redacted: [{ name: { type: 'Registration date' } }] }),
+  ];
+  for (const body of bodies) {
+    for (const aiRisk of [null, { risk: 'bajo' }]) {
+      resetExternalState();
+      const external = await runExternalAudit('tienda-antigua.com', {
+        force: true,
+        useCache: false,
+        now: NOW,
+        fetch: routed({ A: [PUBLIC_IP] }, body),
+      });
+      const merged = applyExternalAudit(auditUrl('https://tienda-antigua.com/'), external);
+      const risk = combineRisk(merged, aiRisk);
+      assert.notEqual(risk.light, 'verde');
+      assert.equal(risk.riskLevel, 'no concluyente');
+    }
+  }
+});
+
+test('el verde sigue siendo posible solo para un mensaje sin enlaces ni imágenes', () => {
+  // Control negativo: si nada pudiera ser verde, la regla no significaría nada.
+  const clean = auditMessage('Hola, nos vemos mañana en la oficina a las nueve.');
+  const risk = combineRisk(clean, { risk: 'bajo' });
+  assert.equal(risk.deterministic.locallyExhaustive, true);
+  assert.equal(risk.light, 'verde');
+
+  // Pero en cuanto el mensaje trae un enlace, deja de poder serlo.
+  const withLink = auditMessage('Hola, revisa esto: https://promo-rapida.com/gana');
+  assert.notEqual(combineRisk(withLink, { risk: 'bajo' }).light, 'verde');
 });
 
 test('toda evidencia externa cita fuente y fecha verificable', async () => {

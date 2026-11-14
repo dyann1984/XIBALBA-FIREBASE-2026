@@ -1,13 +1,25 @@
 export type AgentKind = "message" | "url" | "transcripcion" | "financiero";
 export type Assessment = { risk: "bajo" | "medio" | "alto"; summary: string; evidence: string[]; recommendations: string[] };
+/**
+ * Error de validación de la entrada que escribió la persona.
+ *
+ * Se distingue de cualquier otro error a propósito: su mensaje lo redactamos
+ * nosotros para que se lea en pantalla («Introduce una URL completa…»), así que
+ * `explainError` puede mostrarlo tal cual. Los demás errores —los del modelo,
+ * la red o el proveedor— nunca se muestran literalmente, porque su texto no es
+ * nuestro y puede filtrar detalles internos.
+ */
+export class InputError extends Error {
+ constructor(message: string) { super(message); this.name = "InputError"; }
+}
 export function validateInput(kind: AgentKind, input: string): string {
  const value = input.trim();
- if (!value) throw new Error("Escribe contenido para analizar.");
- if (value.length > 6000) throw new Error("El contenido no puede superar 6000 caracteres.");
+ if (!value) throw new InputError("Escribe contenido para analizar.");
+ if (value.length > 6000) throw new InputError("El contenido no puede superar 6000 caracteres.");
  if (kind === "url") {
   let url: URL;
-  try { url = new URL(value); } catch { throw new Error("Introduce una URL completa con https:// o http://."); }
-  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("Introduce una URL HTTP o HTTPS sin credenciales.");
+  try { url = new URL(value); } catch { throw new InputError("Introduce una URL completa con https:// o http://."); }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new InputError("Introduce una URL HTTP o HTTPS sin credenciales.");
  }
  return value;
 }

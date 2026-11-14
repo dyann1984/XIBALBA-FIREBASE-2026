@@ -1,5 +1,6 @@
 import { getServices } from "@/lib/firebase";
 import { parseAssessment, promptFor, validateInput, type AgentKind } from "./guardian.ts";
+import { explainError } from "./errors.ts";
 import { type Audit, type ImageFacts } from "./audit.ts";
 import {
   auditCoordinated,
@@ -220,11 +221,7 @@ export function describeSource(source: string | null): string {
         : "Sin verificar";
 }
 
-export function explainError(error: unknown): string {
-  const s = error instanceof Error ? error.message : "";
-  if (/429|quota|resource.exhausted/i.test(s)) return "Se alcanzó un límite de uso. Espera antes de volver a intentar.";
-  if (/403|permission|app.?check/i.test(s)) return "Firebase rechazó la solicitud. Revisa App Check y los permisos del proyecto.";
-  if (/network|fetch|offline/i.test(s)) return "No se pudo conectar. Comprueba tu conexión y vuelve a intentar.";
-  if (/formato esperado/i.test(s)) return "El modelo devolvió una respuesta que no cumple el formato exigido; se descartó.";
-  return "No se pudo completar el análisis. Inténtalo de nuevo.";
-}
+// La traducción de errores vive en `errors.ts` para poder probarla sin Next:
+// este módulo importa `@/lib/firebase`, cuyo alias solo resuelve en el bundler.
+// Se reexporta para que la interfaz siga importándola de aquí.
+export { explainError } from "./errors.ts";

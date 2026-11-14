@@ -226,5 +226,5 @@ export function explainError(error: unknown): string {
   if (/403|permission|app.?check/i.test(s)) return "Firebase rechazó la solicitud. Revisa App Check y los permisos del proyecto.";
   if (/network|fetch|offline/i.test(s)) return "No se pudo conectar. Comprueba tu conexión y vuelve a intentar.";
   if (/formato esperado/i.test(s)) return "El modelo devolvió una respuesta que no cumple el formato exigido; se descartó.";
-  return s || "No se pudo completar el análisis. Inténtalo de nuevo.";
+  return "No se pudo completar el análisis. Inténtalo de nuevo.";
 }

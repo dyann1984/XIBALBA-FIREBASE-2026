@@ -1,6 +1,6 @@
 // Auditoría externa de un dominio: DNS y RDAP sobre registros públicos.
 //
-// Runtime Node, no Edge: la verificación de firma usa `node:crypto` y el
+// Runtime Node, no Edge: la verificación de firma usa node:crypto y el
 // adaptador WHOIS previsto para «.mx» necesitaría sockets TCP.
 //
 // AUTENTICACIÓN
@@ -27,6 +27,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { runExternalAudit, EXTERNAL_AUDITS_ENABLED } from "@/lib/external";
 import { verifyAppCheckToken } from "@/lib/security/app-check";
+import { readLimitedBody } from "@/lib/security/limited-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,8 +78,8 @@ export async function POST(request: Request) {
     return deny(serverSide ? 503 : 401, verification.reason);
   }
 
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return deny(413, "La petición excede el tamaño admitido.");
+  const raw = await readLimitedBody(request, MAX_BODY_BYTES);
+  if (raw === null) return deny(413, "La petición excede el tamaño admitido.");
 
   let payload: unknown;
   try {

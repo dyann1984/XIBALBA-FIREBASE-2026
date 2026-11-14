@@ -97,6 +97,7 @@ credencial al repositorio.
 | [`docs/seguridad-dependencias.md`](docs/seguridad-dependencias.md) | Avisos de dependencias y por qué se fijaron |
 | [`docs/node-dependencias.md`](docs/node-dependencias.md) | Node 24, `engines` y compatibilidad de dependencias |
 | [`docs/despliegue.md`](docs/despliegue.md) | Cómo desplegar (nada desplegado todavía) |
+| [`docs/informe-lanzamiento.md`](docs/informe-lanzamiento.md) | Qué está comprobado y qué falta para lanzar |
 | [`docs/pruebas-finalizacion.md`](docs/pruebas-finalizacion.md) | Pruebas ejecutadas y sus resultados reales |
 | [`docs/pendientes-hackathon.md`](docs/pendientes-hackathon.md) | Lo que falta antes de presentar |
 | [`docs/devpost.md`](docs/devpost.md) | Descripción para Devpost |

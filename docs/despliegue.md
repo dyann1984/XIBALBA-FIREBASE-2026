@@ -3,10 +3,13 @@
 Fecha: 14 de noviembre de 2026.
 
 > **Estado real: nada está desplegado.** No se ha creado ningún proyecto en
-> Vercel, no se ha ejecutado `firebase deploy`, no se ha tocado ninguna
-> configuración en la consola de Firebase y no hay remoto de Git configurado.
-> Este documento deja el despliegue **preparado**; ejecutarlo requiere tu
-> autorización y tus credenciales.
+> Vercel, no se ha ejecutado `firebase deploy` y no se ha tocado ninguna
+> configuración en la consola de Firebase. Este documento deja el despliegue
+> **preparado**; ejecutarlo requiere tu autorización.
+>
+> El código **sí** está publicado, en privado:
+> [`dyann1984/XIBALBA-FIREBASE-2026`](https://github.com/dyann1984/XIBALBA-FIREBASE-2026),
+> rama por omisión `release/xibalba-2026`, commit `fb3f123`.
 
 ## 0. Antes de nada: el bloqueante
 
@@ -39,10 +42,19 @@ tocara el repositorio. Con `24.x` queda determinista. Ver
 
 En el equipo donde se desarrollaron estas fases hay **Node 22.23.4**, por debajo
 del mínimo declarado. `npm test`, `npm run typecheck` y `npm run build` pasan
-ahí porque ninguno ejecuta el SDK de Firebase en el servidor, pero **nadie ha
-ejecutado la suite en Node 24**: es un hueco de verificación real, no un
-problema conocido. Conviene correr `npm ci && npm test && npm run build` una vez
-en Node 24.x antes de la demostración.
+ahí porque ninguno ejecuta el SDK de Firebase en el servidor, pero localmente
+**nadie ha ejecutado la suite en Node 24**.
+
+Ese hueco se cierra sin tocar el entorno global: `.github/workflows/ci.yml`
+ejecuta `npm ci`, `npm run typecheck`, `npm test` y `npm run build` **en Node
+24.x** en cada empujón a `release/**`, y deja constancia de la versión usada. No
+necesita ningún secreto. Mira el resultado en la pestaña *Actions* del
+repositorio antes de autorizar el lanzamiento:
+
+```bash
+gh run list --branch release/xibalba-2026
+gh run watch
+```
 
 ## 2. Firebase (consola, una sola vez)
 
@@ -86,14 +98,46 @@ Es el destino natural: hay rutas de API con runtime Node (`node:crypto`, y el
 adaptador WHOIS previsto necesitaría sockets TCP), así que un hosting
 exclusivamente estático no sirve.
 
+Hay dos caminos. **El de la integración con Git es el recomendado**: cada
+empujón a `release/xibalba-2026` genera una vista previa propia, y es lo que
+conviene enseñar a un jurado.
+
+**A. Integración con GitHub (recomendado, desde el panel)**
+
+1. *Add New… → Project → Import Git Repository* y elige
+   `dyann1984/XIBALBA-FIREBASE-2026`. La primera vez Vercel pide instalar su
+   aplicación de GitHub: es un consentimiento tuyo, no puede hacerse por línea
+   de órdenes.
+2. Framework: **Next.js** (ya lo declara `vercel.json`). No cambies los comandos.
+3. *Settings → Git → Production Branch*: **`release/xibalba-2026`**.
+4. *Settings → Environment Variables*: las de la tabla anterior, **sin** las dos
+   de depuración.
+5. El primer despliegue arranca solo. Será de **vista previa** mientras no
+   promuevas nada a producción.
+
+**B. Línea de órdenes (despliega el directorio local, no la rama)**
+
 ```bash
-npm install -g vercel
-vercel login
 vercel link          # crea o enlaza el proyecto
 vercel env pull      # comprueba que las variables llegaron
 vercel               # despliegue de vista previa
 vercel --prod        # producción, solo con autorización
 ```
+
+Ojo con la diferencia: `vercel` sube **lo que haya en el disco**, no lo que esté
+en GitHub. Para que la vista previa corresponda al commit publicado, usa el
+camino A o comprueba antes que el árbol de trabajo está limpio.
+
+La CLI ya está instalada (64.2.0) y la sesión autenticada como `dyann1984`. El
+proyecto **no está enlazado** todavía: no existe `.vercel/` y no se ha creado
+ningún proyecto.
+
+**Sobre las variables y la vista previa:** un build sin las
+`NEXT_PUBLIC_FIREBASE_*` compila igual. Nada las lee durante la compilación
+—`lib/firebase.ts` solo construye los servicios cuando alguien los pide, ya en
+el navegador—, así que la vista previa funcionará con la auditoría determinista
+completa y mostrará «IA · SIN CONFIGURAR». Es honesto para una demostración, y
+es además el único estado posible mientras no exista la clave de App Check.
 
 [`vercel.json`](../vercel.json) deja fijados el framework y los comandos de
 instalación y build. Las cabeceras de seguridad no se configuran ahí: las emite
@@ -122,25 +166,39 @@ decidirlo a conciencia y documentar el coste.
 
 ## 6. GitHub
 
-El repositorio es local y **no tiene remoto**. La rama que se despliega es
-`release/xibalba-2026`: la integración de `finalizacion-mvp` (Claude) y
-`codex/finalizacion-xibalba` (Codex), descrita en
-[`integracion-release-2026.md`](integracion-release-2026.md). Para publicarlo:
+**Hecho.** El repositorio existe, es **privado** y contiene la rama de
+integración:
+
+| | |
+|---|---|
+| Repositorio | [`dyann1984/XIBALBA-FIREBASE-2026`](https://github.com/dyann1984/XIBALBA-FIREBASE-2026) |
+| Visibilidad | **privado** |
+| Rama por omisión | `release/xibalba-2026` |
+| Commit publicado | `fb3f123` |
+| Remoto local | `origin` |
+
+Se publicó **solo** esa rama. `master`, `finalizacion-mvp` y
+`codex/finalizacion-xibalba` siguen únicamente en local y sin tocar. Sus
+commits sí están en GitHub —son antepasados del commit de integración—, de modo
+que el historial completo es comprobable; lo que falta en el remoto son las
+referencias de rama. Si quieres que los jueces las vean por nombre:
 
 ```bash
-git remote add origin https://github.com/<usuario>/<repositorio>.git
-git push -u origin master
-git push origin release/xibalba-2026
-git push origin finalizacion-mvp codex/finalizacion-xibalba
+git push origin master finalizacion-mvp codex/finalizacion-xibalba
 ```
 
-Las dos ramas de origen se publican también a propósito: son los padres del
-commit de integración y dejan el historial comprobable para los jueces.
+Antes de publicar se auditaron los 14 commits de la ascendencia de `fb3f123`:
 
-En Vercel, apunta el proyecto a `release/xibalba-2026` como *Production Branch*
-(*Settings → Git*), o enlázalo desde esa rama con `vercel link`. Si se deja
-`master`, el despliegue serviría la fase 5 sin ninguna de las dos
-finalizaciones.
+- `.env.local` **nunca** se versionó;
+- ningún fichero `.env*` salvo `.env.example`, y ahí todos los valores están
+  vacíos;
+- sin coincidencias de claves de Google (`AIza…`), claves de sitio de
+  reCAPTCHA (`6L…`), tokens de GitHub, claves privadas PEM ni ficheros de
+  cuenta de servicio.
+
+**Antes de hacerlo público** queda una cosa pendiente, que no afecta a un
+repositorio privado: `public/xibalba-logo.jpg` no está cubierto por la licencia
+MIT del código. Decide su licencia o retíralo del repositorio público.
 
 Antes de publicar, comprueba que `.env.local` no está en el historial:
 

@@ -47,9 +47,9 @@ export const agents: Agent[] = [
     icon: "wallet",
     color: "gold",
     works:
-      "Verifica con aritmética el dígito de control de una CLABE de 18 dígitos y la suma de Luhn de una tarjeta, identifica la institución emisora de la CLABE y detecta direcciones de criptomoneda. Añade 10 señales financieras: depósito a un tercero, pago irreversible, presión para transferir, rendimientos imposibles, esquemas de referidos, crédito con anticipo y petición de datos bancarios completos. Los números no se guardan completos: se muestran enmascarados.",
+      "Verifica con aritmética el dígito de control de una CLABE de 18 dígitos y la suma de Luhn de una tarjeta, nombra la institución a la que corresponde el código de la CLABE, avisa cuando la cuenta no pertenece al banco que nombra el mensaje y detecta direcciones de criptomoneda. Añade 10 señales financieras: depósito a un tercero, pago irreversible, presión para transferir, rendimientos imposibles, esquemas de referidos, crédito con anticipo y petición de datos bancarios completos. Los números no se guardan completos: se muestran enmascarados.",
     pending:
-      "Un número matemáticamente válido no demuestra que la cuenta sea legítima, segura ni de quien dice ser. No puede comprobar a quién pertenece una cuenta, si un pago se recibió, ni si una empresa está registrada ante la CNBV o la CONDUSEF. No se conecta a ninguna cuenta bancaria.",
+      "Un número matemáticamente válido no demuestra que la cuenta sea legítima, segura ni de quien dice ser. El nombre de la institución sale de una tabla incorporada, no de una consulta a Banco de México, y es un subconjunto: un código que no esté en ella se declara no identificado. No puede comprobar a quién pertenece una cuenta, si un pago se recibió, ni si una empresa está registrada ante la CNBV o la CONDUSEF. No se conecta a ninguna cuenta bancaria.",
   },
   {
     id: "hun",

@@ -33,6 +33,7 @@ import {
   auditUrl,
   extractUrls,
   mergeAudits,
+  FINANCE_ARITHMETIC_CHECKS,
   URL_LOCAL_CHECKS,
   type ImageFacts,
 } from './audit.ts';
@@ -308,7 +309,7 @@ export function auditCoordinated(
   let checksRun = 0;
   if (ran.general) checksRun += contentPatterns.length + 1;
   if (ran.voz) checksRun += voicePatterns.length;
-  if (ran.financiero) checksRun += financePatterns.length + 4;
+  if (ran.financiero) checksRun += financePatterns.length + FINANCE_ARITHMETIC_CHECKS;
   if (ran.url) checksRun += URL_LOCAL_CHECKS;
   if (request.audio) checksRun += 2;
   if (request.images?.length) checksRun += request.images.length + 2;

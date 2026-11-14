@@ -1,0 +1,84 @@
+import type { NextConfig } from "next";
+
+// Cabeceras de seguridad HTTP.
+//
+// ALCANCE HONESTO DE ESTA CSP
+// ---------------------------
+// Es una CSP **de refuerzo**, no estricta. `script-src` conserva
+// `'unsafe-inline'` porque Next.js inyecta scripts en línea para hidratar la
+// página; una CSP estricta exige un nonce por petición, lo que requiere un
+// middleware que aún no existe. Está anotado como pendiente en
+// `docs/pendientes-hackathon.md`. Lo que sí aporta hoy:
+//   · `connect-src` limita a qué servidores puede hablar la página: Firebase y
+//     nada más. Un script inyectado no podría enviar el contenido analizado a
+//     un servidor cualquiera.
+//   · `frame-ancestors`, `object-src` y `base-uri` cierran el secuestro por
+//     incrustación, por complementos y por reescritura de URLs relativas.
+//   · `form-action 'self'` impide que un formulario envíe datos fuera.
+//
+// `Permissions-Policy` no es decorativa: la interfaz afirma que no se usa el
+// micrófono ni se graban llamadas, y esta cabecera lo hace cumplir desde el
+// navegador, no solo desde el código. La cámara sí se permite —y solo a esta
+// misma página—, porque adjuntar una foto de un mensaje es una función real de
+// `components/ImageAttachments.tsx`; el micrófono queda cerrado del todo.
+
+const development = process.env.NODE_ENV === "development";
+
+/** Orígenes de Firebase que el SDK necesita de verdad. */
+const FIREBASE_ENDPOINTS = [
+  "https://firebaseappcheck.googleapis.com",
+  "https://firebasevertexai.googleapis.com",
+  "https://generativelanguage.googleapis.com",
+  "https://firestore.googleapis.com",
+  "https://firebaseinstallations.googleapis.com",
+  "https://identitytoolkit.googleapis.com",
+  "https://securetoken.googleapis.com",
+  "https://www.googleapis.com",
+];
+
+const csp = [
+  "default-src 'self'",
+  // El nonce es el pendiente conocido; ver la nota de arriba.
+  `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ""} https://www.google.com https://www.gstatic.com`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  // `blob:` es para las vistas previas de imagen y audio que la persona adjunta
+  // y que nunca salen del dispositivo.
+  "img-src 'self' data: blob: https://www.google.com https://www.gstatic.com",
+  "media-src 'self' blob:",
+  `connect-src 'self' ${FIREBASE_ENDPOINTS.join(" ")}`,
+  // reCAPTCHA Enterprise, proveedor de App Check.
+  "frame-src https://www.google.com https://recaptcha.google.com",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(development ? [] : ["upgrade-insecure-requests"]),
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: csp },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "no-referrer" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()",
+  },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // HSTS solo fuera de desarrollo: en http://localhost el navegador la ignora,
+  // y anunciarla en local no aporta nada.
+  ...(development
+    ? []
+    : [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]),
+];
+
+const nextConfig: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
+};
+
+export default nextConfig;

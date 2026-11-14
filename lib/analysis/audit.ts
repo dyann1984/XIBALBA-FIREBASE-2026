@@ -3,6 +3,12 @@ import { contentPatterns, normalizeWithMap, quoteFragment, type ContentPattern }
 import { voicePatterns } from './voice.ts';
 import { financePatterns } from './finance-patterns.ts';
 import { findFinancialIdentifiers } from './finance.ts';
+import {
+  CATALOGUE_NOTE,
+  describeInstitution,
+  institutionMismatch,
+  institutionName,
+} from './clabe-institutions.ts';
 import { describeTranscription, type PreparedAudio, type Transcription } from './audio.ts';
 import type {
   Audit,
@@ -210,6 +216,14 @@ function builder(checkedAt: string): Builder {
 
 /** Comprobaciones locales que `auditUrl` ejecuta siempre, hallen o no señales. */
 export const URL_LOCAL_CHECKS = 18;
+
+/**
+ * Comprobaciones aritméticas y de catálogo que `auditFinancial` ejecuta además
+ * de los dos catálogos de patrones: dígito verificador de CLABE, Luhn, forma de
+ * monedero, enlaces incrustados e institución emisora. El coordinador usa esta
+ * misma constante para no contar la cobertura dos veces.
+ */
+export const FINANCE_ARITHMETIC_CHECKS = 5;
 
 export function auditUrl(input: string, now = new Date()): Audit {
   const checkedAt = now.toISOString();
@@ -1071,12 +1085,38 @@ export function auditFinancial(input: string, now = new Date()): Audit {
       classification: 'determinista',
       status: 'verificado',
       severity: 'informativo',
-      evidence: `Se detectó ${found.validClabes.length} CLABE(s) cuyo dígito verificador cuadra: ${found.validClabes.join(', ')}. Institución(es) según el código: ${found.institutions.join(', ')}.`,
-      source: mathSource,
+      evidence: `Se detectó ${found.validClabes.length} CLABE(s) cuyo dígito verificador cuadra: ${found.validClabes.join(', ')}. Institución(es) según el código: ${found.institutions
+        .map((code) => describeInstitution(code))
+        .join('; ')}.`,
+      source: `${mathSource} y catálogo de instituciones incorporado`,
       recommendation:
         'Dato de contexto: no lo tomes como prueba de que la cuenta sea legítima ni de que pertenezca a quien dice el mensaje.',
-      limitation:
-        'Que el verificador cuadre solo significa que el número está bien formado. La cuenta de un estafador también lo cumple, y esta comprobación no dice de quién es la cuenta ni en qué banco está, porque el catálogo de instituciones no se ha incorporado.',
+      limitation: `Que el verificador cuadre solo significa que el número está bien formado. La cuenta de un estafador también lo cumple. ${CATALOGUE_NOTE}`,
+    });
+  }
+
+  // Discrepancia entre la institución nombrada en el texto y la institución a
+  // la que pertenece la cuenta dictada. Es un hecho comprobable, no una
+  // interpretación: «tu cuenta Santander» con una CLABE que empieza en 127 no
+  // es una cuenta de Santander. No prueba fraude, así que se emite como medio.
+  const mismatch = institutionMismatch(input, found.institutions);
+  if (mismatch) {
+    build.add({
+      id: 'clabe-institucion-discrepante',
+      indicator: 'La cuenta no pertenece al banco que nombra el mensaje',
+      category: 'financiero',
+      classification: 'determinista',
+      status: 'sospechoso',
+      severity: 'medio',
+      evidence: `El texto nombra a ${mismatch.mentioned
+        .map((code) => institutionName(code))
+        .join(', ')}, pero la CLABE indicada corresponde a ${mismatch.fromClabe
+        .map((code) => describeInstitution(code))
+        .join('; ')}.`,
+      source: 'Comparación en el dispositivo entre el texto y el código de la CLABE',
+      recommendation:
+        'Un cobro «de tu banco» que se paga a una cuenta de otra institución merece una llamada al número oficial de tu tarjeta antes de transferir.',
+      limitation: `No es prueba de fraude: una persona o un negocio puede pedir el depósito en otro banco con toda legitimidad. ${CATALOGUE_NOTE}`,
     });
   }
 
@@ -1176,7 +1216,7 @@ export function auditFinancial(input: string, now = new Date()): Audit {
     ? ['titularidad de la cuenta o del medio de pago', 'recepción real del pago']
     : [];
 
-  const checks = contentPatterns.length + financePatterns.length + 4;
+  const checks = contentPatterns.length + financePatterns.length + FINANCE_ARITHMETIC_CHECKS;
   return {
     subject: 'financiero',
     indicators: build.indicators,

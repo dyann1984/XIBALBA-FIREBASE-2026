@@ -94,7 +94,7 @@ historial vacío (borra el historial si quedó de una prueba anterior).
 >
 > «Next.js 15 y React 19, inferencia híbrida con Firebase AI Logic —local
 > primero, nube como respaldo—, App Check verificado de verdad en el servidor
-> contra el JWKS de Firebase, y ciento sesenta y seis pruebas automatizadas.
+> contra el JWKS de Firebase, y más de ciento sesenta pruebas automatizadas.
 >
 > XIBALBÁ no te dice que estás a salvo. Te dice qué encontró, qué no pudo
 > comprobar, y te deja decidir con eso en la mano.»

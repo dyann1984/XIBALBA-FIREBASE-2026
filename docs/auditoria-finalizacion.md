@@ -10,7 +10,7 @@ Ejecutado en este equipo, en este orden:
 | Comprobación | Resultado real |
 |---|---|
 | `npm run typecheck` | Sin errores |
-| `npm test` | `# tests 142 · # pass 142 · # fail 0` |
+| `npm test` | `# tests 142 · # pass 142 · # fail 0` (tras esta fase: 162 en esta rama, 166 con la rama paralela) |
 | `npm run build` | `✓ Compiled successfully`, 6 rutas generadas |
 
 Entorno medido: Node **v22.23.4**, npm 10.9.9, Windows 11.

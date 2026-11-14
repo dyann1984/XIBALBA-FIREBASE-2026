@@ -14,6 +14,15 @@ terminal.
 # fail 0
 ```
 
+> **Qué rama aporta qué.** Esa ejecución se hizo sobre el árbol de trabajo tal
+> como está, que contiene también el trabajo de una sesión paralela
+> (`codex/finalizacion-xibalba`, commit `bb49ea6`: lectura limitada del cuerpo
+> HTTP y mensajes de error del proveedor que ya no se reenvían al cliente). La
+> rama `finalizacion-mvp` aporta **162** de esas 166; las otras **4** son
+> `tests/limited-body.test.mjs`, de la rama paralela. Las dos ramas no tocan los
+> mismos ficheros y pasan juntas; decidir si se fusionan es una decisión
+> pendiente, anotada en `docs/pendientes-hackathon.md`.
+
 Desglose medido fichero a fichero:
 
 | Fichero | Pruebas |
@@ -24,10 +33,10 @@ Desglose medido fichero a fichero:
 | `tests/security.test.mjs` | 21 |
 | `tests/finalizacion.test.mjs` | **20 (nuevas)** |
 | `tests/audit.test.mjs` | 4 |
-| `tests/limited-body.test.mjs` | 4 |
+| `tests/limited-body.test.mjs` | 4 (rama paralela) |
 | `tests/phase1.test.mjs` | 4 |
 
-Las 146 anteriores siguen en verde: el catálogo de instituciones y el cambio de
+Las 142 anteriores siguen en verde: el catálogo de instituciones y el cambio de
 cobertura de VUCUB CAMÉ no rompieron ninguna.
 
 ### Qué cubren las 20 nuevas

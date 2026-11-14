@@ -31,6 +31,7 @@ desplegar.
 | Remoto de GitHub configurado | **No hay remoto.** Comandos en `docs/despliegue.md`, sección 6 |
 | Comprobar que `.env.local` no está en el historial de Git | Pendiente de ejecutar; `.gitignore` ya lo cubre |
 | Decidir qué rama se publica (`master`, `finalizacion-mvp`) | Pendiente |
+| Decidir si se fusiona la rama paralela `codex/finalizacion-xibalba` | **Pendiente.** Otra sesión trabajó en esta misma carpeta y dejó el commit `bb49ea6` (lectura limitada del cuerpo HTTP y errores del proveedor que ya no se reenvían al cliente). No toca los mismos ficheros que `finalizacion-mvp` y las dos pasan juntas, pero la fusión es decisión tuya |
 | Revisar que el logo puede acompañar al código en el repositorio público | Pendiente: el logo **no** está bajo la licencia MIT del código |
 
 ## 3. Verificaciones de contenido antes de presentar
@@ -86,7 +87,8 @@ No son pendientes: son decisiones.
 
 ## 6. Comprobación final, el día de la presentación
 
-- [ ] `npm run typecheck`, `npm test` (166) y `npm run build` en verde.
+- [ ] `npm run typecheck`, `npm test` y `npm run build` en verde (162 pruebas en
+      `finalizacion-mvp`; 166 si se fusiona la rama paralela).
 - [ ] `npm run dev` levanta y el caso de demostración de la llamada da **rojo**
       con 8 señales.
 - [ ] El caso de control da **gris**.

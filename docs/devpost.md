@@ -95,7 +95,7 @@ depósito en otro banco.
 
 ## Logros
 
-- **166 pruebas automatizadas** en verde, incluidas pruebas de privacidad, de
+- **162 pruebas automatizadas** en verde, incluidas pruebas de privacidad, de
   integridad del semáforo y un **control negativo** que comprueba que el verde
   sigue siendo alcanzable.
 - La aplicación es **útil sin conexión y sin configurar Firebase**: la auditoría

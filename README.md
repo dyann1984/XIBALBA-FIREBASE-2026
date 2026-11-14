@@ -60,7 +60,7 @@ El guion de la demostración está en [`docs/guion-video.md`](docs/guion-video.m
 | `lib/security/` | Verificación real de los tokens de Firebase App Check |
 | `lib/history.ts` | Historial local: guarda el resultado, nunca el contenido |
 | `data/` | Catálogo RDAP y casos de demostración |
-| `tests/` | 166 pruebas con `node --test` |
+| `tests/` | 162 pruebas con `node --test` |
 
 Los cinco agentes —CAMAZOTZ (llamadas), IXBALANQUÉ (mensajes), VUCUB CAMÉ
 (dinero), HUN CAMÉ (enlaces) y EL GUARDIÁN (coordinación)— están descritos con

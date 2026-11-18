@@ -1,5 +1,7 @@
 node_modules/
 .next/
+.next-phase2/
+test-results/
 .env*
 !.env.example
 *.tsbuildinfo

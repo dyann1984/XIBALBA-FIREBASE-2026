@@ -1,0 +1,72 @@
+# Verificación en Node 24, que es la versión que el proyecto exige.
+#
+# Existe por un motivo concreto: el equipo donde se desarrolló XIBALBÁ tiene
+# Node 22.23.4, mientras `engines` declara 24.x, así que todo se verificó en una
+# versión distinta de la que se despliega. Subir el Node local es un cambio del
+# entorno global; esto cierra el hueco sin tocarlo.
+#
+# No necesita ningún secreto. Las variables `NEXT_PUBLIC_FIREBASE_*` se
+# incrustan en el build, pero nada las lee durante la compilación:
+# `lib/firebase.ts` solo construye los servicios cuando alguien los pide, en el
+# navegador. Un build sin ellas compila igual y, al ejecutarse, muestra
+# «IA · SIN CONFIGURAR» y corre la auditoría local. Por eso el artefacto que
+# produce este flujo sirve para comprobar que compila, no para desplegar.
+
+name: Verificación (Node 24)
+
+on:
+  push:
+    branches:
+      - 'release/**'
+      - master
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verificacion:
+    name: typecheck · pruebas · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          cache: npm
+
+      - name: Dejar constancia de la versión usada
+        run: |
+          node -v
+          npm -v
+
+      - name: Instalar dependencias exactas del lock
+        run: npm ci
+
+      - name: Comprobación de tipos
+        run: npm run typecheck
+
+      - name: Pruebas
+        # 175 pruebas. El comando no lleva `--experimental-strip-types`: desde
+        # Node 22.18 la eliminación de tipos está activada por omisión.
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
+
+      - name: Avisos de dependencias (informativo, no bloquea)
+        # Los 4 avisos altos conocidos están en la cadena @grpc/grpc-js, que
+        # describe el comportamiento de un servidor gRPC que este proyecto no
+        # ejecuta. Analizados en docs/seguridad-dependencias.md. Si aparece algo
+        # nuevo, se ve aquí sin detener la verificación.
+        run: npm audit --omit=dev || true

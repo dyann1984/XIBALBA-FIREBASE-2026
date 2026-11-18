@@ -6,8 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "firebase": "^13.3.0",
@@ -15,6 +17,7 @@
     "next": "^15.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tesseract.js": "^6.0.1",
     "three": "0.187.0",
     "tldts": "^7.5.2"
   },
@@ -23,13 +26,17 @@
     "postcss": "^8.5.32"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "0.187.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.6",
     "typescript": "^5.7.0"
   },
+  "enginesComment": "24.x, no >=24.12.0: Vercel resuelve un rango al major más nuevo que soporta, y hoy ya ofrece 26.x. Un rango abierto haría que el despliegue cambiara de runtime sin que nadie tocara el repositorio. Ver docs/node-dependencias.md.",
   "engines": {
-    "node": ">=24.12.0"
+    "node": "24.x"
   }
 }

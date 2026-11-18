@@ -1,0 +1,54 @@
+{
+  "note": "Casos de demostración para presentar XIBALBÁ sin usar información de ninguna persona real. Todo es inventado: las CLABE se construyeron con el dígito verificador correcto a partir de dígitos de relleno (ninguna corresponde a una cuenta existente), la tarjeta es el número de prueba público 4111 1111 1111 1111, los dominios usan example.com —reservado por la IANA para documentación— y los teléfonos usan el rango 555 de ejemplo. No pegues aquí mensajes reales recibidos por nadie.",
+  "revisado": "2026-11-14",
+  "cases": [
+    {
+      "id": "sms-banco",
+      "title": "SMS de «tu banco» con enlace falso",
+      "kind": "message",
+      "agent": "IXBALANQUÉ · HUN CAMÉ",
+      "expect": "Rojo, confianza alta (5 señales, puntuación 132). Urgencia con plazo, amenaza de bloqueo de la cuenta, un host que invoca la marca sobre un dominio registrable que no le pertenece, una ruta que pide credenciales y un host ofuscado.",
+      "text": "BBVA le informa: detectamos un cargo no reconocido por $8,450.00 en su cuenta. Si usted no reconoce esta operación debe validar su identidad en las próximas 2 horas o su cuenta será bloqueada de forma permanente. Valide aquí: https://bbva-mx.validacion-de-cuenta.example.com/acceso"
+    },
+    {
+      "id": "enlace-tienda",
+      "title": "Enlace de una «tienda oficial»",
+      "kind": "url",
+      "agent": "HUN CAMÉ",
+      "expect": "Rojo, confianza media (1 señal alta, puntuación 45). El subdominio invoca una marca conocida y el dominio registrable es otro. Nada se abre ni se visita.",
+      "text": "https://mercadopago-pagos.seguro-checkout.example.com/pago?id=48219"
+    },
+    {
+      "id": "llamada-secuestro",
+      "title": "Llamada: «no cuelgue» y una cuenta dictada",
+      "kind": "transcripcion",
+      "agent": "CAMAZOTZ · VUCUB CAMÉ",
+      "expect": "Rojo, confianza alta (8 señales, puntuación 362). Dos señales críticas —«no cuelgue» y familiar retenido—, suplantación de institución, cuenta dictada por teléfono, petición de datos bancarios, presión para transferir, urgencia y la discrepancia de institución: la llamada dice «Santander» y la CLABE corresponde a Banco Azteca.",
+      "text": "Buenas tardes, le hablo del departamento de seguridad de Santander. Escúcheme bien y no cuelgue la llamada, tampoco avise a nadie de su familia porque estamos monitoreando su línea. Tenemos retenido a su hijo y necesitamos resolver esto en este momento. Para liberar la protección de su cuenta deposite ahora mismo a esta CLABE: 127000000000000006. No tiene tiempo de ir a la sucursal, hágalo desde su aplicación."
+    },
+    {
+      "id": "inversion-garantizada",
+      "title": "Inversión con rendimiento «garantizado»",
+      "kind": "financiero",
+      "agent": "VUCUB CAMÉ",
+      "expect": "Rojo, confianza alta (4 señales, puntuación 126). Rendimiento garantizado imposible, urgencia con cierre esta noche, petición de datos bancarios y presión para transferir. La CLABE es válida y se identifica a Citibanamex, lo que no reduce el riesgo.",
+      "text": "¡Última oportunidad! Invierte $5,000 y recibe $15,000 garantizados en 48 horas, sin riesgo. Deposita hoy mismo a la CLABE 002123456789012343 a nombre de nuestro asesor y envía tu comprobante por WhatsApp. Si invitas a 3 amigos duplicamos tu rendimiento. Los lugares se cierran esta noche."
+    },
+    {
+      "id": "empleo-falso",
+      "title": "Vacante que pide pagar primero",
+      "kind": "message",
+      "agent": "IXBALANQUÉ · VUCUB CAMÉ",
+      "expect": "Rojo, confianza media (1 señal alta, puntuación 45): oferta de empleo con sueldo desproporcionado, sin experiencia ni entrevista y con un cobro para empezar. Con una sola señal la confianza baja a media, y así se muestra.",
+      "text": "VACANTE HOME OFFICE. Gana $9,000 pesos semanales trabajando 2 horas al día desde tu casa, sin experiencia y sin entrevista. Solo necesitas cubrir $350 por tu kit de capacitación antes de ser dado de alta. Escribe al 55 5555 0101 y empieza hoy."
+    },
+    {
+      "id": "mensaje-legitimo",
+      "title": "Control: un mensaje normal",
+      "kind": "message",
+      "agent": "IXBALANQUÉ",
+      "expect": "Gris sin IA, verde con interpretación de IA. Sirve para demostrar que la herramienta no pinta de rojo todo lo que recibe: cuando no hay señales, lo dice.",
+      "text": "Hola, confirmo nuestra cita del jueves a las 10 en la sucursal del centro. Llevo los documentos que me pediste. Nos vemos ahí."
+    }
+  ]
+}

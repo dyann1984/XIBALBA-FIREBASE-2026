@@ -33,6 +33,7 @@ import {
   auditUrl,
   extractUrls,
   mergeAudits,
+  FINANCE_ARITHMETIC_CHECKS,
   URL_LOCAL_CHECKS,
   type ImageFacts,
 } from './audit.ts';
@@ -40,6 +41,7 @@ import { contentPatterns } from './patterns.ts';
 import { voicePatterns } from './voice.ts';
 import { financePatterns } from './finance-patterns.ts';
 import { findFinancialIdentifiers } from './finance.ts';
+import { auditPhones } from './phone.ts';
 import type { PreparedAudio, Transcription } from './audio.ts';
 import { TRANSCRIPTION_PENDING } from './audio.ts';
 
@@ -142,6 +144,8 @@ export function selectAgents(input: {
     add('ixbalanque', 'Hay texto que analizar con el catálogo general.');
   }
 
+  if (input.hasImages) add('vucub', 'Revisa los metadatos de las imágenes adjuntas.');
+
   // 6. EL GUARDIÁN siempre coordina y explica.
   add('guardian', 'Coordina a los agentes y explica el resultado.');
 
@@ -200,6 +204,16 @@ export type CoordinatedRequest = {
   images?: ImageFacts[];
   audio?: Pick<PreparedAudio, 'name' | 'mimeType' | 'size' | 'durationSeconds'> | null;
   transcription?: Transcription;
+  onEvent?: (event: AgentEvent) => void;
+};
+
+/** Eventos de trabajo real, sin contenido de entrada ni excepciones internas. */
+export type AgentEvent = {
+  agent: AgentId;
+  phase: 'queued' | 'started' | 'completed' | 'error';
+  task: string;
+  elapsedMs?: number;
+  findings?: number;
 };
 
 export type CoordinatedAudit = {
@@ -209,6 +223,7 @@ export type CoordinatedAudit = {
   attributed: AttributedIndicator[];
   /** Agentes que efectivamente aportaron alguna evidencia. */
   contributing: AgentId[];
+  executed: AgentId[];
 };
 
 /**
@@ -222,6 +237,10 @@ export function auditCoordinated(
   request: CoordinatedRequest,
   now = new Date(),
 ): CoordinatedAudit {
+  const clock = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const emit = (event: AgentEvent) => { try { request.onEvent?.(event); } catch { /* La telemetría no altera el análisis. */ } };
+  const guardianStart = clock();
+  emit({ agent: 'guardian', phase: 'started', task: 'coordinación' });
   const text = request.text ?? '';
   const selection = selectAgents({
     kind: request.kind,
@@ -229,15 +248,33 @@ export function auditCoordinated(
     hasImages: Boolean(request.images?.length),
     hasAudio: Boolean(request.audio),
   });
+  // EL GUARDIÁN ya anunció su propio inicio; el resto queda en cola en el
+  // orden real en que se eligió, antes de que ninguno ejecute su catálogo.
+  for (const agent of selection.agents) {
+    if (agent === 'guardian') continue;
+    emit({ agent, phase: 'queued', task: 'en cola' });
+  }
 
   const parts: { agent: AgentId; audit: Audit }[] = [];
+  const run = (agent: AgentId, task: string, work: () => Audit) => {
+    const start = clock();
+    emit({ agent, phase: 'started', task });
+    try {
+      const audit = work();
+      parts.push({ agent, audit });
+      emit({ agent, phase: 'completed', task, elapsedMs: clock() - start, findings: audit.indicators.length });
+    } catch (error) {
+      emit({ agent, phase: 'error', task, elapsedMs: clock() - start });
+      throw error;
+    }
+  };
   // Qué catálogos se recorrieron de verdad, para contar la cobertura una sola
   // vez. Sumar las coberturas de cada parte inflaría el número: el catálogo
   // general lo recorren tanto CAMAZOTZ como VUCUB CAMÉ.
   const ran = { general: false, voz: false, financiero: false, url: false };
 
   if (request.kind === 'url') {
-    parts.push({ agent: 'hun', audit: auditUrl(text, now) });
+    run('hun', 'URL', () => auditUrl(text, now));
     ran.url = true;
   } else if (text.trim()) {
     // Cada agente seleccionado ejecuta su propio catálogo, en el orden en que
@@ -251,34 +288,57 @@ export function auditCoordinated(
     // cobertura se cuenta una sola vez, de modo que no puntúan dos veces.
     for (const agent of selection.agents) {
       if (agent === 'camazotz') {
-        parts.push({ agent, audit: auditTranscript(text, now) });
+        run(agent, 'voz y texto', () => auditTranscript(text, now));
         ran.general = true;
         ran.voz = true;
       } else if (agent === 'vucub') {
-        parts.push({ agent, audit: auditFinancial(text, now) });
+        run(agent, 'finanzas y texto', () => auditFinancial(text, now));
         ran.general = true;
         ran.financiero = true;
       } else if (agent === 'ixbalanque') {
-        parts.push({ agent, audit: auditMessage(text, now) });
+        run(agent, 'mensaje', () => auditMessage(text, now));
         ran.general = true;
         // Las comprobaciones de URL solo se ejecutaron si había algún enlace.
         if (extractUrls(text).length) ran.url = true;
       } else if (agent === 'hun') {
-        parts.push({ agent, audit: auditTextLinks(text, now) });
+        run(agent, 'enlaces', () => auditTextLinks(text, now));
         if (extractUrls(text).length) ran.url = true;
       }
     }
   }
 
   if (request.audio) {
-    parts.push({
-      agent: 'camazotz',
-      audit: auditAudio(request.audio, request.transcription ?? TRANSCRIPTION_PENDING, now),
-    });
+    const audio = request.audio;
+    run('camazotz', 'archivo de audio', () => auditAudio(audio, request.transcription ?? TRANSCRIPTION_PENDING, now));
   }
 
   if (request.images?.length) {
-    parts.push({ agent: 'vucub', audit: auditImages(request.images, now) });
+    const images = request.images;
+    run('vucub', 'metadatos de imagen', () => auditImages(images, now));
+  }
+
+  if (request.kind !== 'url' && text.trim()) {
+    const phoneAgent: AgentId = selection.agents.includes('camazotz') ? 'camazotz' : 'ixbalanque';
+    const phoneStart = clock();
+    emit({ agent: phoneAgent, phase: 'started', task: 'teléfonos' });
+    const phoneAudit = auditPhones(text, now);
+    emit({ agent: phoneAgent, phase: 'completed', task: 'teléfonos', elapsedMs: clock() - phoneStart, findings: phoneAudit.indicators.length });
+    if (phoneAudit.indicators.length) {
+      parts.push({
+        agent: phoneAgent,
+        audit: {
+          subject: 'mensaje',
+          indicators: phoneAudit.indicators,
+          coverage: {
+            label: 'Análisis telefónico local.',
+            checksRun: 4,
+            checksTotal: 5,
+            pendingExternal: ['reputación y titularidad de línea telefónica'],
+          },
+          limitation: 'No se consultó ninguna base externa de reputación telefónica.',
+        },
+      });
+    }
   }
 
   if (!parts.length) {
@@ -293,7 +353,8 @@ export function auditCoordinated(
       },
       limitation: 'No se recibió contenido que auditar.',
     };
-    return { audit: empty, selection, attributed: [], contributing: [] };
+    emit({ agent: 'guardian', phase: 'completed', task: 'coordinación', elapsedMs: clock() - guardianStart, findings: 0 });
+    return { audit: empty, selection, attributed: [], contributing: [], executed: ['guardian'] };
   }
 
   const attributed = dedupeIndicators(
@@ -308,7 +369,7 @@ export function auditCoordinated(
   let checksRun = 0;
   if (ran.general) checksRun += contentPatterns.length + 1;
   if (ran.voz) checksRun += voicePatterns.length;
-  if (ran.financiero) checksRun += financePatterns.length + 4;
+  if (ran.financiero) checksRun += financePatterns.length + FINANCE_ARITHMETIC_CHECKS;
   if (ran.url) checksRun += URL_LOCAL_CHECKS;
   if (request.audio) checksRun += 2;
   if (request.images?.length) checksRun += request.images.length + 2;
@@ -325,5 +386,6 @@ export function auditCoordinated(
 
   const contributing = [...new Set(attributed.flatMap((item) => item.agents))];
 
-  return { audit, selection, attributed, contributing };
+  emit({ agent: 'guardian', phase: 'completed', task: 'coordinación', elapsedMs: clock() - guardianStart, findings: attributed.length });
+  return { audit, selection, attributed, contributing, executed: [...new Set<AgentId>([...parts.map(part => part.agent), 'guardian'])] };
 }

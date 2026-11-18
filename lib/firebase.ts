@@ -62,6 +62,10 @@ export async function diagnoseLocalAppCheck(): Promise<string> {
 export async function initializeLocalDebug() { if (localDebugEnabled()) { await prepareLocalDebug(); if (isConfigured()) getServices(); } }
 export async function localAvailability(): Promise<string> {
   const api = (globalThis as typeof globalThis & { LanguageModel?: { availability: () => Promise<string> } }).LanguageModel;
-  if (!api) return "No disponible en este navegador";
-  try { return await api.availability(); } catch { return "No se pudo comprobar"; }
+  // Devuelve una clave, no una frase: la interfaz la traduce al idioma
+  // elegido. Los valores propios del navegador (`available`, `downloadable`,
+  // `downloading`, `unavailable`) se dejan pasar tal cual y también tienen
+  // traducción; cualquier otro se muestra como desconocido.
+  if (!api) return "unsupported";
+  try { return (await api.availability()) || "unknown"; } catch { return "error"; }
 }

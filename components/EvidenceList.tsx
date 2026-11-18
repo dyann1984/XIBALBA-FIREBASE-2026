@@ -3,6 +3,9 @@ import { useState } from "react";
 import type { Audit, AuditIndicator, Severity } from "@/lib/analysis/risk";
 import type { Assessment } from "@/lib/analysis/guardian";
 import { AGENT_NAMES, type AgentId } from "@/lib/analysis/coordinator";
+import { useI18n } from "@/components/LanguageProvider";
+import { localizeIndicator, localizeAuditLimitation, localizePending } from "@/lib/i18n/evidence";
+import { LANG_TAG } from "@/lib/i18n";
 import { ChevronDown } from "lucide-react";
 
 /**
@@ -21,6 +24,26 @@ const SEVERITY_ORDER: Record<Severity, number> = {
   medio: 2,
   bajo: 3,
   informativo: 4,
+};
+
+const STATUS_KEY: Record<string, "statusSospechoso" | "statusVerificado" | "statusNoVerificado" | "statusNoConcluyente" | "statusError"> = {
+  sospechoso: "statusSospechoso",
+  verificado: "statusVerificado",
+  "no verificado": "statusNoVerificado",
+  "no concluyente": "statusNoConcluyente",
+  error: "statusError",
+};
+const SEV_KEY: Record<Severity, "sevCritico" | "sevAlto" | "sevMedio" | "sevBajo" | "sevInformativo"> = {
+  critico: "sevCritico",
+  alto: "sevAlto",
+  medio: "sevMedio",
+  bajo: "sevBajo",
+  informativo: "sevInformativo",
+};
+const AI_RISK_KEY: Record<string, "riskAlto" | "riskMedio" | "riskBajo"> = {
+  alto: "riskAlto",
+  medio: "riskMedio",
+  bajo: "riskBajo",
 };
 
 function byRelevance(a: AuditIndicator, b: AuditIndicator) {
@@ -63,15 +86,25 @@ function Group({
 }
 
 function Indicator({ item }: { item: AuditIndicator }) {
+  const { t, lang } = useI18n();
   const agents = agentsOf(item);
+  // El motor redacta en español. `localizeIndicator` devuelve la versión en el
+  // idioma elegido cuando existe y, si no, el texto original: es preferible una
+  // evidencia en español a una evidencia ausente.
+  const text = localizeIndicator(item, lang);
+  const statusKey = STATUS_KEY[item.status];
   return (
     <article className={`indicator status-${item.status.replace(/\s+/g, "-")} sev-${item.severity}`}>
       <header>
-        <strong>{item.indicator}</strong>
+        <strong>{text.indicator}</strong>
         <span className="chips">
-          <span className={`chip chip-${item.status.replace(/\s+/g, "-")}`}>{item.status}</span>
+          <span className={`chip chip-${item.status.replace(/\s+/g, "-")}`}>
+            {statusKey ? t("evidence", statusKey) : item.status}
+          </span>
           {item.severity !== "informativo" && item.status === "sospechoso" && (
-            <span className={`chip chip-sev-${item.severity}`}>severidad {item.severity}</span>
+            <span className={`chip chip-sev-${item.severity}`}>
+              {t("evidence", "severity", { level: t("evidence", SEV_KEY[item.severity]) })}
+            </span>
           )}
           {agents.map((id) => (
             <span key={id} className="chip chip-agent">
@@ -80,20 +113,20 @@ function Indicator({ item }: { item: AuditIndicator }) {
           ))}
         </span>
       </header>
-      <p className="indicator-evidence">{item.evidence}</p>
+      <p className="indicator-evidence">{text.evidence}</p>
       <dl>
         <div>
-          <dt>Recomendación</dt>
-          <dd>{item.recommendation}</dd>
+          <dt>{t("evidence", "recommendation")}</dt>
+          <dd>{text.recommendation}</dd>
         </div>
         <div>
-          <dt>Limitación</dt>
-          <dd>{item.limitation}</dd>
+          <dt>{t("evidence", "limitation")}</dt>
+          <dd>{text.limitation}</dd>
         </div>
         <div>
-          <dt>Fuente</dt>
+          <dt>{t("evidence", "source")}</dt>
           <dd>
-            {item.source} · {new Date(item.checkedAt).toLocaleString("es-MX")}
+            {text.source} · {new Date(item.checkedAt).toLocaleString(LANG_TAG[lang])}
           </dd>
         </div>
       </dl>
@@ -114,6 +147,7 @@ export default function EvidenceList({
   assessment: Assessment | null;
   aiError: string | null;
 }) {
+  const { t, lang } = useI18n();
   const deterministic = audit.indicators.filter((i) => i.classification === "determinista").sort(byRelevance);
   const external = audit.indicators
     .filter((i) => i.classification === "verificado-externo")
@@ -121,44 +155,46 @@ export default function EvidenceList({
   const pending = audit.indicators.filter((i) => i.classification === "pendiente-externo");
   const failed = audit.indicators.filter((i) => i.classification === "error");
   const aiItems = assessment?.evidence ?? [];
+  // Honestidad del idioma: si alguna evidencia se quedó en español por no tener
+  // traducción exacta, se dice en lugar de disimularlo. En español el aviso
+  // está vacío y no se muestra.
+  const untranslated = t("evidence", "untranslated");
+  const hasUntranslated =
+    Boolean(untranslated) && audit.indicators.some((item) => localizeIndicator(item, lang).fallback);
 
   return (
     <div className="evidence">
       <Group
         letter="A"
-        title="Evidencia determinista verificada"
-        caption="Hechos comprobados en el dispositivo sobre el contenido recibido."
+        title={t("evidence", "aTitle")}
+        caption={t("evidence", "aCaption")}
         count={deterministic.length}
       >
         {deterministic.length ? (
           deterministic.map((item) => <Indicator key={item.id} item={item} />)
         ) : (
-          <p className="evidence-empty">No se ejecutó ninguna comprobación determinista.</p>
+          <p className="evidence-empty">{t("evidence", "aEmpty")}</p>
         )}
       </Group>
 
       {external.length > 0 && (
         <Group
           letter="A′"
-          title="Registros públicos consultados"
-          caption="Hechos obtenidos de DNS y RDAP, con fuente y fecha. No acreditan legitimidad."
+          title={t("evidence", "aPrimeTitle")}
+          caption={t("evidence", "aPrimeCaption")}
           count={external.length}
         >
           {external.map((item) => (
             <Indicator key={item.id} item={item} />
           ))}
-          <p className="evidence-note">
-            Estas consultas se hicieron a registros públicos y resolutores independientes. Nunca se
-            contactó con el sitio analizado. Que un dominio resuelva o tenga años de antigüedad no
-            demuestra que sea seguro.
-          </p>
+          <p className="evidence-note">{t("evidence", "aPrimeNote")}</p>
         </Group>
       )}
 
       <Group
         letter="B"
-        title="Interpretación mediante inteligencia artificial"
-        caption="Lectura del modelo. No verificada y no equivalente a una comprobación."
+        title={t("evidence", "bTitle")}
+        caption={t("evidence", "bCaption")}
         count={aiItems.length}
       >
         {assessment ? (
@@ -169,64 +205,61 @@ export default function EvidenceList({
                 <li key={index}>{item}</li>
               ))}
             </ul>
-            <h4>Recomendaciones del modelo</h4>
+            <h4>{t("evidence", "bRecommendations")}</h4>
             <ul className="plain-list">
               {assessment.recommendations.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
             <p className="evidence-note">
-              El modelo estimó un riesgo {assessment.risk}. Esa estimación no está calibrada y no
-              puede elevarse a hecho comprobado.
+              {t("evidence", "bNote", {
+                level: t("verdict", AI_RISK_KEY[assessment.risk] ?? "riskBajo").toLowerCase(),
+              })}
             </p>
           </>
         ) : (
           <p className="evidence-empty">
-            {aiError
-              ? `No hay interpretación de IA disponible: ${aiError}`
-              : "No se solicitó interpretación de IA para este contenido."}
+            {aiError ? t("evidence", "bError", { error: aiError }) : t("evidence", "bNoAi")}
           </p>
         )}
       </Group>
 
       <Group
         letter="C"
-        title="Pendiente de comprobación externa"
-        caption="Consultas que no se realizaron o que el registro no ofrece. Su ausencia limita la conclusión."
+        title={t("evidence", "cTitle")}
+        caption={t("evidence", "cCaption")}
         count={pending.length + audit.coverage.pendingExternal.length}
         open={false}
       >
         {audit.coverage.pendingExternal.length > 0 && (
           <ul className="plain-list">
             {audit.coverage.pendingExternal.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item}>{localizePending(item, lang)}</li>
             ))}
           </ul>
         )}
         {pending.map((item) => (
           <Indicator key={item.id} item={item} />
         ))}
-        <p className="evidence-note">
-          Lo que aparece aquí no se comprobó. No se inventa ninguno de esos datos: simplemente no
-          están disponibles.
-        </p>
+        <p className="evidence-note">{t("evidence", "cNote")}</p>
       </Group>
 
       {(failed.length > 0 || aiError) && (
         <Group
           letter="D"
-          title="Errores e información no disponible"
-          caption="Comprobaciones que no pudieron ejecutarse."
+          title={t("evidence", "dTitle")}
+          caption={t("evidence", "dCaption")}
           count={failed.length + (aiError ? 1 : 0)}
         >
-          {aiError && <p className="indicator-evidence">Interpretación de IA: {aiError}</p>}
+          {aiError && <p className="indicator-evidence">{t("evidence", "dAi", { error: aiError })}</p>}
           {failed.map((item) => (
             <Indicator key={item.id} item={item} />
           ))}
         </Group>
       )}
 
-      <p className="evidence-note strong">{audit.limitation}</p>
+      <p className="evidence-note strong">{localizeAuditLimitation(audit.limitation, lang)}</p>
+      {hasUntranslated && <p className="evidence-note">{untranslated}</p>}
     </div>
   );
 }

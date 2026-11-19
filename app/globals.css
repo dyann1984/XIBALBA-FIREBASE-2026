@@ -1216,3 +1216,33 @@ footer { border-top-color: var(--line); color: var(--muted); }
 @media (max-width: 700px) {
   .map-canvas svg { max-width: 320px; }
 }
+
+/* --- Escudo Global (directorio internacional) ------------------------------ */
+.global-shield { display: grid; gap: 16px; }
+.shield-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.shield-controls label { color: var(--muted); font-size: 11px; letter-spacing: .5px; }
+.shield-controls select { background: #060c15; border: 1px solid var(--line-strong); color: var(--ink); border-radius: 7px; padding: 8px 10px; font: inherit; }
+.shield-status { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 4px 10px; font-size: 10.5px; font-weight: 600; letter-spacing: .3px; border: 1px solid var(--line-strong); }
+.shield-status-verificado { color: #34d399; border-color: #1f4d3c; }
+.shield-status-en-revision { color: #fbbf24; border-color: #4d3f1f; }
+.shield-status-pendiente { color: #94a3b8; border-color: var(--line-strong); }
+.shield-records { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.shield-record { border: 1px solid var(--line-strong); border-radius: 10px; padding: 14px 16px; background: rgba(4, 9, 16, .6); display: grid; gap: 8px; }
+.shield-record-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.shield-channels { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.shield-channels a { color: var(--jade, #2fd697); }
+.shield-languages { color: var(--muted); }
+.shield-notes { font-size: 12px; color: var(--muted); margin: 0; }
+.shield-meta { font-size: 11px; color: var(--muted); margin: 0; }
+.shield-meta a { color: var(--ink-2); }
+
+/* --- Botón de ayuda permanente --------------------------------------------- */
+.help-floating { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: grid; justify-items: end; gap: 10px; }
+.help-fab { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 11px 16px; background: linear-gradient(100deg, #f0d08a, #d2a855); color: #0c1118; border: none; font-weight: 600; box-shadow: 0 10px 26px -14px rgba(226, 184, 104, .75); min-height: 44px; }
+.help-panel { width: min(300px, 80vw); border: 1px solid var(--line-strong); border-radius: 12px; padding: 16px; background: linear-gradient(170deg, var(--panel-2), var(--panel)); box-shadow: var(--lift); position: relative; }
+.help-panel h3 { margin: 0 0 6px; font-size: 15px; }
+.help-panel p { margin: 0 0 12px; color: var(--ink-2); font-size: 12.5px; }
+.help-panel-close { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--muted); }
+@media (max-width: 700px) {
+  .help-floating { right: 12px; bottom: 12px; }
+}

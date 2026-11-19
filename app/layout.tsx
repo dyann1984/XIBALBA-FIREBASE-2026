@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import PwaRegister from "@/components/PwaRegister";
 
 export const metadata: Metadata = {
   title: "XIBALBÁ AI | Protección inteligente",
   description:
     "Plataforma de prevención, detección e investigación de fraudes digitales.",
-  icons: { icon: "/xibalba-logo.jpg", apple: "/xibalba-logo.jpg" },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -26,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="es">
       <body>
         <LanguageProvider>{children}</LanguageProvider>
+        <PwaRegister />
       </body>
     </html>
   );

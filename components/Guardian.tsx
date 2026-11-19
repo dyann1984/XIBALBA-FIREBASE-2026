@@ -4,7 +4,8 @@ import { describeAgents, explainError, type AnalysisResult } from "@/lib/analysi
 import { VERIFIED_CLASSES } from "@/lib/analysis/risk";
 import { useI18n } from "@/components/LanguageProvider";
 import { localizeIndicator, localizePending } from "@/lib/i18n/evidence";
-import JaguarAvatar, { type GuardianState } from "@/components/guardian/JaguarAvatar";
+import JaguarPortrait from "@/components/guardian/JaguarPortrait";
+import { type GuardianState } from "@/components/guardian/JaguarAvatar";
 import { Mic, MicOff, Pause, Send, Volume2, VolumeX } from "lucide-react";
 
 type SpeechRecInstance = {
@@ -404,7 +405,7 @@ export default function Guardian({
   return (
     <section className="panel guardian-panel" aria-label={t("guardian", "panelLabel")}>
       <div className={`jaguar-frame jaguar-frame-${light}`}>
-        <JaguarAvatar state={state} light={light} speaking={speaking} lang={lang} />
+        <JaguarPortrait state={state} light={light} speaking={speaking} lang={lang} />
         <span className="jaguar-frame-tag">{t("guardian", "eyebrow")}</span>
       </div>
 

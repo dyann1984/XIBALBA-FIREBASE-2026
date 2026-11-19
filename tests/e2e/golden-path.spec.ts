@@ -45,7 +45,7 @@ test("Camino dorado: inicio → Guardián → mensaje fraudulento → agentes �
 
   // 2. El Guardián se presenta: en reposo, sin micrófono activo, visible desde "Nuevo análisis".
   await page.getByRole("navigation").getByRole("button", { name: /Nuevo análisis|New analysis/i }).click();
-  const jaguar = page.locator(".jaguar");
+  const jaguar = page.locator("[data-guardian-state]");
   await expect(jaguar).toHaveAttribute("data-guardian-state", "reposo");
   await expect(page.getByText(/explicará el resultado|will explain the result/i).first()).toBeVisible();
 

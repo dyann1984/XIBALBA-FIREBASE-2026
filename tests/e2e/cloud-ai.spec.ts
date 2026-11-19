@@ -1,4 +1,12 @@
 import { test, expect } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+
+const ARTIFACTS_DIR = path.resolve(process.cwd(), "artifacts", "xibalba-3-phase5.4");
+
+test.beforeAll(() => {
+  fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
+});
 
 /**
  * CAMINO CON SERVICIOS REALES EN LA NUBE (Firebase App Check + Gemini).
@@ -57,4 +65,40 @@ test("Interpretación de IA en la nube real (Firebase + Gemini) nunca baja un ve
   // haberlo rebajado, sea cual sea su propia lectura del texto.
   await expect(page.locator(".verdict-rojo")).toBeVisible();
   await expect(page.locator(".inference")).not.toContainText(/SIN VERIFICAR|UNVERIFIED/i);
+});
+
+/**
+ * El estado visual "seguridad" del retrato del Guardián (verde en el
+ * semáforo) solo es alcanzable con una interpretación de IA real: el motor
+ * local nunca da verde por sí solo (ver xibalba.spec.ts, prueba 8). Por eso
+ * esta captura vive aquí y no en la batería principal.
+ */
+test("Retrato del Guardián en estado de seguridad (verde) con IA real", async ({ page }) => {
+  await page.goto("/");
+  const cloudReady = await page
+    .getByText(/Nube: configurada|Cloud: configured/i)
+    .waitFor({ timeout: 25_000 })
+    .then(() => true)
+    .catch(() => false);
+  test.skip(!cloudReady, "App Check no entregó un token de depuración en 25s (sin red o sin cuota disponible ahora mismo).");
+
+  await page.getByRole("navigation").getByRole("button", { name: /Nuevo análisis/i }).click();
+  await page.locator(".consent input[type='checkbox']").first().check();
+  await page.locator("#content").fill(
+    "Hola, confirmo nuestra cita del jueves a las 10 en la sucursal del centro. Llevo los documentos que me pediste. Nos vemos ahí.",
+  );
+  await page.getByRole("button", { name: /Analizar contenido/i }).click();
+
+  const answered = await page
+    .locator(".inference")
+    .filter({ hasText: /LOCAL|NUBE|ON-DEVICE|CLOUD/i })
+    .waitFor({ timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false);
+  test.skip(!answered, "La llamada real al modelo no respondió en 30s (red o cuota del proveedor).");
+
+  await expect(page.locator(".verdict-verde")).toBeVisible();
+  const portrait = page.locator(".guardian-stage.portrait");
+  await expect(portrait).toHaveAttribute("data-guardian-state", "seguridad");
+  await portrait.screenshot({ path: path.join(ARTIFACTS_DIR, "03-retrato-seguridad.png") });
 });

@@ -36,6 +36,19 @@ const ACCENT: Record<GuardianLight, string> = {
   gris: "#2ee6e6",
 };
 
+/** Color de acento por estado real, compartido por cualquier representación
+ * visual del Guardián (SVG procedural o retrato estático). Única fuente de
+ * verdad para que las dos nunca diverjan de color por estado. */
+export function guardianAccentFor(state: GuardianState, light: GuardianLight): string {
+  return state === "escuchando"
+    ? "#2ee6e6"
+    : state === "seguridad"
+      ? "#34d399"
+      : state === "alerta" || state === "error"
+        ? "#f43f5e"
+        : ACCENT[light];
+}
+
 const SPOKEN_STATE: Record<"es" | "en", Record<GuardianState, string>> = {
   es: {
     reposo: "El guardián jaguar está en reposo, esperando un análisis.",
@@ -139,14 +152,7 @@ export default function JaguarAvatar({
     return () => clearInterval(timer);
   }, [active]);
 
-  const accent =
-    state === "escuchando"
-      ? "#2ee6e6"
-      : state === "seguridad"
-        ? "#34d399"
-        : state === "alerta" || state === "error"
-          ? "#f43f5e"
-          : ACCENT[light];
+  const accent = guardianAccentFor(state, light);
   const label = SPOKEN_STATE[lang][state];
   const style = {
     "--guardian-accent": accent,

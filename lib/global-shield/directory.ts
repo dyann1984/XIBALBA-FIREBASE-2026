@@ -68,6 +68,20 @@ export const SEED_RECORDS: EmergencyRecord[] = [
     notes: "Action Fraud no es un servicio de emergencia: ante peligro inmediato, el número real es el 999, no este.",
   },
   {
+    id: "CA-antifraud-centre",
+    countryCode: "CA",
+    incidentCategories: ["fraude-financiero", "phishing", "suplantacion", "ciberdelito"],
+    agencyName: "Canadian Anti-Fraud Centre / Centre antifraude du Canada",
+    channels: [
+      { kind: "telefono", value: "+1-888-495-8501", languages: ["en-CA", "fr-CA"] },
+      { kind: "portal", value: "https://antifraudcentre-centreantifraude.ca/report-signalez-eng.htm", languages: ["en-CA", "fr-CA"] },
+    ],
+    sourceUrls: ["https://sk.211.ca/services/report-a-scam-fraud-or-cybercrime", "https://halton.cioc.ca/record/IMP0344?Number=0"],
+    lastVerifiedAt: "2026-11-19",
+    status: "en-revision",
+    notes: "El teléfono coincide en varios directorios independientes (211.ca, cioc.ca), pero ninguna fuente de esta búsqueda es el propio sitio oficial antifraudcentre-centreantifraude.ca, así que queda en revisión hasta confirmarlo ahí directamente.",
+  },
+  {
     id: "ES-policia-nacional",
     countryCode: "ES",
     incidentCategories: ["fraude-financiero", "phishing", "ciberdelito"],

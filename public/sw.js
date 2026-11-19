@@ -15,7 +15,7 @@
 //     contenido: la URL cambia si el contenido cambia): CACHE PRIMERO. Es
 //     seguro cachearlos de forma agresiva porque nunca pueden quedar
 //     obsoletos bajo la misma URL.
-const CACHE_NAME = "xibalba-shell-v2";
+const CACHE_NAME = "xibalba-shell-v3";
 const SHELL_ASSETS = ["/", "/xibalba-logo.jpg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -53,15 +53,28 @@ async function networkFirst(request) {
   }
 }
 
+// "Stale-while-revalidate", no cache puro: en una build de produccion real
+// el nombre de archivo lleva el hash de su contenido, asi que revalidar es
+// casi siempre una operacion vacia. Pero en `next dev` los nombres de chunk
+// NO llevan hash (son el mismo string en cada recompilacion) -- un cache
+// puro serviria para siempre la version vieja tras editar el codigo, como
+// paso de verdad en esta sesion. Revalidar en segundo plano hace que una
+// segunda carga ya muestre el cambio, sin tener que borrar la cache a mano.
 async function cacheFirst(request) {
   const cached = await caches.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (response.ok) {
-    const cache = await caches.open(CACHE_NAME);
-    cache.put(request, response.clone()).catch(() => {});
+  const revalidate = fetch(request)
+    .then((response) => {
+      if (response.ok) {
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone())).catch(() => {});
+      }
+      return response;
+    })
+    .catch(() => undefined);
+  if (cached) {
+    revalidate.catch(() => {});
+    return cached;
   }
-  return response;
+  return (await revalidate) ?? fetch(request);
 }
 
 self.addEventListener("fetch", (event) => {

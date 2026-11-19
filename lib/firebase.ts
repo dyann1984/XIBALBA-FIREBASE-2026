@@ -60,6 +60,115 @@ export async function diagnoseLocalAppCheck(): Promise<string> {
   }
 }
 export async function initializeLocalDebug() { if (localDebugEnabled()) { await prepareLocalDebug(); if (isConfigured()) getServices(); } }
+
+export type StageStatus = "ok" | "fallo" | "no-aplica" | "pendiente";
+
+/** Diagnóstico granular: cada etapa se comprueba por separado, nunca se
+ * infiere una de otra. "SDK disponible" no implica "servicio configurado";
+ * "autenticación exitosa" no implica "respuesta real obtenida". */
+export type FirebaseDiagnostics = {
+  sdkAvailable: StageStatus;
+  serviceConfigured: StageStatus;
+  authSuccessful: StageStatus;
+  realCallExecuted: StageStatus;
+  realResponseObtained: StageStatus;
+  persistenceConfirmed: StageStatus;
+  detail: {
+    sdkAvailable?: string;
+    serviceConfigured?: string;
+    authSuccessful?: string;
+    realCallExecuted?: string;
+    realResponseObtained?: string;
+    persistenceConfirmed?: string;
+  };
+};
+
+/** `includeModelCall`: la llamada real a Gemini envía `sampleText`, así que
+ * se deja fuera por defecto — quien la pida debe aceptarlo explícitamente,
+ * igual que el consentimiento de IA del resto de la aplicación. */
+export async function diagnoseFirebaseStack(
+  sampleText?: string,
+): Promise<FirebaseDiagnostics> {
+  const detail: FirebaseDiagnostics["detail"] = {};
+  const result: FirebaseDiagnostics = {
+    sdkAvailable: "ok",
+    serviceConfigured: "pendiente",
+    authSuccessful: "pendiente",
+    realCallExecuted: "pendiente",
+    realResponseObtained: "pendiente",
+    persistenceConfirmed: "no-aplica",
+    detail,
+  };
+  detail.sdkAvailable = "El paquete firebase se importó y ejecutó sin lanzar un error de carga.";
+
+  // En localhost con modo debug, "configurado" depende de haber obtenido ya
+  // el token de depuración — por eso se prepara ANTES de preguntar, no
+  // después. Preguntar primero reportaría "fallo" en la primera visita de
+  // cada pestaña, aunque la configuración sea correcta.
+  try {
+    await initializeLocalDebug();
+  } catch {
+    /* Si falla, isConfigured() lo refleja igual más abajo. */
+  }
+
+  if (!isConfigured()) {
+    result.serviceConfigured = "fallo";
+    detail.serviceConfigured = "Faltan variables NEXT_PUBLIC_FIREBASE_* o la clave de App Check.";
+    result.authSuccessful = "pendiente";
+    result.realCallExecuted = "pendiente";
+    result.realResponseObtained = "pendiente";
+    detail.persistenceConfirmed =
+      "No aplica: ningún código del proyecto lee ni escribe en Firestore todavía (las reglas deniegan todo acceso a propósito).";
+    return result;
+  }
+  result.serviceConfigured = "ok";
+  detail.serviceConfigured = "initializeApp() y la configuración de App Check se completaron.";
+
+  try {
+    await initializeLocalDebug();
+    await getToken(getServices().appCheck, true);
+    result.authSuccessful = "ok";
+    detail.authSuccessful = "App Check entregó un token real al SDK (debug local o reCAPTCHA Enterprise, según el entorno).";
+  } catch (error) {
+    result.authSuccessful = "fallo";
+    detail.authSuccessful = error instanceof Error ? error.message : "No se obtuvo un token de App Check.";
+    result.realCallExecuted = "pendiente";
+    result.realResponseObtained = "pendiente";
+    detail.persistenceConfirmed =
+      "No aplica: ningún código del proyecto lee ni escribe en Firestore todavía (las reglas deniegan todo acceso a propósito).";
+    return result;
+  }
+
+  if (!sampleText) {
+    detail.realCallExecuted = "No se pidió una llamada real a Gemini (se necesita el contenido de prueba explícito).";
+    detail.persistenceConfirmed =
+      "No aplica: ningún código del proyecto lee ni escribe en Firestore todavía (las reglas deniegan todo acceso a propósito).";
+    return result;
+  }
+
+  try {
+    const { model } = getServices();
+    const response = await model.generateContent(sampleText);
+    result.realCallExecuted = "ok";
+    detail.realCallExecuted = `generateContent() se ejecutó. Ruta de inferencia: ${response.response.inferenceSource ?? "no informada por el SDK"}.`;
+    const text = response.response.text();
+    if (text && text.trim()) {
+      result.realResponseObtained = "ok";
+      detail.realResponseObtained = `Respuesta real recibida (${text.length} caracteres).`;
+    } else {
+      result.realResponseObtained = "fallo";
+      detail.realResponseObtained = "La llamada se ejecutó pero el modelo devolvió una respuesta vacía.";
+    }
+  } catch (error) {
+    result.realCallExecuted = "fallo";
+    detail.realCallExecuted = error instanceof Error ? error.message : "La llamada a Gemini falló.";
+    result.realResponseObtained = "pendiente";
+  }
+
+  detail.persistenceConfirmed =
+    "No aplica: ningún código del proyecto lee ni escribe en Firestore todavía (las reglas deniegan todo acceso a propósito). getFirestore() se inicializa, pero no se usa.";
+  return result;
+}
 export async function localAvailability(): Promise<string> {
   const api = (globalThis as typeof globalThis & { LanguageModel?: { availability: () => Promise<string> } }).LanguageModel;
   // Devuelve una clave, no una frase: la interfaz la traduce al idioma

@@ -107,6 +107,19 @@ export type DeterministicVerdict = {
  */
 export type ReasonKey = { key: string; vars?: Record<string, string> };
 
+/**
+ * Impacto potencial: una dimensión propia e independiente del nivel de
+ * riesgo y de la confianza (encargo "Fase 4, Etapa E"). Se deriva
+ * exclusivamente de las categorías reales de las evidencias ya verificadas
+ * y sospechosas — nunca de un supuesto adicional. Una misma investigación
+ * puede tener varias áreas de impacto a la vez.
+ */
+export type PotentialImpactArea =
+  | 'economico' // categoría 'financiero': posible pérdida de dinero
+  | 'identidad' // 'phishing' o 'suplantacion': robo de credenciales o identidad
+  | 'sitio-fraudulento' // 'dominio' o 'estructura': exposición a un sitio engañoso
+  | 'no-concluyente'; // sin evidencia verificada suficiente para estimar impacto
+
 export type CombinedRisk = {
   light: TrafficLight;
   riskLevel: RiskLevel;
@@ -120,7 +133,24 @@ export type CombinedRisk = {
   rationaleKeys: ReasonKey[];
   aiRisk: AiRiskLevel | null;
   deterministic: DeterministicVerdict;
+  /** Dimensión independiente de riesgo y confianza; ver `PotentialImpactArea`. */
+  potentialImpact: PotentialImpactArea[];
 };
+
+/** Deriva el impacto potencial solo de categorías de evidencia verificada y
+ * sospechosa — nunca de la interpretación de IA, que no está verificada. */
+export function potentialImpactOf(audit: Audit): PotentialImpactArea[] {
+  const categories = new Set(
+    audit.indicators
+      .filter((item) => isVerified(item) && item.status === 'sospechoso')
+      .map((item) => item.category),
+  );
+  const areas: PotentialImpactArea[] = [];
+  if (categories.has('financiero')) areas.push('economico');
+  if (categories.has('phishing') || categories.has('suplantacion')) areas.push('identidad');
+  if (categories.has('dominio') || categories.has('estructura')) areas.push('sitio-fraudulento');
+  return areas.length ? areas : ['no-concluyente'];
+}
 
 const WEIGHT: Record<Severity, number> = {
   critico: 100,
@@ -281,6 +311,7 @@ export function combineRisk(audit: Audit, ai?: { risk: AiRiskLevel } | null): Co
     rationaleKeys,
     aiRisk,
     deterministic,
+    potentialImpact: potentialImpactOf(audit),
   };
 }
 

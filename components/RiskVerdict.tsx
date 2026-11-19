@@ -25,6 +25,12 @@ const RISK = {
   "no concluyente": "riskNinguno",
 } as const;
 const CONFIDENCE = { alta: "confidenceAlta", media: "confidenceMedia", baja: "confidenceBaja" } as const;
+const IMPACT = {
+  economico: "impactEconomico",
+  identidad: "impactIdentidad",
+  "sitio-fraudulento": "impactSitio",
+  "no-concluyente": "impactNinguno",
+} as const;
 const AI_RISK = { alto: "riskAlto", medio: "riskMedio", bajo: "riskBajo" } as const;
 const ICON: Record<TrafficLight, typeof ShieldCheck> = {
   verde: ShieldCheck,
@@ -99,6 +105,12 @@ export default function RiskVerdict({ risk }: { risk: CombinedRisk }) {
               percent,
             })}
             <small>{localizeCoverageLabel(risk.coverage.label, lang)}</small>
+          </dd>
+        </div>
+        <div>
+          <dt>{t("verdict", "metricImpact")}</dt>
+          <dd>
+            {risk.potentialImpact.map((area) => t("verdict", IMPACT[area])).join(" · ")}
           </dd>
         </div>
         <div>

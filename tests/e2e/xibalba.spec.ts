@@ -369,3 +369,47 @@ test("11. El historial se puede buscar y filtrar por semáforo", async ({ page }
   await expect(page.getByText(/coincide con este filtro|does not match this filter/i)).toBeVisible();
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, "16-historial-filtro.png"), fullPage: true });
 });
+
+test("12. El mapa de investigaciones solo conecta casos con un motivo real compartido", async ({ page }) => {
+  const mapNavButton = (p: import("@playwright/test").Page) =>
+    p.getByRole("navigation").getByRole("button", { name: /Mapa de relaciones|Relationship map/i });
+
+  await page.goto("/");
+  // Historial vacío: el mapa debe decirlo, nunca inventar un caso.
+  await mapNavButton(page).click();
+  await expect(page.getByText(/Todavía no hay investigaciones|No investigations yet/i)).toBeVisible();
+
+  // Dos casos que comparten exactamente el mismo dominio sospechoso: la
+  // correlación real (lib/analysis/correlation.ts) debe unirlos con una
+  // línea; un tercero sin nada en común debe quedar aislado.
+  await newAnalysisButton(page).click();
+  await page.locator("#content").fill("Tu paquete está detenido, paga la aduana aquí: http://envios-mx.validacion-paquete.example.com/pagar");
+  await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+  await expect(page.locator(".verdict")).toBeVisible();
+
+  await newAnalysisButton(page).click();
+  await page.locator("#content").fill("Confirma tu entrega en http://envios-mx.validacion-paquete.example.com/confirmar o se cancelará el envío.");
+  await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+  await expect(page.locator(".verdict")).toBeVisible();
+
+  await newAnalysisButton(page).click();
+  await page.locator("#content").fill("Hola, ¿comemos el viernes? Avísame la hora.");
+  await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+  await expect(page.locator(".verdict")).toBeVisible();
+
+  await mapNavButton(page).click();
+  await expect(page.locator(".map-node")).toHaveCount(3);
+  // El dominio compartido produce exactamente una línea entre los dos primeros casos.
+  await expect(page.locator(".map-edge")).toHaveCount(1);
+
+  // El caso aislado (sin dominio ni patrón compartido) lo dice explícitamente.
+  await page.locator(".map-node-isolated").click();
+  await expect(
+    page.getByText(/Ningún dominio, prefijo telefónico o patrón de fraude compartido|No shared domain, phone prefix or fraud pattern/i),
+  ).toBeVisible();
+
+  // Un nodo conectado muestra el motivo real: el dominio compartido.
+  await page.locator(".map-node:not(.map-node-isolated)").first().click();
+  await expect(page.getByText(/Mismo dominio|Shared domain/i)).toBeVisible();
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "17-mapa-investigaciones.png"), fullPage: true });
+});

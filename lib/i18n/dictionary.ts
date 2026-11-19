@@ -38,6 +38,7 @@ export const es = {
     analizar: "Nuevo análisis",
     agentes: "Agentes IA",
     historial: "Historial",
+    mapa: "Mapa de relaciones",
     privacidad: "Privacidad",
   },
   home: {
@@ -385,6 +386,12 @@ export const es = {
     hours: "hace {n} h",
     days: "hace {n} d",
   },
+  map: {
+    eyebrow: "RELACIONES ENTRE CASOS",
+    title: "Mapa de",
+    titleEm: "investigaciones.",
+    lead: "Cada nodo es un caso de tu historial de esta sesión; una línea solo aparece cuando hay un motivo real compartido entre dos casos.",
+  },
   agentsPage: {
     eyebrow: "INTELIGENCIA ESPECIALIZADA",
     title: "Un equipo,",
@@ -484,6 +491,7 @@ export const en: Dictionary = {
     analizar: "New analysis",
     agentes: "AI agents",
     historial: "History",
+    mapa: "Relationship map",
     privacidad: "Privacy",
   },
   home: {
@@ -825,6 +833,12 @@ export const en: Dictionary = {
     minutes: "{n} min ago",
     hours: "{n} h ago",
     days: "{n} d ago",
+  },
+  map: {
+    eyebrow: "RELATIONSHIPS BETWEEN CASES",
+    title: "Investigation",
+    titleEm: "map.",
+    lead: "Each node is a case from your history in this session; a line only appears when two cases share a real, verified reason.",
   },
   agentsPage: {
     eyebrow: "SPECIALISED INTELLIGENCE",

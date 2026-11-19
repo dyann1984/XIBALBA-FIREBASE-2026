@@ -10,13 +10,14 @@ import { recognizeImageText, type PreparedImage, type OcrResult } from "@/lib/an
 import { TRANSCRIPTION_PENDING, releaseAudio, transcribeAudio, type PreparedAudio, type Transcription } from "@/lib/analysis/audio";
 import Guardian from "@/components/Guardian";
 import AgentOperationsBoard from "@/components/AgentOperationsBoard";
+import InvestigationMap from "@/components/InvestigationMap";
 import RiskVerdict from "@/components/RiskVerdict";
 import EvidenceList from "@/components/EvidenceList";
 import ImageAttachments from "@/components/ImageAttachments";
 import AudioAttachment from "@/components/AudioAttachment";
 import { useI18n } from "@/components/LanguageProvider";
 import { LANG_LABEL, LANG_TAG, type Lang } from "@/lib/i18n";
-import { Activity, ArrowDownLeft, ArrowRight, AudioLines, BookOpen, ChevronDown, CircleHelp, Clock3, Download, Eye, Fingerprint, FlaskConical, Globe2, LayoutDashboard, Link2, LockKeyhole, Menu, MessageSquareText, ScanLine, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, WalletCards, X } from "lucide-react";
+import { Activity, ArrowDownLeft, ArrowRight, AudioLines, BookOpen, ChevronDown, CircleHelp, Clock3, Download, Eye, Fingerprint, FlaskConical, Globe2, LayoutDashboard, Link2, LockKeyhole, Menu, MessageSquareText, Network, ScanLine, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, WalletCards, X } from "lucide-react";
 import { agents, type Agent } from "@/lib/agents";
 import demoData from "@/data/demo-cases.json";
 import { append as appendHistory, clear as clearStoredHistory, describeWhen, load as loadStoredHistory, save as saveStoredHistory, summarize, HISTORY_LIMIT, type HistoryEntry } from "@/lib/history";
@@ -27,7 +28,7 @@ import { buildReportData, formatReportMarkdown } from "@/lib/analysis/report";
 import type { Translate } from "@/lib/i18n";
 
 const icons: Record<string, typeof Shield> = { voice: AudioLines, message: MessageSquareText, wallet: WalletCards, link: Link2, shield: ShieldCheck };
-type Section = "inicio" | "analizar" | "agentes" | "historial" | "privacidad";
+type Section = "inicio" | "analizar" | "agentes" | "historial" | "mapa" | "privacidad";
 type DemoCase = { id: string; title: string; kind: string; agent: string; expect: string; text: string };
 const demoCases = (demoData as { cases: DemoCase[] }).cases;
 /** Clave del permiso explícito para conservar el historial en este navegador. */
@@ -257,7 +258,7 @@ export default function Dashboard() {
   await submitText(trimmed, inferredKind);
  };
  const go = (s: Section) => { setSection(s); setSelected(null); setMenu(false); };
- const nav: { id: Section; icon: typeof Shield }[] = [{id:"inicio",icon:LayoutDashboard},{id:"analizar",icon:ScanLine},{id:"agentes",icon:Sparkles},{id:"historial",icon:Clock3},{id:"privacidad",icon:Fingerprint}];
+ const nav: { id: Section; icon: typeof Shield }[] = [{id:"inicio",icon:LayoutDashboard},{id:"analizar",icon:ScanLine},{id:"agentes",icon:Sparkles},{id:"historial",icon:Clock3},{id:"mapa",icon:Network},{id:"privacidad",icon:Fingerprint}];
  /** Textos de cada agente, tomados del diccionario y no del módulo en español. */
  const agentText = (agent: Agent) => ({
   role: t("agents", `${agent.id}Role` as "camazotzRole"),
@@ -364,6 +365,7 @@ export default function Dashboard() {
   {history.length ? (filteredHistory.length ? <ul className="history-list">{filteredHistory.map(entry => <HistoryRow key={entry.id} entry={entry} t={t} lang={lang}/>)}</ul> : <p className="notice">{lang === "en" ? "No history entries match this filter." : "Ningún elemento del historial coincide con este filtro."}</p>)
    : <div className="empty-row"><div className="empty-icon"><Clock3 size={20}/></div><div><strong>{t("history","emptyTitle")}</strong><p>{t("history","emptyText")}</p></div><button className="text-link" onClick={()=>go("analizar")}>{t("history","emptyCta")} <ArrowRight size={15}/></button></div>}
   <p className="notice">{t("history","note")}</p></div></div>}
+ {section === "mapa" && <div className="inner-page"><div className="eyebrow"><span/> {t("map","eyebrow")}</div><h1>{t("map","title")} <em>{t("map","titleEm")}</em></h1><p className="lead">{t("map","lead")}</p><div className="panel"><InvestigationMap history={history} lang={lang}/></div></div>}
  {section === "privacidad" && <div className="inner-page"><div className="eyebrow"><span/> {t("privacy","eyebrow")}</div><h1>{t("privacy","title")} <em>{t("privacy","titleEm")}</em></h1><p className="lead">{t("privacy","lead")}</p><div className="privacy-grid"><div className="panel info-card"><LockKeyhole/><h2>{t("privacy","card1Title")}</h2><p>{t("privacy","card1Text")}</p></div><div className="panel info-card"><Eye/><h2>{t("privacy","card2Title")}</h2><p>{t("privacy","card2Text")}</p></div><div className="panel info-card"><BookOpen/><h2>{t("privacy","card3Title")}</h2><p>{t("privacy","card3Text")}</p></div></div></div>}
  <footer><span>© 2026 XIBALBÁ AI <i>✦</i> {t("app","footerLeft")}</span><span>{t("app","footerRight")} <ArrowDownLeft size={13}/></span></footer></div></main></div>;
 }

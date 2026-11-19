@@ -1097,3 +1097,23 @@ footer { border-top-color: var(--line); color: var(--muted); }
 .command-strip small { color: #8eaaa5; font-size: .65rem; letter-spacing: .08em; }
 .command-strip strong { color: #e4f3ed; }
 .command-strip button { margin-left: auto; }
+
+/* --- Mapa de relaciones entre investigaciones ------------------------------ */
+.investigation-map { display: grid; gap: 18px; }
+.map-canvas { display: grid; place-items: center; padding: 8px; }
+.map-canvas svg { width: 100%; max-width: 440px; height: auto; }
+.map-edge { stroke: rgba(94, 234, 212, .35); stroke-width: 1.4; }
+.map-edge-active { stroke: var(--jade, #2fd697); stroke-width: 2.2; }
+.map-node { cursor: pointer; }
+.map-node circle:first-child { stroke: rgba(5, 8, 12, .7); stroke-width: 1.5; transition: r .2s ease; }
+.map-node-ring { fill: none; stroke: #e7fffb; stroke-width: 1.4; stroke-dasharray: 3 3; }
+.map-node-isolated circle:first-child { opacity: .55; }
+.map-node:focus-visible circle:first-child { outline: 2px solid var(--jade, #2fd697); outline-offset: 2px; }
+.map-detail { padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(6, 14, 18, .6); display: grid; gap: 8px; }
+.map-detail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.map-detail-head time { color: var(--muted); font-size: 11px; }
+.map-reasons { display: grid; gap: 6px; padding-left: 0; list-style: none; }
+.map-reasons li { font-size: 12px; color: var(--ink-2); border-left: 2px solid var(--line-strong); padding-left: 8px; }
+@media (max-width: 700px) {
+  .map-canvas svg { max-width: 320px; }
+}

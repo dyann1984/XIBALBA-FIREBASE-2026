@@ -124,6 +124,21 @@ export default function JaguarAvatar({
     return () => window.removeEventListener("pointermove", onMove);
   }, [active]);
 
+  // En pantallas táctiles nunca llega `pointermove`, así que sin esto la
+  // mirada queda fija en el centro. Una deriva autónoma y suave mantiene al
+  // jaguar con vida en móvil sin simular ningún estado que no sea real.
+  useEffect(() => {
+    if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(hover: none), (pointer: coarse)").matches) return;
+    const timer = setInterval(() => {
+      setGaze({
+        x: Math.random() * 1.2 - 0.6,
+        y: Math.random() * 0.8 - 0.4,
+      });
+    }, 3400);
+    return () => clearInterval(timer);
+  }, [active]);
+
   const accent =
     state === "escuchando"
       ? "#2ee6e6"

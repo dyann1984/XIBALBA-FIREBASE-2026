@@ -106,6 +106,11 @@ test("1. Pantalla principal, quick-scan, agentes, análisis de estafa, reportes 
   await page.locator("#guardian-question").fill("¿Qué evidencia debería revisar primero?");
   await page.getByRole("button", { name: /Preguntar al guardián/i }).click();
   await expect(page.locator(".guardian-answer").first()).toBeVisible();
+
+  // Captura dedicada de la página "Agentes IA" para revisión visual.
+  await page.getByRole("navigation").getByRole("button", { name: /^(Agentes IA|AI agents)$/i }).click();
+  await expect(page.locator(".agent-card.large, .agent-grid.large .agent-card")).toHaveCount(5);
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "18-agentes.png"), fullPage: true });
 });
 
 test("2. Cambio de idioma ES/EN completo y persistencia", async ({ page }) => {

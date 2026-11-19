@@ -795,6 +795,256 @@ footer { border-top-color: var(--line); color: var(--muted); }
   white-space: nowrap;
 }
 
+/* ==========================================================================
+   XIBALBÁ 3.0 · Fase 5 — Command Center premium y Laboratorio Forense
+   --------------------------------------------------------------------------
+   Capa aditiva, igual que la anterior: no reemplaza superficies ya resueltas
+   (paneles, veredicto, evidencia), añade los componentes nuevos que pide la
+   Fase 5 — estado real de la plataforma, el laboratorio de tres áreas y el
+   centro de operaciones de los 5 agentes — y refuerza el acento jade junto
+   al turquesa y el oro ya existentes.
+   ========================================================================== */
+
+:root {
+  --jade: #2fd697;
+  --jade-deep: #0f3a2c;
+  --obsidian: #03050a;
+}
+
+/* --- Estado real de la plataforma (Command Center) ------------------------ */
+.ops-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 22px;
+}
+.ops-status-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 15px;
+  background: linear-gradient(165deg, var(--panel-2), var(--panel));
+  box-shadow: var(--lift);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ops-status-head { display: flex; align-items: center; gap: 7px; font-size: 9.5px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--muted); }
+.ops-status-head svg { color: var(--jade); flex: none; }
+.ops-status-card strong { font-size: 12.5px; color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+.ops-status-card small { font-size: 10.5px; color: var(--ink-2); line-height: 1.5; }
+.ops-status-cta { justify-content: space-between; }
+.ops-status-cta .text-link { margin-top: 4px; }
+.ops-risk-bars { display: flex; gap: 3px; height: 8px; border-radius: 4px; overflow: hidden; background: #0a1017; }
+.ops-risk-bar { display: block; min-width: 2px; }
+.ops-risk-bar.ops-risk-rojo { background: var(--rojo); }
+.ops-risk-bar.ops-risk-amarillo { background: var(--amarillo); }
+.ops-risk-bar.ops-risk-verde { background: var(--verde); }
+.ops-risk-bar.ops-risk-gris { background: var(--gris); opacity: .5; }
+
+.ops-alerts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #6b2f3b;
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(120deg, rgba(42, 20, 28, .55), rgba(10, 16, 24, .7));
+  color: var(--rojo);
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+.ops-alerts span { flex: 1; color: var(--ink-2); }
+.ops-alerts svg { flex: none; }
+.ops-alerts .text-link { color: var(--rojo); }
+
+.agent-activity-badge {
+  font-size: 8.5px;
+  letter-spacing: .3px;
+  color: var(--jade);
+  border: 1px solid var(--jade-deep);
+  background: rgba(47, 214, 151, .08);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+/* --- Laboratorio forense: tres áreas ---------------------------------------
+   Escritorio (≥1100px): A / B / C visibles a la vez, en columnas.
+   Tableta (701–1099px): apiladas en una sola columna, todas visibles —
+   hay espacio vertical de sobra y ocultar contenido no aporta nada.
+   Móvil (≤700px): una sola área a la vez, elegida con las pestañas. */
+.lab-tabs { display: none; }
+.lab-grid { grid-template-columns: 1.1fr 1fr 1fr; align-items: start; }
+.lab-area { min-width: 0; }
+.lab-jaguar { margin-top: 16px; }
+
+@media (max-width: 1099px) {
+  .lab-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .lab-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 4px 0 14px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 2px;
+  }
+  .lab-tab {
+    flex: 1;
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-size: 10.5px;
+    letter-spacing: .4px;
+    padding: 9px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+  }
+  .lab-tab.active { color: var(--ink); border-color: var(--jade); }
+  .lab-tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--jade); box-shadow: 0 0 8px var(--jade); }
+  .lab-area { display: none; }
+  .lab-area.lab-area-active { display: block; }
+  .ops-status-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1441px) {
+  /* En pantallas grandes el laboratorio respira más; evita que las tres
+     columnas se vean apretadas contra el ancho máximo del contenido. */
+  .lab-grid { grid-template-columns: 1.15fr 1fr 1fr; gap: 20px; }
+}
+
+/* --- Centro de operaciones de los 5 agentes -------------------------------
+   EL GUARDIÁN al centro; los cuatro especialistas alrededor. Las líneas que
+   los unen solo existen hacia un agente que de verdad ejecutó su catálogo en
+   este análisis — nunca una red fija de relaciones que no existen. */
+.ops-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 8px;
+  aspect-ratio: 1 / 1;
+  max-width: 320px;
+  margin: 14px auto;
+}
+.ops-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ops-link { stroke: var(--jade); stroke-width: 2; opacity: .55; stroke-dasharray: 3 4; }
+.ops-link-started { opacity: .9; stroke-dasharray: none; animation: ops-flow 1.2s linear infinite; }
+.ops-link-completed { opacity: .4; stroke-dasharray: none; }
+.ops-link-error { stroke: var(--rojo); opacity: .8; stroke-dasharray: none; }
+@keyframes ops-flow { to { stroke-dashoffset: -14; } }
+
+.ops-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: rgba(4, 9, 16, .78);
+  padding: 8px 4px;
+  font-size: 9px;
+}
+.ops-node strong { font-size: 9px; letter-spacing: .3px; color: var(--ink); }
+.ops-node span { font-size: 8.5px; color: var(--muted); }
+.ops-node small { font-size: 8px; color: var(--jade); }
+.ops-guardian { grid-column: 2; grid-row: 2; border-color: var(--gold-deep); background: rgba(227, 189, 114, .08); box-shadow: 0 0 20px -6px rgba(227, 189, 114, .5); }
+.ops-guardian strong { color: var(--gold); }
+.ops-camazotz { grid-column: 1; grid-row: 1; }
+.ops-ixbalanque { grid-column: 3; grid-row: 1; }
+.ops-vucub { grid-column: 1; grid-row: 3; }
+.ops-hun { grid-column: 3; grid-row: 3; }
+.ops-node.ops-active { border-color: var(--jade-deep); box-shadow: 0 0 16px -6px rgba(47, 214, 151, .45); }
+.ops-node.ops-inactive { opacity: .4; }
+@media (prefers-reduced-motion: reduce) {
+  .ops-link-started { animation: none; }
+}
+@media (max-width: 420px) {
+  .ops-board { max-width: 240px; }
+  .ops-node { font-size: 8px; padding: 6px 3px; }
+}
+
+/* --- Encuadre premium del jaguar -------------------------------------------
+   El avatar ya existía (SVG 2.5D); esto solo lo integra visualmente al resto
+   del tablero en vez de dejarlo flotando sobre el fondo del panel. No es una
+   reconstrucción 3D: ver XIBALBA_3_0_PHASE5_REPORT.md. */
+.jaguar-frame {
+  position: relative;
+  border-radius: 14px;
+  padding: 3px;
+  background: conic-gradient(from 180deg, var(--jade-deep), var(--cyan-deep), var(--gold-deep), var(--jade-deep));
+  flex: 0 0 290px;
+  width: 290px;
+}
+.jaguar-frame::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 50% 40%, currentColor 0%, transparent 70%);
+  opacity: .16;
+  z-index: -1;
+  pointer-events: none;
+}
+.jaguar-frame-rojo { color: var(--rojo); }
+.jaguar-frame-amarillo { color: var(--amarillo); }
+.jaguar-frame-verde { color: var(--jade); }
+.jaguar-frame-gris { color: var(--gris); }
+.jaguar-frame .guardian-stage { border-radius: 12px; width: 100%; }
+.jaguar-frame-tag {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  letter-spacing: 1.4px;
+  color: var(--ink-2);
+  background: rgba(3, 5, 10, .72);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .jaguar-frame { width: 100%; flex: none; }
+}
+
+/* --- Búsqueda y filtros de historial --------------------------------------- */
+.history-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0 4px; }
+.history-search {
+  flex: 1 1 220px;
+  min-width: 0;
+  background: #060c15;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  padding: 9px 12px;
+  color: var(--ink);
+  font: inherit;
+}
+.history-search:focus-visible { outline: 2px solid var(--jade); outline-offset: 1px; }
+.history-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.history-filter-chip {
+  border: 1px solid var(--line-strong);
+  background: #0a1521;
+  color: var(--ink-2);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 10.5px;
+  min-height: 36px;
+}
+.history-filter-chip.active { border-color: var(--jade); color: var(--ink); background: rgba(47, 214, 151, .1); }
+
 .jg-cheek { fill: url(#jg-cheek); opacity: .7; }
 .jg-catchlight { fill: #ffffff; opacity: .92; }
 .jg-voice-waves path {

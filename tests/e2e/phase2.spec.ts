@@ -39,8 +39,10 @@ for (const [kind, message] of [
     await page.getByRole('button',{name:/Nuevo análisis|New analysis/i}).click();
     await page.locator('#photo').setInputFiles({name:`${kind}.png`,mimeType:'image/png',buffer:Buffer.from(bytes,'base64')});
     await page.getByRole('button',{name:/Auditar solo en este dispositivo|Analizar contenido/i}).click();
+    // Fase 5: el bloque de OCR y su corrección manual viven en el Área A
+    // (Evidencia) del laboratorio, no en el Área B (Investigación).
     await expect(page.locator('.ocr-evidence')).toBeVisible();
-    await expect(page.locator('.investigation')).toContainText(/Texto reconocido|Lectura incompleta/);
+    await expect(page.locator('.ocr-evidence')).toContainText(/Texto reconocido|Lectura incompleta/);
     await page.screenshot({path:path.join(artifacts,`${kind}.png`),fullPage:true});
   });
 }

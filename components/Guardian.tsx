@@ -403,7 +403,10 @@ export default function Guardian({
 
   return (
     <section className="panel guardian-panel" aria-label={t("guardian", "panelLabel")}>
-      <JaguarAvatar state={state} light={light} speaking={speaking} lang={lang} />
+      <div className={`jaguar-frame jaguar-frame-${light}`}>
+        <JaguarAvatar state={state} light={light} speaking={speaking} lang={lang} />
+        <span className="jaguar-frame-tag">{t("guardian", "eyebrow")}</span>
+      </div>
 
       <div className="guardian-body">
         <div className="guardian-head-row">

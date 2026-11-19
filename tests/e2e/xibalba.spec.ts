@@ -200,10 +200,10 @@ test("4. Manejo de errores de entrada y endpoint App Check sin token", async ({ 
   expect(manifest.short_name).toBe("XIBALBÁ");
 });
 
-test("5. Validación responsive en 360px, 390px, 430px, 768px y 1024px + capturas móviles", async ({
+test("5. Validación responsive en 360px, 390px, 430px, 768px, 1024px y 1440px + capturas móviles", async ({
   page,
 }) => {
-  const widths = [360, 390, 430, 768, 1024];
+  const widths = [360, 390, 430, 768, 1024, 1440];
   for (const width of widths) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/");
@@ -294,4 +294,78 @@ test("8. Un mensaje limpio sin interpretación de IA queda en gris, nunca en ver
   await expect(page.locator(".verdict-gris")).toBeVisible();
   await expect(page.locator(".verdict-why")).toContainText(/no se detectaron señales|no hay interpretación/i);
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, "13-semaforo-gris.png"), fullPage: true });
+});
+
+test("9. El laboratorio forense muestra las tres áreas en escritorio y se navega por pestañas en móvil", async ({ page }) => {
+  await page.goto("/");
+  await newAnalysisButton(page).click();
+
+  // Escritorio: las tres áreas (A, B, C) están presentes a la vez, sin
+  // depender de ninguna pestaña.
+  await expect(page.locator(".lab-area-evidence")).toBeVisible();
+  await expect(page.locator(".lab-area-investigation")).toBeVisible();
+  await expect(page.locator(".lab-area-evaluation")).toBeVisible();
+  await expect(page.locator(".lab-tabs")).toBeHidden();
+
+  // Móvil: solo una pestaña visible a la vez, y cambiar de pestaña cambia
+  // cuál área se ve sin perder las otras dos (siguen montadas, ocultas).
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".lab-tabs")).toBeVisible();
+  await expect(page.locator(".lab-area-evidence")).toBeVisible();
+  await expect(page.locator(".lab-area-investigation")).toBeHidden();
+  await page.getByRole("tab", { name: /B · Investig/i }).click();
+  await expect(page.locator(".lab-area-investigation")).toBeVisible();
+  await expect(page.locator(".lab-area-evidence")).toBeHidden();
+  await page.getByRole("tab", { name: /C · Evalua/i }).click();
+  await expect(page.locator(".lab-area-evaluation")).toBeVisible();
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "14-lab-tabs-movil.png"), fullPage: true });
+});
+
+test("10. El centro de operaciones de agentes solo conecta a quien de verdad participó", async ({ page }) => {
+  await page.goto("/");
+  await newAnalysisButton(page).click();
+  // Un mensaje sin dinero, llamada ni enlaces: solo IXBALANQUÉ y EL GUARDIÁN
+  // deberían participar; CAMAZOTZ, VUCUB CAMÉ y HUN CAMÉ no tienen nada que
+  // analizar y el tablero no debe inventarles una conexión.
+  await page.locator("#content").fill("Oye, ¿nos vemos mañana para comer? Avísame a qué hora.");
+  await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+  await expect(page.locator(".ops-board")).toBeVisible();
+  await expect(page.locator(".ops-ixbalanque.ops-active")).toBeVisible();
+  await expect(page.locator(".ops-camazotz.ops-inactive")).toBeVisible();
+  await expect(page.locator(".ops-vucub.ops-inactive")).toBeVisible();
+  await expect(page.locator(".ops-hun.ops-inactive")).toBeVisible();
+  // Tantas líneas reales como agentes activos listados, ni una más.
+  await expect(page.locator(".ops-link")).toHaveCount(1);
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "15-ops-board.png"), fullPage: true });
+});
+
+test("11. El historial se puede buscar y filtrar por semáforo", async ({ page }) => {
+  await page.goto("/");
+  await newAnalysisButton(page).click();
+  await page.locator("#content").fill("BBVA: detectamos actividad sospechosa en tu cuenta. Envíanos el código de verificación que te llegó.");
+  await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+  await expect(page.locator(".verdict-rojo")).toBeVisible();
+
+  await newAnalysisButton(page).click();
+  await page.locator("#content").fill("Hola, nos vemos el jueves en la cafetería de siempre.");
+  await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+  await expect(page.locator(".verdict")).toBeVisible();
+
+  await historyNavButton(page).click();
+  await expect(page.locator(".history-row")).toHaveCount(2);
+
+  // Filtrar por semáforo rojo deja solo la entrada de riesgo alto.
+  await page.getByRole("button", { name: /^RED$|^ROJO$/i }).click();
+  await expect(page.locator(".history-row")).toHaveCount(1);
+  await expect(page.locator(".history-row")).toContainText(/alto|high/i);
+
+  await page.getByRole("button", { name: /^All$|^Todos$/i }).click();
+  await expect(page.locator(".history-row")).toHaveCount(2);
+
+  // Buscar texto que no coincide con ningún caso vacía la lista con un aviso,
+  // no con una lista rota.
+  await page.locator(".history-search").fill("xyz-no-existe");
+  await expect(page.locator(".history-row")).toHaveCount(0);
+  await expect(page.getByText(/coincide con este filtro|does not match this filter/i)).toBeVisible();
+  await page.screenshot({ path: path.join(ARTIFACTS_DIR, "16-historial-filtro.png"), fullPage: true });
 });

@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { getServices, initializeLocalDebug, isConfigured, localAvailability } from "@/lib/firebase";
 import { analyze, analyzeLocally, describeAgents, modelTranscriber, modelImageText, type AnalysisResult } from "@/lib/analysis/analyze";
 import { errorKey } from "@/lib/analysis/errors";
 import { type AgentKind } from "@/lib/analysis/guardian";
@@ -110,7 +109,9 @@ export default function Dashboard() {
   queueMicrotask(() => { if (active) setOcrCapability("TextDetector" in window ? "native" : "wasm"); });
   return () => { active = false; };
  }, []);
- useEffect(() => { void initializeLocalDebug().catch(() => {}).finally(() => setConfigured(isConfigured())); void localAvailability().then(setAvailability); }, []);
+ // Importado de forma dinámica: el SDK de Firebase no debe formar parte del
+ // fragmento de JS de la portada (ver lib/analysis/analyze.ts y docs/rendimiento.md).
+ useEffect(() => { void import("@/lib/firebase").then(({ initializeLocalDebug, isConfigured, localAvailability }) => { void initializeLocalDebug().catch(() => {}).finally(() => setConfigured(isConfigured())); void localAvailability().then(setAvailability); }); }, []);
  // Se lee después del montaje: en el servidor no hay `localStorage` y el
  // historial guardado no debe formar parte del HTML renderizado.
  useEffect(() => {
@@ -242,7 +243,7 @@ export default function Dashboard() {
    setStage(lang === "en" ? "Running coordinated audit" : "Ejecutando auditoría coordinada");
    // Sin consentimiento o sin configuración, la auditoría local se ejecuta igual.
    if (!consent || !configured) { const local = analyzeLocally(payload); setOutcome(local); record(local, text, attachments); setLabTab("evaluation"); return; }
-   void getServices().model.initializeDeviceModel().catch(() => {});
+   void import("@/lib/firebase").then(({ getServices }) => getServices().model.initializeDeviceModel().catch(() => {}));
    const result = await analyze(payload);
    setOutcome(result); record(result, text, attachments); setLabTab("evaluation");
   } catch (e) { setError(t("errors", errorKey(e))); setLabTab("evidence"); } finally { setBusy(false); }

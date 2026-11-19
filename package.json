@@ -18,7 +18,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tesseract.js": "^6.0.1",
-    "three": "0.187.0",
     "tldts": "^7.5.2"
   },
   "overridesComment": "postcss 8.4.31 (fijado por next 15.5.29) arrastra 4 avisos de lectura arbitraria de .map vía sourceMappingURL. 8.5.x es el mismo major y los corrige sin tocar dependencias directas. NO se fuerza @grpc/grpc-js: @firebase/firestore lo fija en ~1.9.0 y sus avisos solo afectan a un servidor gRPC, que este proyecto no ejecuta. Ver docs/seguridad-dependencias.md.",
@@ -31,7 +30,6 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/three": "0.187.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.6",
     "typescript": "^5.7.0"

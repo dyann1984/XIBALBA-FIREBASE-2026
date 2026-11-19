@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getServices } from "@/lib/firebase";
 import { describeAgents, explainError, type AnalysisResult } from "@/lib/analysis/analyze";
 import { VERIFIED_CLASSES } from "@/lib/analysis/risk";
 import { useI18n } from "@/components/LanguageProvider";
@@ -331,6 +330,7 @@ export default function Guardian({
 
     setAsking(true);
     try {
+      const { getServices } = await import("@/lib/firebase");
       const { model } = getServices();
       const evidence = outcome.audit.indicators.slice(0, 14).map((item) => {
         const kindOf =

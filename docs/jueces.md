@@ -77,7 +77,11 @@ curl -I https://xibalba-firebase-2026.vercel.app
 Devuelve `Content-Security-Policy`, `Strict-Transport-Security`,
 `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
 `Cross-Origin-Opener-Policy: same-origin`, `X-Content-Type-Options: nosniff` y
-`Permissions-Policy: camera=(self), microphone=(), geolocation=()…`.
+`Permissions-Policy: camera=(self), microphone=(self), geolocation=()…`. La
+cámara y el micrófono quedan habilitados porque la propia interfaz los usa de
+forma explícita (adjuntar una foto, dictar una pregunta al Guardián): nunca se
+activan solos, siempre tras pulsar un botón, y el micrófono se apaga a los 15
+segundos como máximo.
 
 Dos endpoints, y sus respuestas reales en este despliegue:
 
@@ -114,9 +118,12 @@ el que algo puede declararse sin señales.
 
 ## 6. Lo que XIBALBÁ no hace, dicho por nosotros
 
-No intercepta llamadas. No abre el micrófono. No lee WhatsApp, SMS ni redes
-sociales. No visita los enlaces que le pegas. No consulta la titularidad de
-ninguna cuenta ni bases de la CNBV o la CONDUSEF. **No confirma un fraude.**
+No intercepta llamadas. No abre el micrófono por su cuenta: solo lo activa la
+persona, con el botón "Dictar pregunta", durante 15 segundos como máximo, para
+preguntarle algo al Guardián sobre un análisis ya hecho — nunca para escuchar
+la llamada o el mensaje en sí. No lee WhatsApp, SMS ni redes sociales. No
+visita los enlaces que le pegas. No consulta la titularidad de ninguna cuenta
+ni bases de la CNBV o la CONDUSEF. **No confirma un fraude.**
 
 Orienta con evidencia y dice qué no pudo comprobar. La verificación por el canal
 oficial sigue siendo de la persona.
@@ -124,8 +131,9 @@ oficial sigue siendo de la persona.
 ## 7. Código y verificación
 
 - Repositorio: `dyann1984/XIBALBA-FIREBASE-2026`, rama `release/xibalba-2026`.
-- **175 pruebas automatizadas**, en verde en Node 22.23.4 y en Node 24.22.2
-  (GitHub Actions, `.github/workflows/ci.yml`).
+- **226 pruebas automatizadas** (204 unitarias + 22 E2E con Playwright, 4 de
+  ellas de accesibilidad con axe-core), en verde en Node 22.23.4 y en Node
+  24.22.2 (GitHub Actions, `.github/workflows/ci.yml`).
 - Para ejecutarlo en local: `npm ci`, `npm run dev`. Sin claves de Firebase
   funciona exactamente igual que el despliegue que acabas de ver.
 - Arquitectura y límites de cada agente: [`architecture.md`](architecture.md) y

@@ -71,6 +71,16 @@ severidad alta **y al mismo tiempo escribe su límite**: no es prueba de
 fraude, porque alguien puede pedir legítimamente un depósito en otro banco.
 Paso a paso en [`jueces.md`](jueces.md#1-recorrido-de-dos-minutos).
 
+## 5.1 Actualización (Fase 5.4): retrato premium del Guardián
+
+El Guardián cambió de un avatar SVG procedural a un retrato ilustrado de alta
+calidad con animación por capas (respiración, parpadeo, brillo de ojos,
+viñeta de color reactiva al semáforo), sincronizado con los mismos estados
+reales que antes. **No es un modelo 3D**: no existe ningún GLB en el
+repositorio, y la documentación lo dice en vez de disimularlo
+([`guardian-visual.md`](guardian-visual.md)). El estado verde ("seguridad")
+se verificó esta sesión con una respuesta real de Gemini, no simulada.
+
 ## 6. Funcionamiento en móviles
 
 - Responsive verificado sin desbordamiento horizontal en 320, 360, 375, 390,

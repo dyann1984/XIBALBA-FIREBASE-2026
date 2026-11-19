@@ -1,6 +1,20 @@
 # Despliegue
 
-Fecha: 14 de noviembre de 2026.
+Fecha: 14 de noviembre de 2026. Actualizado el 19 de noviembre de 2026 (Fase
+5.4) con un hallazgo real: **nada de lo construido en las Fases 2 a 5.4 está
+en `release/xibalba-2026`**, la rama que Vercel tiene fijada como producción.
+Todo ese trabajo vive en `codex/xibalba-3-phase5-command-center`, una rama
+local sin fusionar y sin empujar. El despliegue público descrito en este
+documento sigue siendo la base de la Fase 1; hace falta decidir y ejecutar la
+fusión (y entonces sí, con autorización, el despliegue) antes de que el
+jurado vea algo más reciente que eso en línea.
+
+Desde la Fase 5.1, la aplicación también instala un *service worker*
+(`public/sw.js`) que cachea el cascarón estático para funcionar como PWA
+instalable y tolerar una recarga sin red. Nunca cachea `/api/*`, y desde la
+Fase 5.4 usa red primero para el documento HTML (evita servir una página
+vieja que referencie archivos de un build anterior tras un redeploy). Esto no
+cambia nada de lo descrito abajo sobre variables de entorno o App Check.
 
 > **Estado real: la aplicación está desplegada y es pública.**
 > <https://xibalba-firebase-2026.vercel.app> responde 200 sin autenticación.
@@ -61,9 +75,12 @@ Ese hueco **ya está cerrado** sin tocar el entorno global:
 `npm run build` **en Node 24.x** en cada empujón a `release/**`, y deja
 constancia de la versión usada. No necesita ningún secreto.
 
-Primera ejecución, en **Node v24.22.2**: typecheck sin errores, **175 / 175
-pruebas**, build «Compiled successfully», conclusión **success**. Lo que sigue
-sin cubrirse es este equipo, que continúa en Node 22.23.4.
+Primera ejecución, en **Node v24.22.2**: typecheck sin errores, build «Compiled
+successfully», conclusión **success**. El número de pruebas de esa primera
+ejecución (175) quedó desactualizado por las fases siguientes: en esta sesión
+(Fase 5.3–5.4) la suite local tiene **226** (204 unitarias + 22 E2E con
+Playwright). Lo que sigue sin cubrirse es este equipo, que continúa en Node
+22.23.4, y volver a correr el flujo de CI con el número actual.
 
 **Node 24 en Vercel: comprobado.** El panel del proyecto muestra **26.x** —el
 valor por omisión para proyectos nuevos— pero el despliegue **no corre en 26**.
@@ -181,7 +198,9 @@ Después del primer despliegue (**ya comprobado** sobre
    App Check), `Strict-Transport-Security`, `X-Frame-Options: DENY`,
    `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`,
    `X-Content-Type-Options: nosniff` y
-   `Permissions-Policy: camera=(self), microphone=()…`. ✔
+   `Permissions-Policy: camera=(self), microphone=(self)…` (la cámara y el
+   micrófono quedan habilitados porque la interfaz los usa de forma explícita,
+   bajo consentimiento, desde la Fase 2; nunca en segundo plano). ✔
 3. `POST /api/app-check-debug` → **404**. ✔
 4. `POST /api/audit/external`, y aquí hay un matiz que conviene no confundir
    con un fallo:

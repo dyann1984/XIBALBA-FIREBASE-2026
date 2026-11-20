@@ -1102,8 +1102,25 @@ footer { border-top-color: var(--line); color: var(--muted); }
 /* Ilustración estática real (no 3D, no procedural) con animación por capas.
    Ver la nota de honestidad en components/guardian/JaguarPortrait.tsx. */
 .guardian-stage.portrait { position: relative; overflow: hidden; display: block; padding: 0; background: #04070a; }
+/* Envoltura de parallax: lleva el seguimiento de mirada real (traducción por
+   --gaze-x/--gaze-y). El escalado de 1.06 da margen para que la traducción
+   nunca descubra un borde vacío de la imagen. La respiración se anima aparte,
+   en .portrait-img, para que ambos movimientos se compongan sin pisarse. */
+.portrait-parallax {
+  position: absolute;
+  inset: 0;
+  transition: transform .5s cubic-bezier(.2, .7, .2, 1);
+  will-change: transform;
+}
 .portrait-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; transform-origin: center 62%; }
 .portrait-fx { position: absolute; inset: 0; pointer-events: none; }
+.portrait-mic-ring {
+  position: absolute;
+  inset: 6px;
+  border-radius: 16px;
+  border: 2px solid var(--guardian-accent);
+  opacity: 0;
+}
 .portrait-eye {
   position: absolute;
   width: 8%;
@@ -1159,18 +1176,32 @@ footer { border-top-color: var(--line); color: var(--muted); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .portrait:not(.paused) .portrait-img { animation: portrait-breathe 5.4s ease-in-out infinite; }
+  /* Antes: scale(1.012), un cambio del 1.2% invisible a simple vista (se
+     confirmó con getComputedStyle que corría, y aun así nadie la percibía).
+     Ampliado a un rango que se nota sin dejar de ser elegante. */
+  .portrait:not(.paused) .portrait-img { animation: portrait-breathe 5.2s ease-in-out infinite; }
   .portrait.state-escuchando:not(.paused) .portrait-eye,
-  .portrait.state-hablando:not(.paused) .portrait-eye { animation: portrait-eye-pulse 1.1s ease-in-out infinite; }
+  .portrait.state-hablando:not(.paused) .portrait-eye,
+  .portrait.state-analizando:not(.paused) .portrait-eye,
+  .portrait.state-explicando:not(.paused) .portrait-eye { animation: portrait-eye-pulse 1.1s ease-in-out infinite; }
   .portrait.state-analizando:not(.paused) .portrait-scan { animation: portrait-scan-sweep 2.2s linear infinite; }
+  .portrait.state-analizando:not(.paused) .portrait-img { animation: portrait-breathe 5.2s ease-in-out infinite, portrait-think-pulse 1.8s ease-in-out infinite; }
   .portrait.speaking:not(.paused) .portrait-mouth-glow { animation: portrait-speak-pulse .38s ease-in-out infinite alternate; }
   .portrait.state-alerta:not(.paused) .portrait-vignette { animation: portrait-alert-pulse 1.6s ease-in-out infinite; }
+  .portrait.state-escuchando:not(.paused) .portrait-mic-ring { animation: portrait-mic-ring-pulse 1.4s ease-out infinite; }
+  .portrait.state-explicando:not(.paused) .portrait-vignette { animation: portrait-explain-pulse 2.4s ease-in-out infinite; }
 }
-@keyframes portrait-breathe { 50% { transform: scale(1.012); } }
+@keyframes portrait-breathe { 50% { transform: scale(1.035) translateY(-2px); } }
+@keyframes portrait-think-pulse { 0%, 100% { filter: brightness(1) saturate(1); } 50% { filter: brightness(1.08) saturate(1.15); } }
 @keyframes portrait-eye-pulse { 0%, 100% { opacity: .5; } 50% { opacity: .95; } }
 @keyframes portrait-scan-sweep { from { top: 0; opacity: 0; } 8% { opacity: .85; } 92% { opacity: .85; } to { top: 100%; opacity: 0; } }
 @keyframes portrait-speak-pulse { from { opacity: .35; transform: translate(-50%, -50%) scale(1); } to { opacity: .8; transform: translate(-50%, -50%) scale(1.25); } }
 @keyframes portrait-alert-pulse { 50% { box-shadow: inset 0 0 100px 22px #f43f5ea0; } }
+@keyframes portrait-mic-ring-pulse { 0% { opacity: .9; inset: 6px; } 100% { opacity: 0; inset: -4px; } }
+@keyframes portrait-explain-pulse {
+  0%, 100% { box-shadow: inset 0 0 50px 8px transparent; background: radial-gradient(ellipse at center, transparent 48%, transparent 100%); }
+  50% { box-shadow: inset 0 0 60px 14px #e0bb6655; background: radial-gradient(ellipse at center, transparent 44%, #e0bb6622 100%); }
+}
 
 .portrait.state-analizando .portrait-scan { opacity: .85; }
 .portrait.state-seguridad .portrait-vignette {
@@ -1190,7 +1221,9 @@ footer { border-top-color: var(--line); color: var(--muted); }
   .portrait .portrait-eye,
   .portrait .portrait-scan,
   .portrait .portrait-mouth-glow,
-  .portrait .portrait-vignette { animation: none !important; transition: none !important; }
+  .portrait .portrait-vignette,
+  .portrait .portrait-mic-ring,
+  .portrait-parallax { animation: none !important; transition: none !important; transform: none !important; }
   .portrait .portrait-scan { opacity: 0 !important; }
 }
 @media (max-width: 700px) {

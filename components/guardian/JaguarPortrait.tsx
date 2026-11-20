@@ -20,6 +20,15 @@
  * conserva intacto como alternativa: si la imagen no carga (`onError`), este
  * componente renderiza ese SVG en su lugar automáticamente, no solo en el
  * código fuente.
+ *
+ * Hallazgo real de esta sesión (prueba visual en navegador, no solo lectura
+ * de código): la respiración existía mas a una escala de solo 1.2%
+ * (`scale(1.012)`), invisible en la práctica — se confirmó con
+ * `getComputedStyle` que la animación corría, pero nadie podía percibirla.
+ * Se amplió a un rango perceptible y se añadió seguimiento de mirada
+ * (parallax real sobre el puntero, con deriva autónoma en pantallas
+ * táctiles), que antes no existía en absoluto en este componente — solo en
+ * el SVG anterior que ya no se usa en la interfaz real.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -70,6 +79,7 @@ export default function JaguarPortrait({
   const [active, setActive] = useState(true);
   const [blinking, setBlinking] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const [gaze, setGaze] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const element = host.current;
@@ -86,6 +96,34 @@ export default function JaguarPortrait({
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
+
+  // Seguimiento de mirada real sobre el puntero (no existía en el retrato
+  // premium: solo el SVG anterior, ya fuera de uso, lo tenía). En pantallas
+  // táctiles nunca llega `pointermove`, así que una deriva autónoma y suave
+  // mantiene al jaguar con vida sin fingir ningún estado que no sea real.
+  useEffect(() => {
+    if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const element = host.current;
+    if (!element) return;
+    const onMove = (event: PointerEvent) => {
+      const box = element.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      const x = (event.clientX - (box.left + box.width / 2)) / (box.width / 2);
+      const y = (event.clientY - (box.top + box.height / 2)) / (box.height / 2);
+      setGaze({ x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) });
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [active]);
+
+  useEffect(() => {
+    if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(hover: none), (pointer: coarse)").matches) return;
+    const timer = setInterval(() => {
+      setGaze({ x: Math.random() * 1.2 - 0.6, y: Math.random() * 0.7 - 0.35 });
+    }, 3600);
+    return () => clearInterval(timer);
+  }, [active]);
 
   useEffect(() => {
     if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -115,6 +153,15 @@ export default function JaguarPortrait({
   const accent = guardianAccentFor(state, light);
   const label = SPOKEN_STATE[lang][state];
   const style = { "--guardian-accent": accent } as CSSProperties;
+  // Transform directo, no var() dentro de `transform`: un custom property
+  // referenciado con var() no dispara la `transition` de la propiedad que lo
+  // usa en motores reales (solo se nota el salto, nunca la animación) —
+  // hallazgo real al probar el seguimiento de mirada en un navegador, no
+  // solo en el código. Con el valor puesto directo en línea, la transición
+  // sí interpola con normalidad.
+  const parallaxStyle: CSSProperties = {
+    transform: `translate3d(${(gaze.x * 10).toFixed(2)}px, ${(gaze.y * 6).toFixed(2)}px, 0) scale(1.06)`,
+  };
 
   return (
     <div
@@ -125,16 +172,18 @@ export default function JaguarPortrait({
       style={style}
       data-guardian-state={state}
     >
-      <picture>
-        <source srcSet="/guardian/jaguar-portrait.webp" type="image/webp" />
-        <img
-          src="/guardian/jaguar-portrait.jpg"
-          alt={label}
-          className="portrait-img"
-          onError={() => setImageFailed(true)}
-          draggable={false}
-        />
-      </picture>
+      <div className="portrait-parallax" style={parallaxStyle}>
+        <picture>
+          <source srcSet="/guardian/jaguar-portrait.webp" type="image/webp" />
+          <img
+            src="/guardian/jaguar-portrait.jpg"
+            alt={label}
+            className="portrait-img"
+            onError={() => setImageFailed(true)}
+            draggable={false}
+          />
+        </picture>
+      </div>
       <div className="portrait-fx" aria-hidden="true">
         <span className="portrait-eye portrait-eye-left" />
         <span className="portrait-eye portrait-eye-right" />
@@ -142,6 +191,7 @@ export default function JaguarPortrait({
         <span className="portrait-scan" />
         <span className="portrait-vignette" />
         <span className="portrait-mouth-glow" />
+        <span className="portrait-mic-ring" />
       </div>
       <p className="visually-hidden" role="status">
         {label}

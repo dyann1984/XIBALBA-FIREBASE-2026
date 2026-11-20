@@ -77,11 +77,26 @@ const CALL_HINTS =
 const MONEY_HINTS =
   /\b(deposit\w+|transfer\w+|clabe|cuenta bancaria|tarjeta|pago|pagar|cobr\w+|invers\w+|invertir|rendimiento|credito|prestamo|comision|bitcoin|cripto\w*|usdt|spei|oxxo|efectivo|dinero|pesos|mxn|\$\s?\d)\b/i;
 
+/** Por qué se eligió cada agente. Es una clave, no texto: el texto hardcodeado
+ * aquí se mostraba sin pasar por i18n y quedaba en español aunque la persona
+ * cambiara a inglés (hallazgo real de la prueba visual de esta sesión). La
+ * traducción vive en `lib/i18n/dictionary.ts`, sección `agentReasons`. */
+export type AgentReasonKey =
+  | "declaredKind"
+  | "audioAttached"
+  | "callMention"
+  | "financialIdentifier"
+  | "moneyLanguage"
+  | "linksPresent"
+  | "generalCatalog"
+  | "imageMetadata"
+  | "guardianCoordinates";
+
 export type AgentSelection = {
   /** Agentes que van a analizar, en orden de presentación. */
   agents: AgentId[];
-  /** Por qué se eligió cada uno. Se muestra a la persona. */
-  reasons: Record<string, string>;
+  /** Por qué se eligió cada uno. Clave a traducir, no texto fijo. */
+  reasons: Record<string, AgentReasonKey>;
 };
 
 /**
@@ -96,9 +111,9 @@ export function selectAgents(input: {
 }): AgentSelection {
   const text = input.text ?? '';
   const agents: AgentId[] = [];
-  const reasons: Record<string, string> = {};
+  const reasons: Record<string, AgentReasonKey> = {};
 
-  const add = (id: AgentId, reason: string) => {
+  const add = (id: AgentId, reason: AgentReasonKey) => {
     if (agents.includes(id)) return;
     agents.push(id);
     reasons[id] = reason;
@@ -106,12 +121,12 @@ export function selectAgents(input: {
 
   // 1. El agente declarado siempre participa.
   const declared = KIND_AGENT[input.kind];
-  add(declared, 'Lo elegiste como tipo de contenido.');
+  add(declared, 'declaredKind');
 
   // 2. CAMAZOTZ si hay audio o si el texto describe una llamada.
-  if (input.hasAudio) add('camazotz', 'Adjuntaste un archivo de audio.');
+  if (input.hasAudio) add('camazotz', 'audioAttached');
   else if (input.kind !== 'url' && CALL_HINTS.test(text)) {
-    add('camazotz', 'El texto menciona una llamada o un audio.');
+    add('camazotz', 'callMention');
   }
 
   // 3. VUCUB CAMÉ si hay identificadores financieros o lenguaje de dinero.
@@ -125,15 +140,15 @@ export function selectAgents(input: {
         found.cryptoAddresses.length >
       0;
     if (hasIdentifier) {
-      add('vucub', 'El texto contiene un número de cuenta, tarjeta o monedero.');
+      add('vucub', 'financialIdentifier');
     } else if (MONEY_HINTS.test(text)) {
-      add('vucub', 'El texto habla de dinero, pagos o inversiones.');
+      add('vucub', 'moneyLanguage');
     }
   }
 
   // 4. HUN CAMÉ si aparece algún enlace.
   if (input.kind !== 'url' && extractUrls(text).length) {
-    add('hun', 'El contenido incluye enlaces.');
+    add('hun', 'linksPresent');
   }
 
   // 5. IXBALANQUÉ solo si nadie más va a recorrer el catálogo general.
@@ -141,13 +156,13 @@ export function selectAgents(input: {
   //    aquí presentaría como participante a un agente que no ejecuta nada.
   const generalCovered = agents.includes('camazotz') || agents.includes('vucub');
   if (input.kind !== 'url' && text.trim() && !generalCovered) {
-    add('ixbalanque', 'Hay texto que analizar con el catálogo general.');
+    add('ixbalanque', 'generalCatalog');
   }
 
-  if (input.hasImages) add('vucub', 'Revisa los metadatos de las imágenes adjuntas.');
+  if (input.hasImages) add('vucub', 'imageMetadata');
 
   // 6. EL GUARDIÁN siempre coordina y explica.
-  add('guardian', 'Coordina a los agentes y explica el resultado.');
+  add('guardian', 'guardianCoordinates');
 
   return { agents, reasons };
 }

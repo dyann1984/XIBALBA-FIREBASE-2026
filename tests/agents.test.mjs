@@ -505,7 +505,7 @@ test('EL GUARDIÁN siempre coordina y el agente declarado siempre participa', ()
     assert.ok(selection.agents.includes('guardian'), `falta EL GUARDIÁN en ${kind}`);
     assert.equal(
       selection.reasons[selection.agents[0]],
-      'Lo elegiste como tipo de contenido.',
+      'declaredKind',
       `el agente declarado debe ir primero en ${kind}`,
     );
     for (const agent of selection.agents) {
@@ -522,7 +522,7 @@ test('una llamada que dicta una cuenta convoca a CAMAZOTZ y a VUCUB CAMÉ', () =
   });
   assert.ok(result.selection.agents.includes('camazotz'));
   assert.ok(result.selection.agents.includes('vucub'));
-  assert.match(result.selection.reasons.vucub, /número de cuenta|habla de dinero/i);
+  assert.match(result.selection.reasons.vucub, /financialIdentifier|moneyLanguage/);
   // Un solo semáforo, calculado sobre la auditoría ya fusionada.
   assert.equal(result.audit.subject, 'mixto');
   assert.ok(result.contributing.length >= 2);

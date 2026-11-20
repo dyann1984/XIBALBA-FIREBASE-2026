@@ -14,7 +14,17 @@ import { useState } from "react";
 import { Mail, MapPin, Phone, ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { useI18n } from "@/components/LanguageProvider";
 import { KNOWN_COUNTRIES, recordsFor, statusFor } from "@/lib/global-shield/directory";
-import type { HelpChannel, VerificationStatus } from "@/lib/global-shield/types";
+import { ALL_INCIDENT_CATEGORIES, procedureFor } from "@/lib/global-shield/procedures";
+import type { HelpChannel, IncidentCategory, VerificationStatus } from "@/lib/global-shield/types";
+
+const INCIDENT_LABEL_KEY = {
+  "fraude-financiero": "incidentFraudeFinanciero",
+  phishing: "incidentPhishing",
+  extorsion: "incidentExtorsion",
+  suplantacion: "incidentSuplantacion",
+  ciberdelito: "incidentCiberdelito",
+  otro: "incidentOtro",
+} as const satisfies Record<IncidentCategory, string>;
 
 const STATUS_ICON: Record<VerificationStatus, typeof ShieldCheck> = {
   verificado: ShieldCheck,
@@ -54,8 +64,12 @@ export default function GlobalShield({
 }) {
   const { t, lang } = useI18n();
   const [country, setCountry] = useState(defaultCountry ?? KNOWN_COUNTRIES[0].code);
-  const records = recordsFor(country);
+  const [incident, setIncident] = useState<IncidentCategory | "todos">("todos");
+  const allRecords = recordsFor(country);
+  const records =
+    incident === "todos" ? allRecords : allRecords.filter((record) => record.incidentCategories.includes(incident));
   const overallStatus = statusFor(country);
+  const procedure = incident === "todos" ? null : procedureFor(incident, lang);
 
   return (
     <div className="global-shield">
@@ -71,7 +85,48 @@ export default function GlobalShield({
         <StatusBadge status={overallStatus} />
       </div>
 
-      {records.length === 0 ? (
+      <div className="shield-controls">
+        <label htmlFor="shield-incident">{t("globalShield", "selectIncident")}</label>
+        <select
+          id="shield-incident"
+          value={incident}
+          onChange={(event) => setIncident(event.target.value as IncidentCategory | "todos")}
+        >
+          <option value="todos">{t("globalShield", "incidentAll")}</option>
+          {ALL_INCIDENT_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {t("globalShield", INCIDENT_LABEL_KEY[category])}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {procedure && (
+        <div className="shield-procedure" role="region" aria-label={procedure.title}>
+          <h4>{procedure.title}</h4>
+          <ol>
+            {procedure.steps.map((step, index) => (
+              <li key={index}>{step}</li>
+            ))}
+          </ol>
+          <p className="shield-procedure-disclaimer">
+            <b>{t("globalShield", "procedureDisclaimer")}:</b> {procedure.disclaimer}
+          </p>
+        </div>
+      )}
+
+      {records.length === 0 && incident !== "todos" && allRecords.length > 0 && (
+        <div className="empty-row">
+          <div className="empty-icon">
+            <ShieldAlert size={20} />
+          </div>
+          <div>
+            <p>{t("globalShield", "noMatchingAgencies")}</p>
+          </div>
+        </div>
+      )}
+
+      {allRecords.length === 0 ? (
         <div className="empty-row">
           <div className="empty-icon">
             <ShieldAlert size={20} />

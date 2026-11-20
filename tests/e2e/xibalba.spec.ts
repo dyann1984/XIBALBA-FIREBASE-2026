@@ -158,14 +158,17 @@ test("3. Subida de imágenes PNG y WebP, cámara real simulada, historial persis
     "BBVA informa bloqueo de cuenta. Entra a https://bbva-soporte.example.com y llama al +52 55 1234 5678.",
   );
   await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
-  await expect(page.locator(".verdict")).toBeVisible();
+  // Las 3 imágenes (2 subidas + 1 de cámara) siguen adjuntas: el análisis
+  // también intenta OCR sobre ellas antes de mostrar el veredicto, de ahí el
+  // mismo timeout ampliado que en la prueba 7.
+  await expect(page.locator(".verdict")).toBeVisible({ timeout: 20_000 });
 
   // Segundo análisis con mismo dominio para disparar correlación
   await page.locator("#content").fill(
     "Segundo aviso BBVA: verifica tu NIP en https://bbva-soporte.example.com o llama al +52 55 9999 0000.",
   );
   await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
-  await expect(page.locator(".correlation-box")).toBeVisible();
+  await expect(page.locator(".correlation-box")).toBeVisible({ timeout: 20_000 });
 
   // Recargar y comprobar que el historial persistió en localStorage
   await page.reload();
@@ -267,7 +270,9 @@ test("7. OCR con imagen sintética y corrección manual del texto reconocido", a
   const benignImage = await syntheticTextImage(page, "Nos vemos el jueves en la cafeteria");
   await page.locator("#photo").setInputFiles({ name: "captura.png", mimeType: "image/png", buffer: benignImage });
   await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
-  await expect(page.locator(".ocr-evidence")).toBeVisible();
+  // Timeout ampliado a propósito (ver phase2.spec.ts): el arranque en frío
+  // del worker WASM de Tesseract.js toma de forma reproducible más de 5 s.
+  await expect(page.locator(".ocr-evidence")).toBeVisible({ timeout: 20_000 });
   await page.screenshot({ path: path.join(ARTIFACTS_DIR, "11-ocr-reconocido.png"), fullPage: true });
 
   // Corrección manual: la persona edita el texto reconocido para añadir lo
@@ -279,8 +284,10 @@ test("7. OCR con imagen sintética y corrección manual del texto reconocido", a
   await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
 
   // El texto corregido a mano, no el original leído por OCR, debe disparar
-  // las señales de phishing y escalar el semáforo.
-  await expect(page.locator(".verdict-rojo, .verdict-amarillo")).toBeVisible();
+  // las señales de phishing y escalar el semáforo. La imagen sigue adjunta,
+  // así que este segundo análisis también espera a un nuevo arranque del
+  // worker de OCR (mismo motivo que arriba).
+  await expect(page.locator(".verdict-rojo, .verdict-amarillo")).toBeVisible({ timeout: 20_000 });
   // El contenedor de evidencia completo, no cada tarjeta por separado: basta
   // con que la señal aparezca en alguna.
   await expect(page.locator(".evidence")).toContainText(/amenaza|credencial|código/i);

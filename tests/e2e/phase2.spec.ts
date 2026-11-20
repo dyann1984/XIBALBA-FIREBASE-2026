@@ -41,7 +41,13 @@ for (const [kind, message] of [
     await page.getByRole('button',{name:/Auditar solo en este dispositivo|Analizar contenido/i}).click();
     // Fase 5: el bloque de OCR y su corrección manual viven en el Área A
     // (Evidencia) del laboratorio, no en el Área B (Investigación).
-    await expect(page.locator('.ocr-evidence')).toBeVisible();
+    // Timeout ampliado a propósito (investigado en la fase de cierre): el
+    // arranque en frío del worker WASM de Tesseract.js más el reconocimiento
+    // real toma de forma reproducible más de los 5 s por defecto de
+    // Playwright, incluso cuando el OCR sí termina y sí acierta — no es una
+    // prueba más permisiva, es darle tiempo real a una operación que de
+    // verdad lo necesita.
+    await expect(page.locator('.ocr-evidence')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('.ocr-evidence')).toContainText(/Texto reconocido|Lectura incompleta/);
     await page.screenshot({path:path.join(artifacts,`${kind}.png`),fullPage:true});
   });

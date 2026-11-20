@@ -403,7 +403,7 @@ export default function Guardian({
   const canAsk = Boolean(outcome);
 
   return (
-    <section className="panel guardian-panel" aria-label={t("guardian", "panelLabel")}>
+    <section className="panel guardian-panel hud" aria-label={t("guardian", "panelLabel")}>
       <div className={`jaguar-frame jaguar-frame-${light}`}>
         <JaguarPortrait state={state} light={light} speaking={speaking} lang={lang} />
         <span className="jaguar-frame-tag">{t("guardian", "eyebrow")}</span>

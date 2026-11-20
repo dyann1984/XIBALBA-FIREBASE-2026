@@ -1260,7 +1260,9 @@ footer { border-top-color: var(--line); color: var(--muted); }
 .shield-status-en-revision { color: #fbbf24; border-color: #4d3f1f; }
 .shield-status-pendiente { color: #94a3b8; border-color: var(--line-strong); }
 .shield-records { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.shield-record { border: 1px solid var(--line-strong); border-radius: 10px; padding: 14px 16px; background: rgba(4, 9, 16, .6); display: grid; gap: 8px; }
+.shield-record { border: 1px solid var(--line-strong); border-radius: 10px; padding: 14px 16px; background: rgba(4, 9, 16, .6); display: grid; gap: 8px; overflow-wrap: anywhere; }
+.shield-record-head strong { overflow-wrap: anywhere; }
+.shield-channels a { overflow-wrap: anywhere; }
 .shield-record-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .shield-channels { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); }
 .shield-channels a { color: var(--jade, #2fd697); }
@@ -1282,4 +1284,212 @@ footer { border-top-color: var(--line); color: var(--muted); }
 .help-panel-close { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--muted); }
 @media (max-width: 700px) {
   .help-floating { right: 12px; bottom: 12px; }
+}
+
+/* ============================================================================
+   XIBALBÁ — MAYA CYBER INTELLIGENCE LABORATORY (Misión 2)
+   Capa visual sobre las cuatro áreas prioritarias: Centro de Operaciones,
+   Laboratorio Forense, Panel de los Cinco Agentes e Interfaz del Guardián.
+   No cambia ningún dato ni indicador: solo presentación, sobre las clases que
+   ya existen. Reutiliza los tokens de color definidos arriba (--cyan, --gold,
+   --jade, --panel...). Evita filtros pesados (blur) fuera de hover/estados
+   puntuales para no castigar el rendimiento en móvil.
+   ========================================================================== */
+
+/* Corchetes de esquina estilo consola, en oro y cian, sobre cualquier panel
+   marcado como .hud: un acento técnico discreto, no una caja nueva. */
+.hud { position: relative; }
+.hud::before, .hud::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  opacity: .5;
+}
+.hud::before { top: 10px; left: 10px; border-top: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); }
+.hud::after { bottom: 10px; right: 10px; border-bottom: 1.5px solid var(--cyan); border-right: 1.5px solid var(--cyan); }
+
+/* Textura de circuito muy sutil para fondos de panel amplios: una sola capa
+   de líneas finas en diagonal, opacidad mínima, decorativa (aria-hidden la
+   cubre donde aplica vía pseudo-elemento, nunca interfiere con el contenido). */
+.lab-texture {
+  background-image:
+    repeating-linear-gradient(115deg, rgba(58, 232, 224, .035) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(25deg, rgba(227, 189, 114, .03) 0 1px, transparent 1px 84px);
+}
+
+/* --- Eyebrows / encabezados de sección: glifo de escalera + regla brillante */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 9px;
+  flex: none;
+  background:
+    linear-gradient(var(--gold), var(--gold)) no-repeat 0 100% / 3px 3px,
+    linear-gradient(var(--gold), var(--gold)) no-repeat 4.5px 50% / 3px 6px,
+    linear-gradient(var(--gold), var(--gold)) no-repeat 9px 0 / 3px 9px;
+  opacity: .85;
+}
+.eyebrow.muted::before { opacity: .45; }
+
+/* --- Área 1: Centro de Operaciones ----------------------------------------- */
+.command-strip {
+  position: relative;
+  background: linear-gradient(120deg, #0c2024 0%, #0a1a22 55%, #0d1a16 100%);
+  border: 1px solid rgba(227, 189, 114, .22);
+  box-shadow: var(--lift), inset 0 0 0 1px rgba(58, 232, 224, .04);
+}
+.command-strip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(115deg, rgba(58, 232, 224, .04) 0 1px, transparent 1px 64px);
+  pointer-events: none;
+}
+.command-strip div { position: relative; z-index: 1; }
+.command-strip div:not(:last-of-type) { border-right: 1px solid rgba(227, 189, 114, .18); padding-right: 24px; }
+.command-strip strong { font-family: 'Space Grotesk', sans-serif; letter-spacing: .2px; }
+
+.ops-status-grid { gap: 14px; }
+.ops-status-card {
+  position: relative;
+  background: linear-gradient(165deg, var(--panel-2), var(--panel-raise, var(--panel)));
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: var(--lift);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.ops-status-card:hover { border-color: rgba(58, 232, 224, .4); box-shadow: var(--lift), 0 0 0 1px rgba(58, 232, 224, .12); transform: translateY(-1px); }
+.ops-status-card::before, .ops-status-card::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  opacity: .55;
+}
+.ops-status-card::before { top: 7px; left: 7px; border-top: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); }
+.ops-status-card::after { bottom: 7px; right: 7px; border-bottom: 1.5px solid var(--cyan); border-right: 1.5px solid var(--cyan); }
+.ops-status-head { color: var(--cyan); font-size: 11px; letter-spacing: .4px; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
+.ops-status-card strong { font-family: 'Space Grotesk', sans-serif; }
+.ops-status-cta { border-color: rgba(227, 189, 114, .3); }
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(520px 320px at 85% 0%, rgba(58, 232, 224, .14), transparent 68%),
+    radial-gradient(420px 260px at 8% 100%, rgba(227, 189, 114, .1), transparent 70%);
+  pointer-events: none;
+}
+.hero-kicker .pulse { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+
+/* --- Área 3: Panel de los cinco agentes ------------------------------------ */
+.agent-card { position: relative; overflow: hidden; }
+.agent-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--cyan));
+  opacity: .5;
+  transition: opacity .2s;
+}
+.agent-card:hover::before, .agent-card.selected::before { opacity: 1; }
+.agent-icon {
+  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+.agent-grid.large .agent-icon { width: 52px; height: 52px; }
+
+/* --- Área 2: Laboratorio forense -------------------------------------------- */
+.lab-tab { position: relative; }
+.lab-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: -2px;
+  height: 2px;
+  background: var(--jade, #2fd697);
+  box-shadow: 0 0 8px var(--jade, #2fd697);
+}
+.workspace.lab-grid > .panel {
+  position: relative;
+}
+.workspace.lab-grid > .panel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), transparent 70%);
+  opacity: .6;
+  border-radius: 10px 10px 0 0;
+}
+.investigation-agent, .shield-record, .agent-status {
+  position: relative;
+}
+
+/* --- Área 4: Interfaz del Guardián, protagonista ---------------------------
+   Antes vivía después del grid de tres columnas (había que bajar mucho para
+   verlo — hallazgo real de la revisión visual). Ahora es un banner completo
+   justo bajo las pestañas del laboratorio, antes de la mesa de evidencia. */
+.lab-jaguar-hero { margin: 4px 0 20px; }
+.lab-jaguar-hero .guardian-panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(640px 280px at 18% -20%, rgba(58, 232, 224, .1), transparent 60%),
+    radial-gradient(520px 260px at 100% 120%, rgba(227, 189, 114, .09), transparent 65%),
+    linear-gradient(170deg, var(--panel-2), var(--panel));
+  border: 1px solid rgba(227, 189, 114, .25);
+  box-shadow: var(--lift), 0 0 0 1px rgba(58, 232, 224, .05);
+  padding: 1.75rem;
+}
+.lab-jaguar-hero .guardian-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(115deg, rgba(58, 232, 224, .03) 0 1px, transparent 1px 72px);
+  pointer-events: none;
+}
+.lab-jaguar-hero .jaguar-frame { width: 190px; flex: none; }
+.lab-jaguar-hero .guardian-stage.portrait { min-height: 230px; border-radius: 14px; }
+.lab-jaguar-hero .guardian-body h2 { font-family: 'Space Grotesk', sans-serif; letter-spacing: -.2px; }
+
+@media (max-width: 900px) {
+  .lab-jaguar-hero .jaguar-frame { width: 140px; }
+}
+@media (max-width: 600px) {
+  .lab-jaguar-hero .guardian-panel { padding: 1.1rem; }
+  .lab-jaguar-hero .jaguar-frame { width: 100%; }
+}
+
+/* En móvil, bajar algunas capas decorativas para proteger el rendimiento. */
+@media (max-width: 700px) {
+  .command-strip::after,
+  .lab-jaguar-hero .guardian-panel::before,
+  .workspace.lab-grid > .panel::before { opacity: .6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ops-status-card:hover { transform: none; }
 }

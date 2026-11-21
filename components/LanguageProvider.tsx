@@ -60,6 +60,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = LANG_TAG[lang];
+    // El <title> del documento viene fijo en español desde los metadatos del
+    // servidor (Next.js no re-renderiza metadata por una elección de idioma
+    // puramente en cliente). Sin esto, la pestaña del navegador se quedaba en
+    // español aunque toda la interfaz ya hubiera cambiado a inglés.
+    document.title = translatorFor(lang)("app", "documentTitle");
   }, [lang]);
 
   const setLang = useCallback((next: Lang) => {

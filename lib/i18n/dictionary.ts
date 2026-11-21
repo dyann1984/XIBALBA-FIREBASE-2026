@@ -16,6 +16,7 @@
 
 export const es = {
   app: {
+    documentTitle: "XIBALBÁ AI | Protección inteligente",
     tagline: "INTELIGENCIA DE PROTECCIÓN",
     menu: "MENÚ PRINCIPAL",
     breadcrumb: "ESPACIO DE PROTECCIÓN",
@@ -517,6 +518,7 @@ export type Dictionary = typeof es;
 
 export const en: Dictionary = {
   app: {
+    documentTitle: "XIBALBÁ AI | Smart Protection",
     tagline: "PROTECTION INTELLIGENCE",
     menu: "MAIN MENU",
     breadcrumb: "PROTECTION WORKSPACE",

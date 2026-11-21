@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { describeAgents, explainError, type AnalysisResult } from "@/lib/analysis/analyze";
+import { describeAgents, errorKey, type AnalysisResult } from "@/lib/analysis/analyze";
 import { VERIFIED_CLASSES } from "@/lib/analysis/risk";
 import { useI18n } from "@/components/LanguageProvider";
 import { localizeIndicator, localizePending } from "@/lib/i18n/evidence";
@@ -391,7 +391,7 @@ export default function Guardian({
         ...previous,
         {
           question: asked,
-          answer: t("guardian", "answerFailed", { error: explainError(e) }),
+          answer: t("guardian", "answerFailed", { error: t("errors", errorKey(e)) }),
           source: "",
         },
       ]);

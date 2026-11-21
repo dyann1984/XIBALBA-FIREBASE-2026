@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Audit, AuditIndicator, Severity } from "@/lib/analysis/risk";
 import type { Assessment } from "@/lib/analysis/guardian";
 import { AGENT_NAMES, type AgentId } from "@/lib/analysis/coordinator";
+import type { ErrorKey } from "@/lib/analysis/errors";
 import { useI18n } from "@/components/LanguageProvider";
 import { localizeIndicator, localizeAuditLimitation, localizePending } from "@/lib/i18n/evidence";
 import { LANG_TAG } from "@/lib/i18n";
@@ -145,7 +146,7 @@ export default function EvidenceList({
 }: {
   audit: Audit;
   assessment: Assessment | null;
-  aiError: string | null;
+  aiError: ErrorKey | null;
 }) {
   const { t, lang } = useI18n();
   const deterministic = audit.indicators.filter((i) => i.classification === "determinista").sort(byRelevance);
@@ -219,7 +220,7 @@ export default function EvidenceList({
           </>
         ) : (
           <p className="evidence-empty">
-            {aiError ? t("evidence", "bError", { error: aiError }) : t("evidence", "bNoAi")}
+            {aiError ? t("evidence", "bError", { error: t("errors", aiError) }) : t("evidence", "bNoAi")}
           </p>
         )}
       </Group>
@@ -251,7 +252,7 @@ export default function EvidenceList({
           caption={t("evidence", "dCaption")}
           count={failed.length + (aiError ? 1 : 0)}
         >
-          {aiError && <p className="indicator-evidence">{t("evidence", "dAi", { error: aiError })}</p>}
+          {aiError && <p className="indicator-evidence">{t("evidence", "dAi", { error: t("errors", aiError) })}</p>}
           {failed.map((item) => (
             <Indicator key={item.id} item={item} />
           ))}

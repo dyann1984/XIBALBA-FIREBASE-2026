@@ -95,11 +95,21 @@ type Jwk = { kid?: string; kty?: string; alg?: string; use?: string; n?: string;
  * cliente publica en cada carga. Se admite también una variable propia para
  * entornos donde el ID de aplicación no esté disponible en el servidor.
  */
+/**
+ * Quita BOM y espacios de ancho cero que paneles como Vercel a veces dejan
+ * pegados a un valor. `.trim()` por sí solo basta cuando están al borde
+ * (lo cubre igual la especificación de ECMAScript), pero no si quedaran en
+ * medio de la cadena; ver la misma nota en `lib/firebase.ts`.
+ */
+function cleanEnvValue(value: string | undefined): string {
+  return value?.replace(/[﻿​-‍⁠]/g, '').trim() ?? '';
+}
+
 export function projectNumberFromEnv(env: Record<string, string | undefined> = process.env): string | null {
-  const explicit = env.FIREBASE_PROJECT_NUMBER?.trim();
+  const explicit = cleanEnvValue(env.FIREBASE_PROJECT_NUMBER);
   if (explicit && /^\d{1,30}$/.test(explicit)) return explicit;
 
-  const appId = env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim() ?? '';
+  const appId = cleanEnvValue(env.NEXT_PUBLIC_FIREBASE_APP_ID);
   const parts = appId.split(':');
   if (parts.length >= 3 && /^\d{1,30}$/.test(parts[1])) return parts[1];
 

@@ -28,9 +28,33 @@ export type ErrorKey =
   | 'format'
   | 'generic';
 
+/**
+ * Mensajes en español por clave, usados solo por `explainError` (ver su
+ * comentario) y derivados de la misma clasificación que `errorKey`, para que
+ * ninguna de las dos se desincronice de la otra.
+ */
+const SPANISH_MESSAGE: Record<Exclude<ErrorKey, 'inputEmpty' | 'inputLong' | 'inputUrl' | 'inputUrlScheme'>, string> = {
+  config:
+    'Falta completar la configuración de Firebase o de App Check: la interpretación de IA no está disponible. La auditoría local sigue funcionando.',
+  quota: 'Se alcanzó un límite de uso. Espera antes de volver a intentar.',
+  permission: 'Firebase rechazó la solicitud. Revisa App Check y los permisos del proyecto.',
+  network: 'No se pudo conectar. Comprueba tu conexión y vuelve a intentar.',
+  format: 'El modelo devolvió una respuesta que no cumple el formato exigido; se descartó.',
+  generic: 'No se pudo completar el análisis. Inténtalo de nuevo.',
+};
+
 export function errorKey(error: unknown): ErrorKey {
   if (error instanceof InputError) return error.code;
+  // El texto exacto del proveedor (App Check, reCAPTCHA, Gemini, red) nunca
+  // debe llegar a la pantalla: puede traer rutas o identificadores del
+  // proyecto. Pero tampoco debe perderse: queda en la consola del
+  // navegador, donde quien depura la vista previa o producción puede leerlo,
+  // sin exponerlo a quien solo usa la aplicación.
+  if (typeof console !== 'undefined') console.error('[xibalba] interpretación de IA falló:', error);
   const message = error instanceof Error ? error.message : '';
+  // Antes que la rama de App Check: «Falta configurar Firebase y App Check»
+  // contiene «App Check» y caía en el mensaje de rechazo, que acusaba a
+  // Firebase de rechazar una solicitud que nunca llegó a salir del dispositivo.
   if (/falta configurar/i.test(message)) return 'config';
   if (/429|quota|resource.exhausted/i.test(message)) return 'quota';
   if (/403|permission|app.?check/i.test(message)) return 'permission';
@@ -40,36 +64,16 @@ export function errorKey(error: unknown): ErrorKey {
 }
 
 /**
- * Dos reglas que no se mezclan:
+ * Texto en español de `errorKey`. Se conserva para quien no tenga el idioma
+ * de la interfaz a mano (pruebas, módulos sin React): la interfaz misma debe
+ * preferir `t("errors", errorKey(error))`, que sí traduce al inglés — usar
+ * este texto tal cual en una pantalla en inglés fue el defecto real que
+ * motivó separar la clasificación (`errorKey`) del texto (este mapa).
  *
- *  1. Un `InputError` lo escribimos nosotros sobre lo que la persona tecleó
- *     («Introduce una URL completa…»), así que se muestra tal cual. Si no, la
- *     interfaz diría «no se pudo completar el análisis» ante una URL mal
- *     escrita y nadie sabría qué corregir.
- *  2. Cualquier otro error —modelo, red, proveedor— se reduce a un mensaje
- *     nuestro. Su texto no es nuestro: puede traer rutas, identificadores de
- *     proyecto o detalles internos que no tienen por qué aparecer en pantalla.
+ * Un `InputError` lo escribimos nosotros sobre lo que la persona tecleó
+ * («Introduce una URL completa…»), así que se muestra tal cual.
  */
 export function explainError(error: unknown): string {
   if (error instanceof InputError) return error.message;
-  const message = error instanceof Error ? error.message : '';
-  // Antes que la rama de App Check: «Falta configurar Firebase y App Check»
-  // contiene «App Check» y caía en el mensaje de rechazo, que acusaba a
-  // Firebase de rechazar una solicitud que nunca llegó a salir del dispositivo.
-  if (/falta configurar/i.test(message)) {
-    return 'Falta completar la configuración de Firebase o de App Check: la interpretación de IA no está disponible. La auditoría local sigue funcionando.';
-  }
-  if (/429|quota|resource.exhausted/i.test(message)) {
-    return 'Se alcanzó un límite de uso. Espera antes de volver a intentar.';
-  }
-  if (/403|permission|app.?check/i.test(message)) {
-    return 'Firebase rechazó la solicitud. Revisa App Check y los permisos del proyecto.';
-  }
-  if (/network|fetch|offline/i.test(message)) {
-    return 'No se pudo conectar. Comprueba tu conexión y vuelve a intentar.';
-  }
-  if (/formato esperado/i.test(message)) {
-    return 'El modelo devolvió una respuesta que no cumple el formato exigido; se descartó.';
-  }
-  return 'No se pudo completar el análisis. Inténtalo de nuevo.';
+  return SPANISH_MESSAGE[errorKey(error) as keyof typeof SPANISH_MESSAGE] ?? SPANISH_MESSAGE.generic;
 }

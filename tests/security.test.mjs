@@ -89,6 +89,23 @@ test('el número de proyecto se deriva del ID de aplicación, que ya es público
   assert.equal(projectNumberFromEnv({ FIREBASE_PROJECT_NUMBER: 'no-numerico' }), null);
 });
 
+test('un BOM u otro espacio invisible pegado al valor no rompe la derivación', () => {
+  // Confirmado en la sesión de finalización: Vercel puede guardar el valor
+  // con un BOM (U+FEFF) pegado al inicio. `.trim()` de JS lo quita si está en
+  // el borde, pero no si quedara en medio de la cadena (p. ej. entre los
+  // segmentos separados por ":"); projectNumberFromEnv debe resolver el
+  // número de proyecto en ambos casos.
+  assert.equal(projectNumberFromEnv({ NEXT_PUBLIC_FIREBASE_APP_ID: `﻿${APP_ID}` }), PROJECT);
+  assert.equal(
+    projectNumberFromEnv({ NEXT_PUBLIC_FIREBASE_APP_ID: `1:​${PROJECT}:web:abcdef0123456789` }),
+    PROJECT,
+  );
+  assert.equal(
+    projectNumberFromEnv({ FIREBASE_PROJECT_NUMBER: `﻿${PROJECT}` }),
+    PROJECT,
+  );
+});
+
 test('sin número de proyecto no se verifica nada y no se concede acceso', async () => {
   const result = await verifyAppCheckToken(mintToken(), {
     fetch: fakeJwksFetch(),

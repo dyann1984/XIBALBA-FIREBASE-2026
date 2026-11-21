@@ -126,3 +126,33 @@ test('buildReportData y formatReportMarkdown generan reportes enmascarados en ES
   assert.match(mdEn, /XIBALBÁ 2\.0 — Fraud Investigation Report/);
   assert.equal(mdEn.includes('9876 5432'), false);
 });
+
+test('un fallo de IA se reporta en el idioma elegido, nunca siempre en español', () => {
+  // Defecto real visto en la vista previa: `aiError` guardaba ya el texto en
+  // español (de `explainError`), así que un reporte en inglés mezclaba los
+  // dos idiomas. `aiError` ahora es una clave (`ErrorKey`) que cada consumidor
+  // traduce con el idioma que tiene a mano.
+  const coordinated = auditCoordinated({ kind: 'message', text: 'hola, todo bien' });
+  const risk = combineRisk(coordinated.audit, null);
+  const base = {
+    audit: coordinated.audit,
+    risk,
+    assessment: null,
+    source: null,
+    aiError: 'network',
+    selection: coordinated.selection,
+    attributed: coordinated.attributed,
+    contributing: coordinated.contributing,
+  };
+  const corr = correlateIncidents({}, []);
+
+  const reportEn = buildReportData(base, corr, 'en');
+  assert.equal(reportEn.aiInterpretation.error, 'Could not connect. Check your connection and try again.');
+  assert.doesNotMatch(reportEn.aiInterpretation.error, /pudo conectar/);
+
+  const reportEs = buildReportData(base, corr, 'es');
+  assert.equal(
+    reportEs.aiInterpretation.error,
+    'No se pudo conectar. Comprueba tu conexión y vuelve a intentar.',
+  );
+});

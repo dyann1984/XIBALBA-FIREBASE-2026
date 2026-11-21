@@ -26,6 +26,7 @@ import {
   localizeAuditLimitation,
   localizeCoverageLabel,
   localizeIndicator,
+  localizeJoinedList,
   localizePending,
 } from '../lib/i18n/evidence.ts';
 import {
@@ -172,6 +173,36 @@ test('todos los motivos del veredicto se traducen sin dejar la clave a la vista'
       }
     }
   }
+});
+
+test('las listas de señales y comprobaciones pendientes del veredicto se traducen, no solo la plantilla', () => {
+  // Defecto real visto en una vista previa desplegada: `translate(lang,
+  // 'reason', item.key, item.vars)` ya traducía la plantilla
+  // («Deterministic evidence of high severity: {signals}.»), pero el valor
+  // de `{signals}`/`{pending}` —una lista de nombres de indicador que arma
+  // risk.ts uniendo `item.indicator` crudo— se quedaba en español porque el
+  // motor determinista nunca se traduce a sí mismo. La interfaz debe
+  // traducir cada nombre de la lista antes de sustituirlo en la plantilla.
+  const caso = auditMessage(
+    'BBVA le informa: detectamos un cargo no reconocido por $8,450.00 en su cuenta. ' +
+      'Si usted no reconoce esta operación debe validar su identidad en las próximas 2 horas ' +
+      'o su cuenta será bloqueada de forma permanente.',
+  );
+  const risk = combineRisk(caso, null);
+  const conSenales = risk.rationaleKeys.find((item) => item.key === 'detHigh' && item.vars?.signals);
+  assert.ok(conSenales, 'el caso debe producir un motivo detHigh con señales');
+  const traducidas = localizeJoinedList(conSenales.vars.signals, 'en', '; ');
+  assert.doesNotMatch(traducidas, /[áéíóúñ]/i, `una señal quedó sin traducir: ${traducidas}`);
+  assert.match(traducidas, /Time pressure|Threat of account block/);
+
+  const conPendientes = risk.rationaleKeys.find((item) => item.key === 'pending' && item.vars?.pending);
+  if (conPendientes) {
+    const traducidas2 = localizeJoinedList(conPendientes.vars.pending, 'en', ', ');
+    assert.doesNotMatch(traducidas2, /[áéíóúñ]/i, `una comprobación pendiente quedó sin traducir: ${traducidas2}`);
+  }
+
+  // En español, traducir es una operación neutra (encuentra la misma frase).
+  assert.equal(localizeJoinedList(conSenales.vars.signals, 'es', '; '), conSenales.vars.signals);
 });
 
 // ---------------------------------------------------- evidencias: sin huecos

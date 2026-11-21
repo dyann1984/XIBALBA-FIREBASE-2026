@@ -3,13 +3,23 @@ import { CustomProvider, getToken, initializeAppCheck, ReCaptchaEnterpriseProvid
 import { getAI, getGenerativeModel, GoogleAIBackend, InferenceMode } from "firebase/ai";
 import { getFirestore } from "firebase/firestore";
 
+// Variables de entorno pegadas en paneles como Vercel a veces arrastran un
+// BOM (U+FEFF) u otros espacios invisibles al inicio/final del valor. Firebase
+// construye nombres de recurso como "projects/<id>/apps/<id>" con estos
+// valores tal cual; un BOM en medio de esa cadena produce un 400
+// "Invalid resource name" en App Check que parece un problema de consola
+// cuando en realidad es un valor sucio. Se normaliza aquí, en el único lugar
+// donde se leen, para que no importa cómo se cargó la variable.
+function clean(value: string | undefined): string | undefined {
+  return value?.replace(/[﻿​-‍⁠]/g, "").trim() || undefined;
+}
 const config = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: clean(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
+  authDomain: clean(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  projectId: clean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
+  appId: clean(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
 };
-const siteKey = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY;
+const siteKey = clean(process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY);
 function localDebugEnabled() {
   return process.env.NODE_ENV === "development" && typeof window !== "undefined" &&
     window.location.hostname === "localhost" && process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG === "true";

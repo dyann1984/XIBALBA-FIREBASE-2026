@@ -84,6 +84,21 @@ test('las demás ramas de explainError siguen vivas', () => {
   assert.match(explainError(new Error('HTTP 429 quota exceeded')), /límite de uso/);
   assert.match(explainError(new Error('403 permission denied')), /rechazó la solicitud/);
   assert.match(explainError(new Error('network request failed')), /No se pudo conectar/);
+  // Mensaje real observado contra Gemini en producción (sesión de
+  // finalización, ver docs/app-check-diagnostico-sesion-finalizacion.md):
+  // un 401, no un 403, pero con el mismo texto "App Check" que ya clasifica
+  // la rama de permiso. Sin esta prueba, un detalle interno del SDK (el
+  // código HTTP exacto) podría dejar de coincidir con /403|permission/ y la
+  // persona vería el mensaje genérico en vez de uno que señala App Check.
+  assert.match(
+    explainError(new Error('Firebase App Check token is invalid.')),
+    /App Check/,
+  );
+  assert.doesNotMatch(
+    explainError(new Error('Firebase App Check token is invalid.')),
+    /token is invalid/,
+    'no debe reenviarse el texto crudo del proveedor',
+  );
   const malaRespuesta = (() => {
     try {
       parseAssessment('{"risk":"confirmado"}');

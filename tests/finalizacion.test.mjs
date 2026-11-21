@@ -308,6 +308,33 @@ test('el caso de control demuestra que el verde sigue siendo posible', () => {
   assert.equal(combineRisk(audit, { risk: 'bajo' }).light, 'verde');
 });
 
+test('la IA nunca puede rebajar un riesgo alto confirmado por evidencia determinista', () => {
+  // Regla de seguridad explícita del encargo: un veredicto determinista alto
+  // (señales reales, comprobadas en el dispositivo) no puede volverse menos
+  // grave solo porque el modelo, sobre el mismo contenido, opine lo
+  // contrario. Se prueban los tres casos de demostración que de verdad llegan
+  // a 'alto' sin IA, y se verifica con los tres niveles de opinión del
+  // modelo: 'bajo', 'medio' y ninguno rebaja el resultado.
+  const casosAltoSinIA = demo.cases.filter((caso) => {
+    const { audit } = auditCoordinated({ kind: caso.kind, text: caso.text });
+    return combineRisk(audit, null).riskLevel === 'alto';
+  });
+  assert.ok(casosAltoSinIA.length > 0, 'la muestra necesita al menos un caso realmente alto sin IA');
+
+  for (const caso of casosAltoSinIA) {
+    const { audit } = auditCoordinated({ kind: caso.kind, text: caso.text });
+    for (const aiRisk of ['bajo', 'medio']) {
+      const conIA = combineRisk(audit, { risk: aiRisk });
+      assert.equal(
+        conIA.riskLevel,
+        'alto',
+        `${caso.id}: la IA (${aiRisk}) rebajó un riesgo alto determinista`,
+      );
+      assert.equal(conIA.light, 'rojo', `${caso.id}: el semáforo rojo no debe cambiar por una opinión más benigna de la IA`);
+    }
+  }
+});
+
 test('la llamada de demostración convoca a CAMAZOTZ y a VUCUB CAMÉ', () => {
   const caso = demo.cases.find((item) => item.id === 'llamada-secuestro');
   const { contributing, audit } = auditCoordinated({ kind: caso.kind, text: caso.text });

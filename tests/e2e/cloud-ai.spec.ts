@@ -63,7 +63,15 @@ test("Interpretación de IA en la nube real (Firebase + Gemini) nunca baja un ve
 
   // El resultado determinista es inequívocamente alto: la IA real no debe
   // haberlo rebajado, sea cual sea su propia lectura del texto.
-  await expect(page.locator(".verdict-rojo")).toBeVisible();
+  //
+  // Timeout ampliado a propósito, igual que en `answered` arriba: el filtro
+  // de `.inference` por LOCAL/NUBE/ON-DEVICE/CLOUD puede cumplirse mientras
+  // el análisis todavía muestra "SIN VERIFICAR" un instante (el motor aún no
+  // terminó de combinar el veredicto), así que el locator por defecto de 5s
+  // podía fallar aquí aunque la llamada real a la nube sí hubiera respondido
+  // — visto de forma reproducible corriendo esta prueba contra servicios
+  // reales el 21 de noviembre de 2026.
+  await expect(page.locator(".verdict-rojo")).toBeVisible({ timeout: 15_000 });
   await expect(page.locator(".inference")).not.toContainText(/SIN VERIFICAR|UNVERIFIED/i);
 });
 
@@ -97,7 +105,7 @@ test("Retrato del Guardián en estado de seguridad (verde) con IA real", async (
     .catch(() => false);
   test.skip(!answered, "La llamada real al modelo no respondió en 30s (red o cuota del proveedor).");
 
-  await expect(page.locator(".verdict-verde")).toBeVisible();
+  await expect(page.locator(".verdict-verde")).toBeVisible({ timeout: 15_000 });
   const portrait = page.locator(".guardian-stage.portrait");
   await expect(portrait).toHaveAttribute("data-guardian-state", "seguridad");
   await portrait.screenshot({ path: path.join(ARTIFACTS_DIR, "03-retrato-seguridad.png") });

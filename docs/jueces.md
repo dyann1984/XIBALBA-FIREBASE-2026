@@ -131,9 +131,11 @@ oficial sigue siendo de la persona.
 ## 7. Código y verificación
 
 - Repositorio: `dyann1984/XIBALBA-FIREBASE-2026`, rama `release/xibalba-2026`.
-- **226 pruebas automatizadas** (204 unitarias + 22 E2E con Playwright, 4 de
-  ellas de accesibilidad con axe-core), en verde en Node 22.23.4 y en Node
-  24.22.2 (GitHub Actions, `.github/workflows/ci.yml`).
+- **214 pruebas unitarias + batería E2E con Playwright** (28, 4 de
+  accesibilidad con axe-core, 2 omitidas a propósito por depender de
+  credenciales reales), en verde en Node 22.23.4 localmente y, desde antes de
+  esta integración, también en Node 24.22.2 (GitHub Actions,
+  `.github/workflows/ci.yml`).
 - Para ejecutarlo en local: `npm ci`, `npm run dev`. Sin claves de Firebase
   funciona exactamente igual que el despliegue que acabas de ver.
 - Arquitectura y límites de cada agente: [`architecture.md`](architecture.md) y

@@ -48,6 +48,8 @@ const FIREBASE_ENDPOINTS = [
 const csp = [
   "default-src 'self'",
   // El nonce es el pendiente conocido; ver la nota de arriba.
+  // `wasm-unsafe-eval` es necesario para el OCR local (Tesseract.js compila
+  // WebAssembly en el navegador); sin él, el worker de OCR falla bajo CSP.
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${development ? " 'unsafe-eval'" : ""} https://www.google.com https://www.gstatic.com`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",

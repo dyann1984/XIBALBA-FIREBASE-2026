@@ -20,7 +20,7 @@ dificultad.
 - **Se puede demostrar sin ella.** La auditoría determinista completa corre en
   el dispositivo y el guion de video está escrito para funcionar así. Pero si se
   quiere enseñar la inferencia híbrida en vivo, esto va primero.
-- Pasos exactos: **`docs/app-check.md`**.
+- Pasos exactos: **`docs/app-check.md`** (y `docs/despliegue.md`, sección 2).
 
 ### 1.2 Dominio de producción en reCAPTCHA Enterprise
 

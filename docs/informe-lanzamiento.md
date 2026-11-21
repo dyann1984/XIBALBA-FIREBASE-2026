@@ -154,7 +154,10 @@ hoy mismo:
 Hechos: proyecto de Vercel creado, aplicación desplegada y comprobada en línea,
 **Node 24 verificado** (`nodejs24.x`), **repositorio conectado** a Vercel, tres
 de las cuatro variables públicas de Firebase cargadas en *Production* y
-*Preview*, e **IA híbrida comprobada funcionando** en local.
+*Preview*, e **IA híbrida comprobada funcionando** en local. Desde la
+integración del PR #1 (20 de noviembre), además: **PR abierto** de
+`xibalba-global-defense` hacia `release/xibalba-2026`, con 214 pruebas
+unitarias y 28 E2E en verde.
 
 Queda esto, y solo tú puedes hacerlo:
 
@@ -167,9 +170,11 @@ Queda esto, y solo tú puedes hacerlo:
    exige confirmación humana explícita para exponer públicamente un valor con
    forma de clave, y esa confirmación es tuya. Órdenes exactas en
    [`app-check.md`](app-check.md), sección 2.
-3. **Volver a desplegar** para que las variables entren en el build. Con el
-   repositorio ya conectado, **un empujón a `release/xibalba-2026` despliega a
-   producción**; `vercel deploy` sin `--prod` hace una vista previa.
+3. **Revisar y fusionar el PR #1** (o decidir otra estrategia de integración)
+   antes de que `release/xibalba-2026` refleje el trabajo de Global Defense 4.0
+   y el rediseño premium. Con el repositorio ya conectado, **un empujón a
+   `release/xibalba-2026` despliega a producción**; `vercel deploy` sin
+   `--prod` hace una vista previa.
 4. **Decidir el acceso del jurado al código**: colaboradores, público temporal o
    solo la aplicación. Tabla en [`despliegue.md`](despliegue.md), sección 6.
 5. **Publicar las reglas de Firestore** tal como están, que deniegan todo:

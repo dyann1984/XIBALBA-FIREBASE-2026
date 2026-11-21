@@ -1,13 +1,15 @@
 # Despliegue
 
 Fecha: 14 de noviembre de 2026. Actualizado el 19 de noviembre de 2026 (Fase
-5.4) con un hallazgo real: **nada de lo construido en las Fases 2 a 5.4 está
-en `release/xibalba-2026`**, la rama que Vercel tiene fijada como producción.
-Todo ese trabajo vive en `codex/xibalba-3-phase5-command-center`, una rama
-local sin fusionar y sin empujar. El despliegue público descrito en este
-documento sigue siendo la base de la Fase 1; hace falta decidir y ejecutar la
-fusión (y entonces sí, con autorización, el despliegue) antes de que el
-jurado vea algo más reciente que eso en línea.
+5.4) y el 20 de noviembre de 2026 (integración del PR #1) con un hallazgo
+real: **nada de lo construido desde la Fase 2 en adelante — incluida Global
+Defense 4.0 y el rediseño premium — estaba en `release/xibalba-2026`**, la
+rama que Vercel tiene fijada como producción. Todo ese trabajo vivía en
+`xibalba-global-defense`, una rama local sin fusionar y sin empujar hasta
+hoy. El PR #1 (`xibalba-global-defense` → `release/xibalba-2026`) integra
+ambas líneas; el despliegue público sigue siendo la base de la Fase 1 hasta
+que ese PR se revise y se autorice, con autorización explícita, su fusión y
+despliegue.
 
 Desde la Fase 5.1, la aplicación también instala un *service worker*
 (`public/sw.js`) que cachea el cascarón estático para funcionar como PWA
@@ -77,10 +79,11 @@ constancia de la versión usada. No necesita ningún secreto.
 
 Primera ejecución, en **Node v24.22.2**: typecheck sin errores, build «Compiled
 successfully», conclusión **success**. El número de pruebas de esa primera
-ejecución (175) quedó desactualizado por las fases siguientes: en esta sesión
-(Fase 5.3–5.4) la suite local tiene **226** (204 unitarias + 22 E2E con
-Playwright). Lo que sigue sin cubrirse es este equipo, que continúa en Node
-22.23.4, y volver a correr el flujo de CI con el número actual.
+ejecución (175) quedó desactualizado por las fases siguientes: tras la
+integración del PR #1 la suite local tiene **214 unitarias + pruebas E2E con
+Playwright (28, 2 omitidas a propósito)**. Lo que sigue sin cubrirse es este
+equipo, que continúa en Node 22.23.4, y volver a correr el flujo de CI con el
+número actual.
 
 **Node 24 en Vercel: comprobado.** El panel del proyecto muestra **26.x** —el
 valor por omisión para proyectos nuevos— pero el despliegue **no corre en 26**.
@@ -94,7 +97,9 @@ vercel inspect xibalba-firebase-2026-g6g9aqyh1-dyann1984s-projects.vercel.app --
 `engines.node: "24.x"` del `package.json` sobrescribe el ajuste del panel, como
 promete la documentación de Vercel. Cambiar el panel a 24.x es **opcional y
 cosmético**: quita la confusión al mirarlo, pero el valor que manda está en el
-repositorio y viaja con él.
+repositorio y viaja con él. Si de todas formas lo quieres explícito: *Settings
+→ Build and Deployment → Node.js Version → **24.x*** — un clic, conviene
+darlo antes de la presentación.
 
 ```bash
 gh run list --branch release/xibalba-2026

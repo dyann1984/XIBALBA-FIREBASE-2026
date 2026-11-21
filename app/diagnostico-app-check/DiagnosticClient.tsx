@@ -8,7 +8,8 @@ const STAGE_LABEL: Record<keyof FirebaseDiagnostics["detail"], string> = {
   authSuccessful: "3. Autenticación exitosa (App Check)",
   realCallExecuted: "4. Llamada real ejecutada (Gemini)",
   realResponseObtained: "5. Respuesta real obtenida",
-  persistenceConfirmed: "6. Persistencia confirmada (Firestore)",
+  cloudCallVerified: "6. Llamada forzada a la nube (ONLY_IN_CLOUD)",
+  persistenceConfirmed: "7. Persistencia confirmada (Firestore)",
 };
 const STAGE_ICON: Record<string, string> = { ok: "✔", fallo: "✖", "no-aplica": "—", pendiente: "…" };
 

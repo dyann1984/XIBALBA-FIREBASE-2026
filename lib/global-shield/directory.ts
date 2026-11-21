@@ -20,6 +20,7 @@ export const KNOWN_COUNTRIES: CountryEntry[] = [
   { code: "AR", nameEs: "Argentina", nameEn: "Argentina" },
   { code: "CO", nameEs: "Colombia", nameEn: "Colombia" },
   { code: "BR", nameEs: "Brasil", nameEn: "Brazil" },
+  { code: "CL", nameEs: "Chile", nameEn: "Chile" },
 ];
 
 export const SEED_RECORDS: EmergencyRecord[] = [

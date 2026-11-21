@@ -26,6 +26,7 @@ import { extractUrls } from "@/lib/analysis/audit";
 import { extractPhoneNumbers } from "@/lib/analysis/phone";
 import { correlateIncidents } from "@/lib/analysis/correlation";
 import { buildReportData, formatReportMarkdown } from "@/lib/analysis/report";
+import { buildReportPdf } from "@/lib/analysis/pdf";
 import type { Translate } from "@/lib/i18n";
 
 const icons: Record<string, typeof Shield> = { voice: AudioLines, message: MessageSquareText, wallet: WalletCards, link: Link2, shield: ShieldCheck };
@@ -151,11 +152,19 @@ export default function Dashboard() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
  };
  const currentCorrelation = outcome ? correlateIncidents(fingerprintsOf(outcome, input), history.slice(1)) : { relatedEntries: [], campaigns: [] };
- const exportReport = (format: "md" | "json") => {
+ const exportReport = async (format: "md" | "json" | "pdf") => {
   if (!outcome) return;
   const data = buildReportData(outcome, currentCorrelation, lang);
   const stamp = new Date().toISOString().slice(0, 10);
   if (format === "json") downloadFile(JSON.stringify(data, null, 2), `xibalba-report-${stamp}.json`, "application/json");
+  else if (format === "pdf") {
+   const bytes = await buildReportPdf(data);
+   const blob = new Blob([bytes], { type: "application/pdf" });
+   const url = URL.createObjectURL(blob);
+   const a = document.createElement("a");
+   a.href = url; a.download = `xibalba-report-${stamp}.pdf`; a.click();
+   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   else downloadFile(formatReportMarkdown(data), `xibalba-report-${stamp}.md`, "text/markdown;charset=utf-8");
  };
  const allowHistory = (value: boolean) => {
@@ -350,7 +359,7 @@ export default function Dashboard() {
 </div>
 <div className={`panel result-panel lab-area lab-area-evaluation hud ${labTab === "evaluation" ? "lab-area-active" : ""}`} aria-live="polite">
   <div className="eyebrow">C · {outcome ? `${t("analyze","agentsEyebrow")} · ${describeAgents(outcome.contributing.length ? outcome.contributing : outcome.selection.agents)}` : t("analyze","resultEyebrow")}</div>
-  {outcome ? <><RiskVerdict risk={outcome.risk}/>{(currentCorrelation.campaigns.length > 0 || currentCorrelation.relatedEntries.length > 0) && <div className="correlation-box"><div className="eyebrow">{t("analyze","correlationTitle")}</div>{currentCorrelation.relatedEntries.length > 0 && <p className="notice">{t("analyze","correlationRelated",{n:currentCorrelation.relatedEntries.length})}</p>}{currentCorrelation.campaigns.map(c => <div key={c.id} className="campaign-chip"><strong>{lang==="en"?c.nameEn:c.nameEs}</strong><span>{lang==="en"?c.descriptionEn:c.descriptionEs}</span></div>)}</div>}<div className="export-row"><button type="button" className="export-btn" onClick={()=>exportReport("md")}><Download size={14}/> {t("analyze","exportMd")}</button><button type="button" className="export-btn" onClick={()=>exportReport("json")}><Download size={14}/> {t("analyze","exportJson")}</button></div><ul className="agent-reasons">{outcome.selection.agents.map(id=><li key={id}><b>{AGENT_NAMES[id]}</b> · {t("agentReasons",outcome.selection.reasons[id])}{id !== "guardian" && !outcome.contributing.includes(id) && ` ${t("analyze","noContribution")}`}</li>)}</ul><EvidenceList audit={outcome.audit} assessment={outcome.assessment} aiError={outcome.aiError}/></>
+  {outcome ? <><RiskVerdict risk={outcome.risk}/>{(currentCorrelation.campaigns.length > 0 || currentCorrelation.relatedEntries.length > 0) && <div className="correlation-box"><div className="eyebrow">{t("analyze","correlationTitle")}</div>{currentCorrelation.relatedEntries.length > 0 && <p className="notice">{t("analyze","correlationRelated",{n:currentCorrelation.relatedEntries.length})}</p>}{currentCorrelation.campaigns.map(c => <div key={c.id} className="campaign-chip"><strong>{lang==="en"?c.nameEn:c.nameEs}</strong><span>{lang==="en"?c.descriptionEn:c.descriptionEs}</span></div>)}</div>}<div className="export-row"><button type="button" className="export-btn" onClick={()=>void exportReport("md")}><Download size={14}/> {t("analyze","exportMd")}</button><button type="button" className="export-btn" onClick={()=>void exportReport("json")}><Download size={14}/> {t("analyze","exportJson")}</button><button type="button" className="export-btn" onClick={()=>void exportReport("pdf")}><Download size={14}/> {t("analyze","exportPdf")}</button></div><ul className="agent-reasons">{outcome.selection.agents.map(id=><li key={id}><b>{AGENT_NAMES[id]}</b> · {t("agentReasons",outcome.selection.reasons[id])}{id !== "guardian" && !outcome.contributing.includes(id) && ` ${t("analyze","noContribution")}`}</li>)}</ul><EvidenceList audit={outcome.audit} assessment={outcome.assessment} aiError={outcome.aiError}/></>
    : <><div className="result-icon"><ShieldAlert size={30}/></div><h2 className="risk-indicator risk-gris">● {t("analyze","resultEmptyTitle")}</h2><p>{t("analyze","resultEmptyText")}</p><div className="risk-pills"><span>{t("verdict","lightVerde")}</span><span>{t("verdict","lightAmarillo")}</span><span>{t("verdict","lightRojo")}</span><span>{t("verdict","lightGris")}</span></div></>}
   <div className="inference"><Activity size={16}/> {t("analyze","engine")}: <b>{sourceLabel(outcome?.source ?? null).toUpperCase()}</b> · {t("analyze","aiLocal")}: {availability ? t("analyze", AVAILABILITY_KEY[availability] ?? "availabilityUnknown") : t("analyze","availabilityChecking")}</div>
  </div></div>

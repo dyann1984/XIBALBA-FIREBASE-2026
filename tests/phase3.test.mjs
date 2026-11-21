@@ -272,6 +272,36 @@ test('un mensaje limpio con imagen adjunta deja de ser concluyente', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Impacto potencial: dimensión propia, independiente de riesgo y confianza
+// ---------------------------------------------------------------------------
+
+test('el impacto potencial se deriva de las categorías reales de evidencia verificada', () => {
+  const clean = combineRisk(
+    auditContent({ kind: 'message', text: 'Hola, nos vemos el jueves en la cafetería de siempre.' }),
+    null,
+  );
+  assert.deepEqual(clean.potentialImpact, ['no-concluyente']);
+
+  const financiero = combineRisk(
+    auditContent({ kind: 'financiero', text: 'Deposita a la CLABE 123456789012345678 para liberar tu crédito.' }),
+    null,
+  );
+  assert.ok(financiero.potentialImpact.includes('economico'), 'una CLABE inválida debe producir impacto económico');
+
+  const phishing = combineRisk(auditUrl('https://bbva-mx.validacion-de-cuenta.example.com/acceso'), null);
+  assert.ok(
+    phishing.potentialImpact.includes('identidad') || phishing.potentialImpact.includes('sitio-fraudulento'),
+    'un enlace de phishing bancario debe producir impacto de identidad o de sitio fraudulento',
+  );
+
+  // Nunca depende de la IA: con o sin interpretación de IA da el mismo impacto.
+  assert.deepEqual(
+    combineRisk(auditUrl('https://bbva-mx.validacion-de-cuenta.example.com/acceso'), { risk: 'bajo' }).potentialImpact,
+    phishing.potentialImpact,
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Robustez
 // ---------------------------------------------------------------------------
 

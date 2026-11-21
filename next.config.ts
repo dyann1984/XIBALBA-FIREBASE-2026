@@ -16,11 +16,10 @@ import type { NextConfig } from "next";
 //     incrustación, por complementos y por reescritura de URLs relativas.
 //   · `form-action 'self'` impide que un formulario envíe datos fuera.
 //
-// `Permissions-Policy` no es decorativa: la interfaz afirma que no se usa el
-// micrófono ni se graban llamadas, y esta cabecera lo hace cumplir desde el
-// navegador, no solo desde el código. La cámara sí se permite —y solo a esta
-// misma página—, porque adjuntar una foto de un mensaje es una función real de
-// `components/ImageAttachments.tsx`; el micrófono queda cerrado del todo.
+// `Permissions-Policy` hace cumplir desde el navegador los permisos reales de la
+// interfaz: cámara (`camera=(self)`) para adjuntar fotos de mensajes y
+// micrófono (`microphone=(self)`) para la voz conversacional explícita con el
+// Guardián bajo autorización de la persona; el resto queda cerrado.
 
 const development = process.env.NODE_ENV === "development";
 
@@ -49,7 +48,9 @@ const FIREBASE_ENDPOINTS = [
 const csp = [
   "default-src 'self'",
   // El nonce es el pendiente conocido; ver la nota de arriba.
-  `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ""} https://www.google.com https://www.gstatic.com`,
+  // `wasm-unsafe-eval` es necesario para el OCR local (Tesseract.js compila
+  // WebAssembly en el navegador); sin él, el worker de OCR falla bajo CSP.
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${development ? " 'unsafe-eval'" : ""} https://www.google.com https://www.gstatic.com`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   // `blob:` es para las vistas previas de imagen y audio que la persona adjunta
@@ -74,7 +75,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "no-referrer" },
   {
     key: "Permissions-Policy",
-    value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()",
+    value: "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), bluetooth=()",
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   // HSTS solo fuera de desarrollo: en http://localhost el navegador la ignora,
@@ -85,6 +86,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

@@ -104,6 +104,7 @@ credencial al repositorio.
 | [`docs/fase5-agentes.md`](docs/fase5-agentes.md) | Los cinco agentes y sus límites |
 | [`docs/auditoria-fase3.md`](docs/auditoria-fase3.md) | Reglas del semáforo y clases de evidencia |
 | [`docs/historial.md`](docs/historial.md) | Historial local y diseño del historial en la nube |
+| [`docs/app-check.md`](docs/app-check.md) | Cómo activar la IA en el despliegue (clave de App Check) |
 | [`docs/seguridad-endpoint.md`](docs/seguridad-endpoint.md) | App Check, CSRF y límites del endpoint |
 | [`docs/seguridad-dependencias.md`](docs/seguridad-dependencias.md) | Avisos de dependencias y por qué se fijaron |
 | [`docs/node-dependencias.md`](docs/node-dependencias.md) | Node 24, `engines` y compatibilidad de dependencias |

@@ -60,6 +60,10 @@ export type HistoryEntry = {
   source: string | null;
   /** `true` si hubo adjuntos; no se guarda ningún archivo. */
   hadAttachments: boolean;
+  /** Huellas no sensibles para correlación local de incidentes y campañas. */
+  domains?: string[];
+  phonePrefixes?: string[];
+  signalIds?: string[];
 };
 
 /**
@@ -98,6 +102,9 @@ type SummarySource = {
   kind: string;
   text: string;
   hadAttachments?: boolean;
+  domains?: string[];
+  phonePrefixes?: string[];
+  signalIds?: string[];
   risk: {
     light: TrafficLight;
     riskLevel: RiskLevel;
@@ -130,6 +137,9 @@ export function summarize(result: SummarySource, id: string, now = new Date()): 
     preview: previewOf(result.text),
     source: result.source,
     hadAttachments: Boolean(result.hadAttachments),
+    ...(result.domains?.length ? { domains: result.domains.slice(0, 5) } : {}),
+    ...(result.phonePrefixes?.length ? { phonePrefixes: result.phonePrefixes.slice(0, 5) } : {}),
+    ...(result.signalIds?.length ? { signalIds: result.signalIds.slice(0, 12) } : {}),
   };
 }
 
@@ -239,11 +249,14 @@ export function describeKind(kind: string): string {
   return KIND_LABEL[kind] ?? 'Análisis';
 }
 
-/** Fecha y hora legibles en español, sin segundos. */
-export function describeWhen(at: string): string {
+/**
+ * Fecha y hora legibles, sin segundos. El locale es un parámetro para que el
+ * historial se lea en el idioma de la interfaz; por omisión, el del proyecto.
+ */
+export function describeWhen(at: string, locale: string = 'es-MX'): string {
   const date = new Date(at);
-  if (Number.isNaN(date.getTime())) return 'fecha no legible';
-  return date.toLocaleString('es-MX', {
+  if (Number.isNaN(date.getTime())) return locale.startsWith('en') ? 'unreadable date' : 'fecha no legible';
+  return date.toLocaleString(locale, {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

@@ -60,11 +60,19 @@ function deny(status: number, message: string) {
 
 export async function POST(request: Request) {
   const url = new URL(request.url);
+  // `url.origin` viene de `request.url`, que Next.js puede normalizar a un
+  // host interno («localhost») distinto del `Host` real que mandó el
+  // cliente (por ejemplo, al servir en 127.0.0.1 o detrás de un proxy). Usar
+  // esa normalización rechazaría como CSRF peticiones legítimas del mismo
+  // origen; el origen esperado se deriva del encabezado `Host` que el
+  // cliente realmente envió.
+  const hostHeader = request.headers.get("host");
+  const expectedOrigin = hostHeader ? `${url.protocol}//${hostHeader}` : url.origin;
 
   // Capa anti-CSRF, no autenticación. Se comprueba primero porque es barata.
   if (
     request.headers.get("sec-fetch-site") !== "same-origin" ||
-    request.headers.get("origin") !== url.origin
+    request.headers.get("origin") !== expectedOrigin
   ) {
     return deny(403, "Petición rechazada: debe originarse en la misma aplicación.");
   }

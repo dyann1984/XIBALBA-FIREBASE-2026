@@ -1,6 +1,22 @@
 # Despliegue
 
-Fecha: 14 de noviembre de 2026.
+Fecha: 14 de noviembre de 2026. Actualizado el 19 de noviembre de 2026 (Fase
+5.4) y el 20 de noviembre de 2026 (integración del PR #1) con un hallazgo
+real: **nada de lo construido desde la Fase 2 en adelante — incluida Global
+Defense 4.0 y el rediseño premium — estaba en `release/xibalba-2026`**, la
+rama que Vercel tiene fijada como producción. Todo ese trabajo vivía en
+`xibalba-global-defense`, una rama local sin fusionar y sin empujar hasta
+hoy. El PR #1 (`xibalba-global-defense` → `release/xibalba-2026`) integra
+ambas líneas; el despliegue público sigue siendo la base de la Fase 1 hasta
+que ese PR se revise y se autorice, con autorización explícita, su fusión y
+despliegue.
+
+Desde la Fase 5.1, la aplicación también instala un *service worker*
+(`public/sw.js`) que cachea el cascarón estático para funcionar como PWA
+instalable y tolerar una recarga sin red. Nunca cachea `/api/*`, y desde la
+Fase 5.4 usa red primero para el documento HTML (evita servir una página
+vieja que referencie archivos de un build anterior tras un redeploy). Esto no
+cambia nada de lo descrito abajo sobre variables de entorno o App Check.
 
 > **Estado real: la aplicación está desplegada y es pública.**
 > <https://xibalba-firebase-2026.vercel.app> responde 200 sin autenticación.
@@ -61,18 +77,29 @@ Ese hueco **ya está cerrado** sin tocar el entorno global:
 `npm run build` **en Node 24.x** en cada empujón a `release/**`, y deja
 constancia de la versión usada. No necesita ningún secreto.
 
-Primera ejecución, en **Node v24.22.2**: typecheck sin errores, **175 / 175
-pruebas**, build «Compiled successfully», conclusión **success**. Lo que sigue
-sin cubrirse es este equipo, que continúa en Node 22.23.4.
+Primera ejecución, en **Node v24.22.2**: typecheck sin errores, build «Compiled
+successfully», conclusión **success**. El número de pruebas de esa primera
+ejecución (175) quedó desactualizado por las fases siguientes: tras la
+integración del PR #1 la suite local tiene **214 unitarias + pruebas E2E con
+Playwright (28, 2 omitidas a propósito)**. Lo que sigue sin cubrirse es este
+equipo, que continúa en Node 22.23.4, y volver a correr el flujo de CI con el
+número actual.
 
-**Un ajuste pendiente en Vercel.** El panel del proyecto `xibalba-firebase-2026`
-muestra **26.x** como versión de Node: es el valor por omisión que Vercel asigna
-hoy a los proyectos nuevos. Según su documentación, `engines.node` del
-`package.json` —que aquí dice `24.x`— **sobrescribe** ese ajuste, pero el
-registro de construcción no imprimió ninguna línea con la versión usada, así que
-**no se puede afirmar cuál corrió**. El build terminó correctamente en cualquier
-caso. Para quitar la duda: *Settings → Build and Deployment → Node.js Version →
-**24.x***. Es un clic, y conviene darlo antes de la presentación.
+**Node 24 en Vercel: comprobado.** El panel del proyecto muestra **26.x** —el
+valor por omisión para proyectos nuevos— pero el despliegue **no corre en 26**.
+Las funciones declaran el runtime `nodejs24.x`:
+
+```bash
+vercel inspect xibalba-firebase-2026-g6g9aqyh1-dyann1984s-projects.vercel.app --json
+# → "nodejs24.x"
+```
+
+`engines.node: "24.x"` del `package.json` sobrescribe el ajuste del panel, como
+promete la documentación de Vercel. Cambiar el panel a 24.x es **opcional y
+cosmético**: quita la confusión al mirarlo, pero el valor que manda está en el
+repositorio y viaja con él. Si de todas formas lo quieres explícito: *Settings
+→ Build and Deployment → Node.js Version → **24.x*** — un clic, conviene
+darlo antes de la presentación.
 
 ```bash
 gh run list --branch release/xibalba-2026
@@ -176,7 +203,9 @@ Después del primer despliegue (**ya comprobado** sobre
    App Check), `Strict-Transport-Security`, `X-Frame-Options: DENY`,
    `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`,
    `X-Content-Type-Options: nosniff` y
-   `Permissions-Policy: camera=(self), microphone=()…`. ✔
+   `Permissions-Policy: camera=(self), microphone=(self)…` (la cámara y el
+   micrófono quedan habilitados porque la interfaz los usa de forma explícita,
+   bajo consentimiento, desde la Fase 2; nunca en segundo plano). ✔
 3. `POST /api/app-check-debug` → **404**. ✔
 4. `POST /api/audit/external`, y aquí hay un matiz que conviene no confundir
    con un fallo:
@@ -234,6 +263,34 @@ Antes de publicar se auditaron los 14 commits de la ascendencia de `fb3f123`:
 **Antes de hacerlo público** queda una cosa pendiente, que no afecta a un
 repositorio privado: `public/xibalba-logo.jpg` no está cubierto por la licencia
 MIT del código. Decide su licencia o retíralo del repositorio público.
+
+### Conectado a Vercel
+
+El repositorio está **conectado** al proyecto de Vercel (`vercel git connect`,
+14/11/2026). Consecuencia que conviene tener presente: **a partir de ahora, cada
+empujón a `release/xibalba-2026` dispara un despliegue automático a
+producción**. Para probar sin tocar producción, `vercel deploy` sin `--prod`
+genera una vista previa.
+
+### Cómo dar acceso al jurado sin abrir el repositorio
+
+Tres modalidades, de menos a más expuesta. Las tres dejan intacta la aplicación
+en línea, que ya es pública y no necesita ningún permiso:
+
+| Modalidad | Cómo | Cuándo conviene |
+|---|---|---|
+| **Colaboradores** | *Settings → Collaborators → Add people*, con los usuarios de GitHub de los jueces (permiso **Read**) | Si el concurso te da sus cuentas. Es lo más controlado: acceso nominal y revocable |
+| **Público temporal** | *Settings → General → Change repository visibility → Public*, y volver a privado al terminar | Si Devpost exige un enlace abierto. Antes: resolver la licencia del logo |
+| **Solo la aplicación** | No dar acceso al código; entregar la URL y `docs/jueces.md` | Si las bases no exigen código. La guía está escrita para evaluar sin leer el repositorio |
+
+Si eliges colaboradores:
+
+```bash
+gh api -X PUT repos/dyann1984/XIBALBA-FIREBASE-2026/collaborators/<usuario> -f permission=pull
+```
+
+Mientras decides, **el repositorio sigue privado**. No se ha cambiado su
+visibilidad ni se ha invitado a nadie.
 
 Antes de publicar, comprueba que `.env.local` no está en el historial:
 

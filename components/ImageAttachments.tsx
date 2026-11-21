@@ -2,12 +2,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   MAX_IMAGES,
+  MAX_IMAGE_BYTES,
   describeImageRejection,
   imagesFromClipboard,
   prepareImage,
   releaseImage,
   type PreparedImage,
 } from "@/lib/analysis/images";
+import { useI18n } from "@/components/LanguageProvider";
 import { Camera, CameraOff, Clipboard, ImagePlus, Trash2 } from "lucide-react";
 
 /**
@@ -26,6 +28,7 @@ export default function ImageAttachments({
   disabled: boolean;
   onError: (message: string) => void;
 }) {
+  const { t, lang } = useI18n();
   const fileInput = useRef<HTMLInputElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -38,6 +41,14 @@ export default function ImageAttachments({
     if (video.current) video.current.srcObject = null;
     setCameraOn(false);
   }, []);
+
+  // Conecta el stream al elemento <video> una vez montado en el DOM.
+  useEffect(() => {
+    if (!cameraOn || !video.current || !stream.current) return;
+    const element = video.current;
+    element.srcObject = stream.current;
+    void element.play().catch(() => {});
+  }, [cameraOn]);
 
   // Libera cámara y URLs de vista previa al desmontar.
   useEffect(() => stopCamera, [stopCamera]);
@@ -55,26 +66,28 @@ export default function ImageAttachments({
       if (disabled || !files.length) return;
       const room = MAX_IMAGES - images.length;
       if (room <= 0) {
-        onError(`Puedes adjuntar hasta ${MAX_IMAGES} imágenes.`);
+        onError(t("images", "tooMany", { max: MAX_IMAGES }));
         return;
       }
       const accepted: PreparedImage[] = [];
       for (const file of files.slice(0, room)) {
-        const rejection = describeImageRejection(file);
+        const rejection = describeImageRejection(file, lang);
         if (rejection) {
           onError(rejection);
           continue;
         }
         try {
-          accepted.push(await prepareImage(file));
+          accepted.push(await prepareImage(file, lang));
         } catch (error) {
-          onError(error instanceof Error ? error.message : "No se pudo preparar la imagen.");
+          onError(error instanceof Error ? error.message : t("images", "prepareFailed"));
         }
       }
-      if (files.length > room) onError(`Solo se añadieron ${room}: el límite es ${MAX_IMAGES} imágenes.`);
+      if (files.length > room) {
+        onError(t("images", "partial", { room, max: MAX_IMAGES }));
+      }
       if (accepted.length) onChange([...images, ...accepted]);
     },
-    [disabled, images, onChange, onError],
+    [disabled, images, lang, onChange, onError, t],
   );
 
   // Pegado global con Ctrl+V mientras el área de análisis está visible.
@@ -98,28 +111,24 @@ export default function ImageAttachments({
     if (disabled || cameraBusy) return;
     setCameraBusy(true);
     try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Este navegador no permite usar la cámara.");
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error(t("images", "noCamera"));
       const media = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 1280 } },
         audio: false,
       });
       stream.current = media;
       setCameraOn(true);
-      if (video.current) {
-        video.current.srcObject = media;
-        await video.current.play().catch(() => {});
-      }
     } catch (error) {
       stopCamera();
       const name = (error as { name?: string })?.name;
       onError(
         name === "NotAllowedError"
-          ? "No se concedió permiso para usar la cámara."
+          ? t("images", "cameraDenied")
           : name === "NotFoundError"
-            ? "No se encontró ninguna cámara disponible."
+            ? t("images", "cameraMissing")
             : error instanceof Error
               ? error.message
-              : "No se pudo abrir la cámara.",
+              : t("images", "cameraFailed"),
       );
     } finally {
       setCameraBusy(false);
@@ -128,7 +137,10 @@ export default function ImageAttachments({
 
   const capture = async () => {
     const element = video.current;
-    if (!element || !element.videoWidth) return;
+    if (!element || !element.videoWidth) {
+      onError(t("images", "captureFailed"));
+      return;
+    }
     const canvas = document.createElement("canvas");
     canvas.width = element.videoWidth;
     canvas.height = element.videoHeight;
@@ -137,7 +149,7 @@ export default function ImageAttachments({
       canvas.toBlob((value) => resolve(value), "image/jpeg", 0.9),
     );
     if (!blob) {
-      onError("No se pudo capturar la imagen.");
+      onError(t("images", "captureFailed"));
       return;
     }
     stopCamera();
@@ -147,8 +159,12 @@ export default function ImageAttachments({
   return (
     <div className="attachments">
       <div className="attachments-actions">
-        <button type="button" disabled={disabled || images.length >= MAX_IMAGES} onClick={() => fileInput.current?.click()}>
-          <ImagePlus size={15} /> Añadir imagen
+        <button
+          type="button"
+          disabled={disabled || images.length >= MAX_IMAGES}
+          onClick={() => fileInput.current?.click()}
+        >
+          <ImagePlus size={15} /> {t("images", "add")}
         </button>
         <button
           type="button"
@@ -156,10 +172,11 @@ export default function ImageAttachments({
           onClick={() => (cameraOn ? stopCamera() : void startCamera())}
           aria-pressed={cameraOn}
         >
-          {cameraOn ? <CameraOff size={15} /> : <Camera size={15} />} {cameraOn ? "Cerrar cámara" : "Usar cámara"}
+          {cameraOn ? <CameraOff size={15} /> : <Camera size={15} />}{" "}
+          {cameraOn ? t("images", "cameraClose") : t("images", "camera")}
         </button>
         <span className="attachments-hint">
-          <Clipboard size={13} /> También puedes pegar una captura con Ctrl+V
+          <Clipboard size={13} /> {t("images", "pasteHint")}
         </span>
       </div>
 
@@ -168,7 +185,7 @@ export default function ImageAttachments({
         id="photo"
         className="visually-hidden"
         type="file"
-        accept="image/jpeg,image/png"
+        accept="image/jpeg,image/png,image/webp"
         multiple
         disabled={disabled}
         onChange={(event) => {
@@ -179,16 +196,16 @@ export default function ImageAttachments({
 
       {cameraOn && (
         <div className="camera">
-          <video ref={video} playsInline muted aria-label="Vista previa de la cámara" />
+          <video ref={video} playsInline muted autoPlay aria-label={t("images", "cameraPreview")} />
           <div className="camera-actions">
             <button type="button" className="primary" onClick={() => void capture()}>
-              <Camera size={15} /> Capturar
+              <Camera size={15} /> {t("images", "capture")}
             </button>
             <button type="button" onClick={stopCamera}>
-              Cancelar
+              {t("images", "cancel")}
             </button>
           </div>
-          <p className="notice">La cámara permanece activa solo mientras esta vista está abierta.</p>
+          <p className="notice">{t("images", "cameraNote")}</p>
         </div>
       )}
 
@@ -198,7 +215,7 @@ export default function ImageAttachments({
             <li key={image.id}>
               {/* Vista previa local: es un object URL, no una imagen remota. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={image.previewUrl} alt={`Vista previa de ${image.name}`} />
+              <img src={image.previewUrl} alt={t("images", "previewOf", { name: image.name })} />
               <div className="thumb-meta">
                 <strong>{image.name}</strong>
                 <small>
@@ -207,7 +224,12 @@ export default function ImageAttachments({
                   {image.width && image.height ? ` · ${image.width}×${image.height}` : ""}
                 </small>
               </div>
-              <button type="button" aria-label={`Quitar ${image.name}`} disabled={disabled} onClick={() => remove(image)}>
+              <button
+                type="button"
+                aria-label={t("images", "remove", { name: image.name })}
+                disabled={disabled}
+                onClick={() => remove(image)}
+              >
                 <Trash2 size={15} />
               </button>
             </li>
@@ -216,9 +238,7 @@ export default function ImageAttachments({
       )}
 
       <p className="notice">
-        Hasta {MAX_IMAGES} imágenes JPEG o PNG de 4 MB. Permanecen en memoria, no se guardan y solo
-        se envían al modelo si aceptas el consentimiento. Cubre los datos personales antes de
-        compartir una captura.
+        {t("images", "note", { max: MAX_IMAGES, mb: MAX_IMAGE_BYTES / 1024 / 1024 })}
       </p>
     </div>
   );

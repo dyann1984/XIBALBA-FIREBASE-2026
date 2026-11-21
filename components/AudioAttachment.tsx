@@ -9,6 +9,7 @@ import {
   type PreparedAudio,
   type Transcription,
 } from "@/lib/analysis/audio";
+import { useI18n } from "@/components/LanguageProvider";
 import { FileAudio, Info, MicOff, Trash2 } from "lucide-react";
 
 /**
@@ -31,9 +32,9 @@ export default function AudioAttachment({
   disabled: boolean;
   onError: (message: string) => void;
 }) {
+  const { t } = useI18n();
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Libera el object URL al desmontar; quitar el archivo lo hace en `remove`.
   useEffect(
     () => () => {
       if (audio) releaseAudio(audio);
@@ -49,7 +50,7 @@ export default function AudioAttachment({
       if (audio) releaseAudio(audio);
       onChange(prepared);
     } catch (error) {
-      onError(error instanceof Error ? error.message : "No se pudo preparar el audio.");
+      onError(error instanceof Error ? error.message : t("audio", "prepareFailed"));
     }
   };
 
@@ -66,7 +67,7 @@ export default function AudioAttachment({
     <div className="attachments">
       <div className="attachments-actions">
         <button type="button" disabled={disabled} onClick={() => fileInput.current?.click()}>
-          <FileAudio size={15} /> {audio ? "Cambiar audio" : "Adjuntar audio"}
+          <FileAudio size={15} /> {audio ? t("audio", "change") : t("audio", "attach")}
         </button>
         <input
           ref={fileInput}
@@ -81,7 +82,7 @@ export default function AudioAttachment({
           }}
         />
         <span className="attachments-hint">
-          <MicOff size={13} /> No se usa el micrófono ni se graban llamadas
+          <MicOff size={13} /> {t("audio", "noMic")}
         </span>
       </div>
 
@@ -92,12 +93,20 @@ export default function AudioAttachment({
             <small>
               {audio.mimeType.replace("audio/", "").toUpperCase()} ·{" "}
               {(audio.size / 1024 / 1024).toFixed(2)} MB
-              {minutes ? ` · ${minutes}` : " · duración no legible"}
+              {minutes ? ` · ${minutes}` : ` · ${t("audio", "unreadableDuration")}`}
             </small>
           </div>
-          {/* Reproducción local desde un object URL; no hay descarga remota. */}
-          <audio controls src={audio.previewUrl} aria-label={`Escuchar ${audio.name}`} />
-          <button type="button" aria-label={`Quitar ${audio.name}`} disabled={disabled} onClick={remove}>
+          <audio
+            controls
+            src={audio.previewUrl}
+            aria-label={t("audio", "listenLabel", { name: audio.name })}
+          />
+          <button
+            type="button"
+            aria-label={t("audio", "removeLabel", { name: audio.name })}
+            disabled={disabled}
+            onClick={remove}
+          >
             <Trash2 size={15} />
           </button>
         </div>
@@ -106,17 +115,11 @@ export default function AudioAttachment({
       {audio && (
         <p className={`notice ${transcription?.status === "disponible" ? "" : "pending-notice"}`}>
           <Info size={13} />{" "}
-          {transcription
-            ? describeTranscription(transcription)
-            : "Transcripción pendiente: el audio no se ha transcrito. Escribe en el campo de contenido lo que recuerdes de la llamada para analizarlo como transcripción."}
+          {transcription ? describeTranscription(transcription) : t("audio", "pendingDefault")}
         </p>
       )}
 
-      <p className="notice">
-        Un archivo MP3, M4A, WAV, OGG o WebM de hasta {MAX_AUDIO_BYTES / 1024 / 1024} MB. Permanece en
-        memoria, no se guarda y solo se envía al modelo si aceptas el consentimiento de audio. Graba
-        solo conversaciones en las que participaste y de las que puedas compartir el contenido.
-      </p>
+      <p className="notice">{t("audio", "note", { mb: MAX_AUDIO_BYTES / 1024 / 1024 })}</p>
     </div>
   );
 }

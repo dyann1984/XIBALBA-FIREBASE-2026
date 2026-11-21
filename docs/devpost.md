@@ -82,8 +82,11 @@ depósito en otro banco.
 - **Firebase App Check** verificado **de verdad en el servidor**: firma RS256
   contra el JWKS público, emisor, audiencia, tipo y caducidad. Sin cuenta de
   servicio.
-- **Three.js** para el Guardián, un personaje procedural que reacciona al
-  semáforo.
+- **Retrato premium con animación por capas** para el Guardián
+  (`components/guardian/JaguarPortrait.tsx`): sin modelo 3D ni librería de
+  render, reacciona en tiempo real al semáforo, al micrófono y a la síntesis
+  de voz (respiración, parpadeo, mirada, mandíbula sincronizada con el
+  habla).
 - **Motor determinista propio** en TypeScript: catálogos de patrones,
   aritmética financiera y un modelo de riesgo donde la IA solo puede **elevar**
   el nivel, nunca rebajarlo.
@@ -110,13 +113,17 @@ depósito en otro banco.
 
 ## Logros
 
-- **175 pruebas automatizadas** en verde, incluidas pruebas de privacidad, de
-  integridad del semáforo y un **control negativo** que comprueba que el verde
-  sigue siendo alcanzable.
+- **214 pruebas unitarias + batería E2E con Playwright** en verde (incluidas
+  pruebas de accesibilidad con axe-core), además de pruebas de privacidad, de
+  integridad del semáforo y un **control negativo** que comprueba que el
+  verde sigue siendo alcanzable.
 - La aplicación es **útil sin conexión y sin configurar Firebase**: la auditoría
-  determinista completa se ejecuta en el dispositivo.
+  determinista completa se ejecuta en el dispositivo, y una PWA instalable con
+  service worker cachea el cascarón estático (nunca las rutas de análisis).
 - Cabeceras de seguridad que respaldan lo que la interfaz promete: la política
-  de permisos **bloquea el micrófono** a nivel de navegador, no solo de código.
+  de permisos solo habilita cámara y micrófono para lo que la propia interfaz
+  ofrece de forma explícita (adjuntar fotos, dictar una pregunta al Guardián),
+  nunca en segundo plano y nunca sin que la persona pulse el botón.
 
 ## Qué aprendimos
 
@@ -129,7 +136,8 @@ aprende a confiar en el «esto es un fraude» cuando llega.
 - Historial por usuario en la nube con Firebase Authentication (diseño y reglas
   ya escritos; hoy el historial vive solo en el dispositivo).
 - Habilitar DNS y RDAP para el público general, con límites de consumo.
-- Internacionalización real en español e inglés.
+- Mapa de investigaciones con más dimensiones de correlación (hoy: dominio,
+  prefijo telefónico y patrón de fraude compartido).
 - Catálogo completo de instituciones del SPEI, verificado contra la lista
   vigente de Banco de México.
 - Protección contra reenvío de tokens de App Check (requiere el Admin SDK).

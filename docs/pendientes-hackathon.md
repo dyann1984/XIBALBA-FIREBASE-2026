@@ -9,14 +9,18 @@ dificultad.
 
 `NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY` está vacía.
 
-- **Consecuencia:** la interpretación de IA no se habilita y
-  `/api/audit/external` responde 401 a todo.
+- **Consecuencia:** la interpretación de IA no se habilita **en el despliegue**
+  y `/api/audit/external` rechaza toda petición.
+- **En local sí funciona**, por el token de depuración de App Check, y se
+  comprobó de punta a punta el 14/11/2026: control en verde, llamada en rojo con
+  8 señales, etiqueta «IA · NUBE» y el respaldo determinista intacto al caer el
+  modelo. La IA no es una promesa; le falta una clave válida para el dominio.
 - **Quién lo resuelve:** solo la persona dueña del proyecto de Firebase, en la
   consola. Ningún agente puede generarla.
 - **Se puede demostrar sin ella.** La auditoría determinista completa corre en
   el dispositivo y el guion de video está escrito para funcionar así. Pero si se
   quiere enseñar la inferencia híbrida en vivo, esto va primero.
-- Pasos exactos: `docs/despliegue.md`, sección 2.
+- Pasos exactos: **`docs/app-check.md`** (y `docs/despliegue.md`, sección 2).
 
 ### 1.2 Dominio de producción en reCAPTCHA Enterprise
 

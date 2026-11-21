@@ -41,6 +41,7 @@ import { contentPatterns } from './patterns.ts';
 import { voicePatterns } from './voice.ts';
 import { financePatterns } from './finance-patterns.ts';
 import { findFinancialIdentifiers } from './finance.ts';
+import { auditPhones } from './phone.ts';
 import type { PreparedAudio, Transcription } from './audio.ts';
 import { TRANSCRIPTION_PENDING } from './audio.ts';
 
@@ -76,11 +77,26 @@ const CALL_HINTS =
 const MONEY_HINTS =
   /\b(deposit\w+|transfer\w+|clabe|cuenta bancaria|tarjeta|pago|pagar|cobr\w+|invers\w+|invertir|rendimiento|credito|prestamo|comision|bitcoin|cripto\w*|usdt|spei|oxxo|efectivo|dinero|pesos|mxn|\$\s?\d)\b/i;
 
+/** Por qué se eligió cada agente. Es una clave, no texto: el texto hardcodeado
+ * aquí se mostraba sin pasar por i18n y quedaba en español aunque la persona
+ * cambiara a inglés (hallazgo real de la prueba visual de esta sesión). La
+ * traducción vive en `lib/i18n/dictionary.ts`, sección `agentReasons`. */
+export type AgentReasonKey =
+  | "declaredKind"
+  | "audioAttached"
+  | "callMention"
+  | "financialIdentifier"
+  | "moneyLanguage"
+  | "linksPresent"
+  | "generalCatalog"
+  | "imageMetadata"
+  | "guardianCoordinates";
+
 export type AgentSelection = {
   /** Agentes que van a analizar, en orden de presentación. */
   agents: AgentId[];
-  /** Por qué se eligió cada uno. Se muestra a la persona. */
-  reasons: Record<string, string>;
+  /** Por qué se eligió cada uno. Clave a traducir, no texto fijo. */
+  reasons: Record<string, AgentReasonKey>;
 };
 
 /**
@@ -95,9 +111,9 @@ export function selectAgents(input: {
 }): AgentSelection {
   const text = input.text ?? '';
   const agents: AgentId[] = [];
-  const reasons: Record<string, string> = {};
+  const reasons: Record<string, AgentReasonKey> = {};
 
-  const add = (id: AgentId, reason: string) => {
+  const add = (id: AgentId, reason: AgentReasonKey) => {
     if (agents.includes(id)) return;
     agents.push(id);
     reasons[id] = reason;
@@ -105,12 +121,12 @@ export function selectAgents(input: {
 
   // 1. El agente declarado siempre participa.
   const declared = KIND_AGENT[input.kind];
-  add(declared, 'Lo elegiste como tipo de contenido.');
+  add(declared, 'declaredKind');
 
   // 2. CAMAZOTZ si hay audio o si el texto describe una llamada.
-  if (input.hasAudio) add('camazotz', 'Adjuntaste un archivo de audio.');
+  if (input.hasAudio) add('camazotz', 'audioAttached');
   else if (input.kind !== 'url' && CALL_HINTS.test(text)) {
-    add('camazotz', 'El texto menciona una llamada o un audio.');
+    add('camazotz', 'callMention');
   }
 
   // 3. VUCUB CAMÉ si hay identificadores financieros o lenguaje de dinero.
@@ -124,15 +140,15 @@ export function selectAgents(input: {
         found.cryptoAddresses.length >
       0;
     if (hasIdentifier) {
-      add('vucub', 'El texto contiene un número de cuenta, tarjeta o monedero.');
+      add('vucub', 'financialIdentifier');
     } else if (MONEY_HINTS.test(text)) {
-      add('vucub', 'El texto habla de dinero, pagos o inversiones.');
+      add('vucub', 'moneyLanguage');
     }
   }
 
   // 4. HUN CAMÉ si aparece algún enlace.
   if (input.kind !== 'url' && extractUrls(text).length) {
-    add('hun', 'El contenido incluye enlaces.');
+    add('hun', 'linksPresent');
   }
 
   // 5. IXBALANQUÉ solo si nadie más va a recorrer el catálogo general.
@@ -140,11 +156,13 @@ export function selectAgents(input: {
   //    aquí presentaría como participante a un agente que no ejecuta nada.
   const generalCovered = agents.includes('camazotz') || agents.includes('vucub');
   if (input.kind !== 'url' && text.trim() && !generalCovered) {
-    add('ixbalanque', 'Hay texto que analizar con el catálogo general.');
+    add('ixbalanque', 'generalCatalog');
   }
 
+  if (input.hasImages) add('vucub', 'imageMetadata');
+
   // 6. EL GUARDIÁN siempre coordina y explica.
-  add('guardian', 'Coordina a los agentes y explica el resultado.');
+  add('guardian', 'guardianCoordinates');
 
   return { agents, reasons };
 }
@@ -201,6 +219,16 @@ export type CoordinatedRequest = {
   images?: ImageFacts[];
   audio?: Pick<PreparedAudio, 'name' | 'mimeType' | 'size' | 'durationSeconds'> | null;
   transcription?: Transcription;
+  onEvent?: (event: AgentEvent) => void;
+};
+
+/** Eventos de trabajo real, sin contenido de entrada ni excepciones internas. */
+export type AgentEvent = {
+  agent: AgentId;
+  phase: 'queued' | 'started' | 'completed' | 'error';
+  task: string;
+  elapsedMs?: number;
+  findings?: number;
 };
 
 export type CoordinatedAudit = {
@@ -210,6 +238,7 @@ export type CoordinatedAudit = {
   attributed: AttributedIndicator[];
   /** Agentes que efectivamente aportaron alguna evidencia. */
   contributing: AgentId[];
+  executed: AgentId[];
 };
 
 /**
@@ -223,6 +252,10 @@ export function auditCoordinated(
   request: CoordinatedRequest,
   now = new Date(),
 ): CoordinatedAudit {
+  const clock = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const emit = (event: AgentEvent) => { try { request.onEvent?.(event); } catch { /* La telemetría no altera el análisis. */ } };
+  const guardianStart = clock();
+  emit({ agent: 'guardian', phase: 'started', task: 'coordinación' });
   const text = request.text ?? '';
   const selection = selectAgents({
     kind: request.kind,
@@ -230,15 +263,33 @@ export function auditCoordinated(
     hasImages: Boolean(request.images?.length),
     hasAudio: Boolean(request.audio),
   });
+  // EL GUARDIÁN ya anunció su propio inicio; el resto queda en cola en el
+  // orden real en que se eligió, antes de que ninguno ejecute su catálogo.
+  for (const agent of selection.agents) {
+    if (agent === 'guardian') continue;
+    emit({ agent, phase: 'queued', task: 'en cola' });
+  }
 
   const parts: { agent: AgentId; audit: Audit }[] = [];
+  const run = (agent: AgentId, task: string, work: () => Audit) => {
+    const start = clock();
+    emit({ agent, phase: 'started', task });
+    try {
+      const audit = work();
+      parts.push({ agent, audit });
+      emit({ agent, phase: 'completed', task, elapsedMs: clock() - start, findings: audit.indicators.length });
+    } catch (error) {
+      emit({ agent, phase: 'error', task, elapsedMs: clock() - start });
+      throw error;
+    }
+  };
   // Qué catálogos se recorrieron de verdad, para contar la cobertura una sola
   // vez. Sumar las coberturas de cada parte inflaría el número: el catálogo
   // general lo recorren tanto CAMAZOTZ como VUCUB CAMÉ.
   const ran = { general: false, voz: false, financiero: false, url: false };
 
   if (request.kind === 'url') {
-    parts.push({ agent: 'hun', audit: auditUrl(text, now) });
+    run('hun', 'URL', () => auditUrl(text, now));
     ran.url = true;
   } else if (text.trim()) {
     // Cada agente seleccionado ejecuta su propio catálogo, en el orden en que
@@ -252,34 +303,57 @@ export function auditCoordinated(
     // cobertura se cuenta una sola vez, de modo que no puntúan dos veces.
     for (const agent of selection.agents) {
       if (agent === 'camazotz') {
-        parts.push({ agent, audit: auditTranscript(text, now) });
+        run(agent, 'voz y texto', () => auditTranscript(text, now));
         ran.general = true;
         ran.voz = true;
       } else if (agent === 'vucub') {
-        parts.push({ agent, audit: auditFinancial(text, now) });
+        run(agent, 'finanzas y texto', () => auditFinancial(text, now));
         ran.general = true;
         ran.financiero = true;
       } else if (agent === 'ixbalanque') {
-        parts.push({ agent, audit: auditMessage(text, now) });
+        run(agent, 'mensaje', () => auditMessage(text, now));
         ran.general = true;
         // Las comprobaciones de URL solo se ejecutaron si había algún enlace.
         if (extractUrls(text).length) ran.url = true;
       } else if (agent === 'hun') {
-        parts.push({ agent, audit: auditTextLinks(text, now) });
+        run(agent, 'enlaces', () => auditTextLinks(text, now));
         if (extractUrls(text).length) ran.url = true;
       }
     }
   }
 
   if (request.audio) {
-    parts.push({
-      agent: 'camazotz',
-      audit: auditAudio(request.audio, request.transcription ?? TRANSCRIPTION_PENDING, now),
-    });
+    const audio = request.audio;
+    run('camazotz', 'archivo de audio', () => auditAudio(audio, request.transcription ?? TRANSCRIPTION_PENDING, now));
   }
 
   if (request.images?.length) {
-    parts.push({ agent: 'vucub', audit: auditImages(request.images, now) });
+    const images = request.images;
+    run('vucub', 'metadatos de imagen', () => auditImages(images, now));
+  }
+
+  if (request.kind !== 'url' && text.trim()) {
+    const phoneAgent: AgentId = selection.agents.includes('camazotz') ? 'camazotz' : 'ixbalanque';
+    const phoneStart = clock();
+    emit({ agent: phoneAgent, phase: 'started', task: 'teléfonos' });
+    const phoneAudit = auditPhones(text, now);
+    emit({ agent: phoneAgent, phase: 'completed', task: 'teléfonos', elapsedMs: clock() - phoneStart, findings: phoneAudit.indicators.length });
+    if (phoneAudit.indicators.length) {
+      parts.push({
+        agent: phoneAgent,
+        audit: {
+          subject: 'mensaje',
+          indicators: phoneAudit.indicators,
+          coverage: {
+            label: 'Análisis telefónico local.',
+            checksRun: 4,
+            checksTotal: 5,
+            pendingExternal: ['reputación y titularidad de línea telefónica'],
+          },
+          limitation: 'No se consultó ninguna base externa de reputación telefónica.',
+        },
+      });
+    }
   }
 
   if (!parts.length) {
@@ -294,7 +368,8 @@ export function auditCoordinated(
       },
       limitation: 'No se recibió contenido que auditar.',
     };
-    return { audit: empty, selection, attributed: [], contributing: [] };
+    emit({ agent: 'guardian', phase: 'completed', task: 'coordinación', elapsedMs: clock() - guardianStart, findings: 0 });
+    return { audit: empty, selection, attributed: [], contributing: [], executed: ['guardian'] };
   }
 
   const attributed = dedupeIndicators(
@@ -326,5 +401,6 @@ export function auditCoordinated(
 
   const contributing = [...new Set(attributed.flatMap((item) => item.agents))];
 
-  return { audit, selection, attributed, contributing };
+  emit({ agent: 'guardian', phase: 'completed', task: 'coordinación', elapsedMs: clock() - guardianStart, findings: attributed.length });
+  return { audit, selection, attributed, contributing, executed: [...new Set<AgentId>([...parts.map(part => part.agent), 'guardian'])] };
 }

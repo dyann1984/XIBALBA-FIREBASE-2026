@@ -1237,7 +1237,7 @@ export function auditFinancial(input: string, now = new Date()): Audit {
 // Auditoría de imágenes adjuntas
 // ---------------------------------------------------------------------------
 
-export type ImageFacts = { name: string; mimeType: string; size: number; width?: number; height?: number };
+export type ImageFacts = { name: string; mimeType: string; size: number; width?: number; height?: number; ocrTextAvailable?: boolean };
 
 export function auditImages(images: ImageFacts[], now = new Date()): Audit {
   const checkedAt = now.toISOString();
@@ -1257,7 +1257,7 @@ export function auditImages(images: ImageFacts[], now = new Date()): Audit {
       }. Permanece en memoria y no se guarda.`,
       source,
       recommendation: 'Cubre los datos personales visibles antes de compartir una captura.',
-      limitation: 'No se extrajo texto de la imagen en el dispositivo.',
+      limitation: image.ocrTextAvailable ? 'El texto reconocido automáticamente puede contener errores u omisiones.' : 'No se confirmó la lectura local de esta imagen.',
     });
   }
 
@@ -1268,9 +1268,10 @@ export function auditImages(images: ImageFacts[], now = new Date()): Audit {
     classification: 'pendiente-externo',
     status: 'no verificado',
     severity: 'informativo',
-    evidence:
-      'No se ejecutó reconocimiento de texto local. Si la imagen se procesa, lo hace el modelo multimodal bajo consentimiento explícito.',
-    source: 'OCR local no implementado',
+    evidence: images.some(image => image.ocrTextAvailable)
+      ? 'Se reconoció texto automáticamente; puede haber errores u omisiones y debe cotejarse con la imagen.'
+      : 'No se dispone de texto confirmado por OCR local para esta imagen. Puede no haber soporte, no haber texto legible o haber ocurrido un error.',
+    source: images.some(image => image.ocrTextAvailable) ? 'Reconocimiento del navegador' : 'OCR local no confirmado',
     recommendation:
       'Si el contenido importante está en la imagen, transcribe también el texto para que el análisis determinista lo cubra.',
     limitation:
@@ -1281,13 +1282,12 @@ export function auditImages(images: ImageFacts[], now = new Date()): Audit {
     subject: 'imagen',
     indicators: build.indicators,
     coverage: {
-      label: 'Solo metadatos locales de la imagen; sin lectura de su contenido.',
+      label: images.some(image => image.ocrTextAvailable) ? 'Metadatos y texto reconocido automáticamente; lectura incompleta posible.' : 'Solo metadatos locales de la imagen; sin lectura de su contenido.',
       checksRun: images.length,
       checksTotal: images.length + 2,
       pendingExternal: ['reconocimiento de texto en la imagen', 'procedencia de la imagen'],
     },
-    limitation:
-      'Una imagen sin señales no indica seguridad: su contenido no se analizó de forma determinista.',
+    limitation: images.some(image => image.ocrTextAvailable) ? 'El OCR puede pasar por alto contenido; coteja el texto con la imagen.' : 'Una imagen sin señales no indica seguridad: su contenido no se analizó de forma determinista.',
   };
 }
 

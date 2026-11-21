@@ -45,6 +45,19 @@ describir lo desplegado.
 forma que la documentación de Vercel pide para sobrescribir el ajuste del
 proyecto.
 
+**Comprobado sobre el despliegue real**, no deducido de la documentación: el
+panel del proyecto `xibalba-firebase-2026` muestra **26.x** —el valor por
+omisión de Vercel para proyectos nuevos— y aun así las funciones del despliegue
+declaran el runtime **`nodejs24.x`**:
+
+```bash
+vercel inspect <despliegue> --json   # → "nodejs24.x"
+```
+
+Es decir, `engines` **sí** sobrescribe el ajuste del panel, tal como promete la
+documentación. Alinear el panel a 24.x es cosmético; el valor que manda vive en
+el repositorio.
+
 ## 3. El script de pruebas ya no depende de un flag experimental
 
 Antes:

@@ -11,6 +11,35 @@
 import { InputError } from './guardian.ts';
 
 /**
+ * Clave del mensaje que debe verse, para que la interfaz pueda mostrarlo en el
+ * idioma elegido. `explainError` se conserva tal cual —devuelve el texto en
+ * español— porque hay código y pruebas que dependen de él; esta función es la
+ * misma clasificación expresada como clave.
+ */
+export type ErrorKey =
+  | 'inputEmpty'
+  | 'inputLong'
+  | 'inputUrl'
+  | 'inputUrlScheme'
+  | 'config'
+  | 'quota'
+  | 'permission'
+  | 'network'
+  | 'format'
+  | 'generic';
+
+export function errorKey(error: unknown): ErrorKey {
+  if (error instanceof InputError) return error.code;
+  const message = error instanceof Error ? error.message : '';
+  if (/falta configurar/i.test(message)) return 'config';
+  if (/429|quota|resource.exhausted/i.test(message)) return 'quota';
+  if (/403|permission|app.?check/i.test(message)) return 'permission';
+  if (/network|fetch|offline/i.test(message)) return 'network';
+  if (/formato esperado/i.test(message)) return 'format';
+  return 'generic';
+}
+
+/**
  * Dos reglas que no se mezclan:
  *
  *  1. Un `InputError` lo escribimos nosotros sobre lo que la persona tecleó

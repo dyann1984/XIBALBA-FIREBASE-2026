@@ -1,14 +1,37 @@
 "use client";
-import { LIGHT_LABEL, RISK_LABEL, type CombinedRisk, type TrafficLight } from "@/lib/analysis/risk";
+import { type CombinedRisk, type TrafficLight } from "@/lib/analysis/risk";
+import { useI18n } from "@/components/LanguageProvider";
+import { translate } from "@/lib/i18n";
+import { localizeCoverageLabel } from "@/lib/i18n/evidence";
 import { ShieldAlert, ShieldCheck, ShieldQuestion, TriangleAlert } from "lucide-react";
 
 const ORDER: TrafficLight[] = ["verde", "amarillo", "rojo", "gris"];
-const SHORT: Record<TrafficLight, string> = {
-  verde: "VERDE",
-  amarillo: "AMARILLO",
-  rojo: "ROJO",
-  gris: "GRIS",
-};
+const SHORT = {
+  verde: "lightVerde",
+  amarillo: "lightAmarillo",
+  rojo: "lightRojo",
+  gris: "lightGris",
+} as const;
+const LABEL = {
+  verde: "labelVerde",
+  amarillo: "labelAmarillo",
+  rojo: "labelRojo",
+  gris: "labelGris",
+} as const;
+const RISK = {
+  alto: "riskAlto",
+  medio: "riskMedio",
+  bajo: "riskBajo",
+  "no concluyente": "riskNinguno",
+} as const;
+const CONFIDENCE = { alta: "confidenceAlta", media: "confidenceMedia", baja: "confidenceBaja" } as const;
+const IMPACT = {
+  economico: "impactEconomico",
+  identidad: "impactIdentidad",
+  "sitio-fraudulento": "impactSitio",
+  "no-concluyente": "impactNinguno",
+} as const;
+const AI_RISK = { alto: "riskAlto", medio: "riskMedio", bajo: "riskBajo" } as const;
 const ICON: Record<TrafficLight, typeof ShieldCheck> = {
   verde: ShieldCheck,
   amarillo: TriangleAlert,
@@ -21,23 +44,34 @@ const ICON: Record<TrafficLight, typeof ShieldCheck> = {
  * nivel de riesgo, confianza de la evaluación y cobertura de la auditoría.
  */
 export default function RiskVerdict({ risk }: { risk: CombinedRisk }) {
+  const { t, lang } = useI18n();
   const Icon = ICON[risk.light];
   const percent = risk.coverage.checksTotal
     ? Math.round((risk.coverage.checksRun / risk.coverage.checksTotal) * 100)
     : 0;
+  // Los motivos llegan del motor como clave más variables, de modo que el
+  // veredicto se lee entero en el idioma elegido. Si una clave no estuviera en
+  // el diccionario, `translate` cae al español en lugar de mostrar la clave.
+  const reasons = risk.rationaleKeys.length
+    ? risk.rationaleKeys.map((item) => translate(lang, "reason", item.key, item.vars))
+    : risk.rationale;
+  const confidenceReason = risk.confidenceKey
+    ? translate(lang, "reason", risk.confidenceKey)
+    : risk.confidenceReason;
+
   return (
-    <div className={`verdict verdict-${risk.light}`} role="group" aria-label="Resultado del análisis">
+    <div className={`verdict verdict-${risk.light}`} role="group" aria-label={t("verdict", "ariaLabel")}>
       <div className="verdict-head">
         <span className="verdict-icon" aria-hidden="true">
-          <Icon size={26} />
+          <Icon size={28} />
         </span>
         <div>
-          <div className="eyebrow">SEMÁFORO DE RIESGO</div>
-          <h2>{LIGHT_LABEL[risk.light]}</h2>
+          <div className="eyebrow">{t("verdict", "eyebrow")}</div>
+          <h2>{t("verdict", LABEL[risk.light])}</h2>
         </div>
       </div>
 
-      <ol className="light-bar" aria-label={`Semáforo en ${SHORT[risk.light]}`}>
+      <ol className="light-bar" aria-label={t("verdict", "lightBar", { light: t("verdict", SHORT[risk.light]) })}>
         {ORDER.map((light) => (
           <li
             key={light}
@@ -45,55 +79,66 @@ export default function RiskVerdict({ risk }: { risk: CombinedRisk }) {
             aria-current={light === risk.light ? "true" : undefined}
           >
             <span aria-hidden="true" />
-            {SHORT[light]}
+            {t("verdict", SHORT[light])}
           </li>
         ))}
       </ol>
 
       <dl className="verdict-metrics">
         <div>
-          <dt>Nivel de riesgo</dt>
-          <dd>{RISK_LABEL[risk.riskLevel]}</dd>
+          <dt>{t("verdict", "metricRisk")}</dt>
+          <dd>{t("verdict", RISK[risk.riskLevel])}</dd>
         </div>
         <div>
-          <dt>Confianza de la evaluación</dt>
+          <dt>{t("verdict", "metricConfidence")}</dt>
           <dd>
-            {risk.confidence}
-            <small>{risk.confidenceReason}</small>
+            {t("verdict", CONFIDENCE[risk.confidence])}
+            <small>{confidenceReason}</small>
           </dd>
         </div>
         <div>
-          <dt>Cobertura de la auditoría</dt>
+          <dt>{t("verdict", "metricCoverage")}</dt>
           <dd>
-            {risk.coverage.checksRun} de {risk.coverage.checksTotal} comprobaciones ({percent}%)
-            <small>{risk.coverage.label}</small>
+            {t("verdict", "checks", {
+              run: risk.coverage.checksRun,
+              total: risk.coverage.checksTotal,
+              percent,
+            })}
+            <small>{localizeCoverageLabel(risk.coverage.label, lang)}</small>
           </dd>
         </div>
         <div>
-          <dt>Interpretación de IA</dt>
+          <dt>{t("verdict", "metricImpact")}</dt>
           <dd>
-            {risk.aiRisk ? `riesgo ${risk.aiRisk}` : "no disponible"}
+            {risk.potentialImpact.map((area) => t("verdict", IMPACT[area])).join(" · ")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("verdict", "metricAi")}</dt>
+          <dd>
+            {risk.aiRisk
+              ? t("verdict", "aiRisk", { level: t("verdict", AI_RISK[risk.aiRisk]).toLowerCase() })
+              : t("verdict", "aiNone")}
             <small>
-              {risk.deterministic.suspicious} señal(es) determinista(s) · puntuación local{" "}
-              {risk.deterministic.score}
+              {t("verdict", "signals", {
+                n: risk.deterministic.suspicious,
+                score: risk.deterministic.score,
+              })}
             </small>
           </dd>
         </div>
       </dl>
 
       <div className="verdict-why">
-        <h3>Por qué este resultado</h3>
+        <h3>{t("verdict", "why")}</h3>
         <ul>
-          {risk.rationale.map((line, index) => (
+          {reasons.map((line, index) => (
             <li key={index}>{line}</li>
           ))}
         </ul>
       </div>
 
-      <p className="verdict-caveat">
-        Es una evaluación orientativa sobre el contenido recibido. No confirma un fraude ni
-        garantiza que algo sea seguro, y no sustituye la verificación por el canal oficial.
-      </p>
+      <p className="verdict-caveat">{t("verdict", "caveat")}</p>
     </div>
   );
 }

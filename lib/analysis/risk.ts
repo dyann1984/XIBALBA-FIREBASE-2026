@@ -100,16 +100,57 @@ export type DeterministicVerdict = {
   locallyExhaustive: boolean;
 };
 
+/**
+ * Motivo expresado como clave, para poder mostrarlo en el idioma elegido.
+ * El texto en español sigue estando en `rationale` y `confidenceReason`: esta
+ * es la misma información sin fijar el idioma.
+ */
+export type ReasonKey = { key: string; vars?: Record<string, string> };
+
+/**
+ * Impacto potencial: una dimensión propia e independiente del nivel de
+ * riesgo y de la confianza (encargo "Fase 4, Etapa E"). Se deriva
+ * exclusivamente de las categorías reales de las evidencias ya verificadas
+ * y sospechosas — nunca de un supuesto adicional. Una misma investigación
+ * puede tener varias áreas de impacto a la vez.
+ */
+export type PotentialImpactArea =
+  | 'economico' // categoría 'financiero': posible pérdida de dinero
+  | 'identidad' // 'phishing' o 'suplantacion': robo de credenciales o identidad
+  | 'sitio-fraudulento' // 'dominio' o 'estructura': exposición a un sitio engañoso
+  | 'no-concluyente'; // sin evidencia verificada suficiente para estimar impacto
+
 export type CombinedRisk = {
   light: TrafficLight;
   riskLevel: RiskLevel;
   confidence: 'alta' | 'media' | 'baja';
   confidenceReason: string;
+  /** El motivo de la confianza, como clave traducible. */
+  confidenceKey: string;
   coverage: Coverage;
   rationale: string[];
+  /** Los mismos motivos que `rationale`, como claves traducibles. */
+  rationaleKeys: ReasonKey[];
   aiRisk: AiRiskLevel | null;
   deterministic: DeterministicVerdict;
+  /** Dimensión independiente de riesgo y confianza; ver `PotentialImpactArea`. */
+  potentialImpact: PotentialImpactArea[];
 };
+
+/** Deriva el impacto potencial solo de categorías de evidencia verificada y
+ * sospechosa — nunca de la interpretación de IA, que no está verificada. */
+export function potentialImpactOf(audit: Audit): PotentialImpactArea[] {
+  const categories = new Set(
+    audit.indicators
+      .filter((item) => isVerified(item) && item.status === 'sospechoso')
+      .map((item) => item.category),
+  );
+  const areas: PotentialImpactArea[] = [];
+  if (categories.has('financiero')) areas.push('economico');
+  if (categories.has('phishing') || categories.has('suplantacion')) areas.push('identidad');
+  if (categories.has('dominio') || categories.has('estructura')) areas.push('sitio-fraudulento');
+  return areas.length ? areas : ['no-concluyente'];
+}
 
 const WEIGHT: Record<Severity, number> = {
   critico: 100,
@@ -175,47 +216,56 @@ export function combineRisk(audit: Audit, ai?: { risk: AiRiskLevel } | null): Co
   const deterministic = deterministicVerdict(audit);
   const aiRisk = ai?.risk ?? null;
   const rationale: string[] = [];
+  const rationaleKeys: ReasonKey[] = [];
+  /** Añade el motivo en las dos formas a la vez, para que no se desincronicen. */
+  const reason = (text: string, key: string, vars?: Record<string, string>) => {
+    rationale.push(text);
+    rationaleKeys.push(vars ? { key, vars } : { key });
+  };
+  const signals = deterministic.topSignals.join('; ');
 
   let riskLevel: RiskLevel;
   if (deterministic.level === 'alto') {
     riskLevel = 'alto';
-    rationale.push(
-      `Evidencia determinista de severidad alta: ${deterministic.topSignals.join('; ')}.`,
-    );
+    reason(`Evidencia determinista de severidad alta: ${signals}.`, 'detHigh', { signals });
   } else if (aiRisk === 'alto') {
     riskLevel = 'alto';
-    rationale.push('El modelo estimó riesgo alto; se adopta el nivel más protector.');
+    reason('El modelo estimó riesgo alto; se adopta el nivel más protector.', 'aiHigh');
   } else if (deterministic.level === 'medio') {
     riskLevel = 'medio';
-    rationale.push(`Señales deterministas de nivel medio: ${deterministic.topSignals.join('; ')}.`);
+    reason(`Señales deterministas de nivel medio: ${signals}.`, 'detMedium', { signals });
   } else if (aiRisk === 'medio') {
     riskLevel = 'medio';
-    rationale.push('Sin señales deterministas relevantes; el modelo estimó riesgo medio.');
+    reason('Sin señales deterministas relevantes; el modelo estimó riesgo medio.', 'aiMedium');
   } else if (!deterministic.locallyExhaustive) {
     riskLevel = 'no concluyente';
-    rationale.push(
+    reason(
       'No se detectaron señales locales, pero quedan comprobaciones externas sin realizar: la ausencia de señales no demuestra seguridad.',
+      'noSignalsPending',
     );
   } else if (aiRisk === 'bajo') {
     riskLevel = 'bajo';
-    rationale.push(
+    reason(
       'El contenido se analizó por completo de forma local, no se hallaron señales y el modelo estimó riesgo bajo.',
+      'fullyLocalLow',
     );
   } else {
     riskLevel = 'no concluyente';
-    rationale.push('No se hallaron señales locales y no hay interpretación de IA disponible.');
+    reason('No se hallaron señales locales y no hay interpretación de IA disponible.', 'noSignalsNoAi');
   }
 
   if (deterministic.level !== 'alto' && aiRisk === 'alto' && deterministic.suspicious === 0) {
-    rationale.push('Advertencia: el nivel alto proviene solo del modelo, sin respaldo determinista.');
+    reason('Advertencia: el nivel alto proviene solo del modelo, sin respaldo determinista.', 'warnAiOnly');
   }
   if (aiRisk === 'bajo' && riskLevel !== 'bajo') {
-    rationale.push(
+    reason(
       'El modelo estimó riesgo bajo, pero no se puede confirmar seguridad sin las comprobaciones externas pendientes.',
+      'aiLowButPending',
     );
   }
   if (audit.coverage.pendingExternal.length) {
-    rationale.push(`Comprobaciones pendientes: ${audit.coverage.pendingExternal.join(', ')}.`);
+    const pending = audit.coverage.pendingExternal.join(', ');
+    reason(`Comprobaciones pendientes: ${pending}.`, 'pending', { pending });
   }
 
   const criticalCount = audit.indicators.filter(
@@ -227,19 +277,27 @@ export function combineRisk(audit: Audit, ai?: { risk: AiRiskLevel } | null): Co
 
   let confidence: CombinedRisk['confidence'];
   let confidenceReason: string;
+  let confidenceKey: string;
   if (criticalCount > 0 || highCount >= 2) {
     confidence = 'alta';
+    confidenceKey = 'confHigh';
     confidenceReason =
       'Se observaron directamente patrones de severidad crítica o varias señales altas en el contenido recibido.';
   } else if (deterministic.score >= 15) {
     confidence = 'media';
+    confidenceKey = 'confMedium';
     confidenceReason = 'Existen señales deterministas, pero admiten explicaciones legítimas.';
   } else {
     confidence = 'baja';
-    confidenceReason =
-      deterministic.suspicious === 0 && aiRisk
-        ? 'No hay evidencia determinista; el nivel depende de la interpretación no verificada del modelo.'
-        : 'La cobertura local es limitada y no hay evidencia suficiente para sostener una conclusión.';
+    if (deterministic.suspicious === 0 && aiRisk) {
+      confidenceKey = 'confLowAiOnly';
+      confidenceReason =
+        'No hay evidencia determinista; el nivel depende de la interpretación no verificada del modelo.';
+    } else {
+      confidenceKey = 'confLowCoverage';
+      confidenceReason =
+        'La cobertura local es limitada y no hay evidencia suficiente para sostener una conclusión.';
+    }
   }
 
   return {
@@ -247,10 +305,13 @@ export function combineRisk(audit: Audit, ai?: { risk: AiRiskLevel } | null): Co
     riskLevel,
     confidence,
     confidenceReason,
+    confidenceKey,
     coverage: audit.coverage,
     rationale,
+    rationaleKeys,
     aiRisk,
     deterministic,
+    potentialImpact: potentialImpactOf(audit),
   };
 }
 

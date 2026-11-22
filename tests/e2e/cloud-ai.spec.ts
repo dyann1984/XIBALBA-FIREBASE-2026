@@ -76,12 +76,12 @@ test("Interpretación de IA en la nube real (Firebase + Gemini) nunca baja un ve
 });
 
 /**
- * El estado visual "seguridad" del retrato del Guardián (verde en el
+ * El estado visual "seguridad" del holograma del Guardián (verde en el
  * semáforo) solo es alcanzable con una interpretación de IA real: el motor
  * local nunca da verde por sí solo (ver xibalba.spec.ts, prueba 8). Por eso
  * esta captura vive aquí y no en la batería principal.
  */
-test("Retrato del Guardián en estado de seguridad (verde) con IA real", async ({ page }) => {
+test("Holograma del Guardián en estado de seguridad (verde) con IA real", async ({ page }) => {
   await page.goto("/");
   const cloudReady = await page
     .getByText(/Nube: configurada|Cloud: configured/i)
@@ -106,7 +106,7 @@ test("Retrato del Guardián en estado de seguridad (verde) con IA real", async (
   test.skip(!answered, "La llamada real al modelo no respondió en 30s (red o cuota del proveedor).");
 
   await expect(page.locator(".verdict-verde")).toBeVisible({ timeout: 15_000 });
-  const portrait = page.locator(".guardian-stage.portrait");
+  const portrait = page.locator(".guardian-stage.jaguar");
   await expect(portrait).toHaveAttribute("data-guardian-state", "seguridad");
   await portrait.screenshot({ path: path.join(ARTIFACTS_DIR, "03-retrato-seguridad.png") });
 });

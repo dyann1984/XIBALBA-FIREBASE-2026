@@ -33,6 +33,43 @@ const KIND_LABEL: Record<string, { es: string; en: string }> = {
 
 type Edge = { a: string; b: string; reasonsEs: string[]; reasonsEn: string[] };
 
+/**
+ * Glifo pequeño por tipo de caso: convierte el nodo en una entidad
+ * reconocible (no un punto genérico), sin inventar un ícono para datos que
+ * no existen. Trazo simple, un solo color heredado (`currentColor`), barato
+ * de pintar en cualquier equipo.
+ */
+function glyphFor(kind: string) {
+  switch (kind) {
+    case "url":
+      // Enlace: dos eslabones.
+      return (
+        <>
+          <circle cx="-3.5" cy="-2" r="3.4" />
+          <circle cx="3.5" cy="2" r="3.4" />
+        </>
+      );
+    case "transcripcion":
+      // Llamada: onda de voz.
+      return (
+        <>
+          <path d="M-7 1 C-7 -4 -3 -4 -3 1 C-3 6 1 6 1 1 C1 -4 5 -4 5 1" />
+        </>
+      );
+    case "financiero":
+      // Dinero: glifo de moneda.
+      return (
+        <>
+          <circle cx="0" cy="0" r="5.2" />
+          <path d="M0 -2.6 L0 2.6 M-2 -1.2 L2 1.2 M-2 1.2 L2 -1.2" />
+        </>
+      );
+    default:
+      // Mensaje: ojo-rombo, el mismo lenguaje visual que las runas del Guardián.
+      return <path d="M-7 0 Q0 -5.5 7 0 Q0 5.5 -7 0 Z M0 -1.6 L1.6 0 L0 1.6 L-1.6 0 Z" />;
+  }
+}
+
 function buildGraph(history: HistoryEntry[]) {
   const edges: Edge[] = [];
   const seen = new Set<string>();
@@ -69,8 +106,12 @@ const CENTER = SIZE / 2;
 const RADIUS = SIZE / 2 - 54;
 
 export default function InvestigationMap({ history, lang }: { history: HistoryEntry[]; lang: Lang }) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedRaw, setSelected] = useState<string | null>(null);
   const { edges, campaigns } = useMemo(() => buildGraph(history), [history]);
+  // Un único caso no se deja como un punto perdido en el vacío: se
+  // selecciona solo, para que el pedestal ritual y la explicación aparezcan
+  // de inmediato en vez de esperar un clic sobre un nodo aislado.
+  const selected = selectedRaw ?? (history.length === 1 ? history[0].id : null);
 
   const positions = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
@@ -117,28 +158,40 @@ export default function InvestigationMap({ history, lang }: { history: HistoryEn
               if (!a || !b) return null;
               const active = selected === edge.a || selected === edge.b;
               return (
-                <line
-                  key={`${edge.a}-${edge.b}`}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
-                  className={`map-edge${active ? " map-edge-active" : ""}`}
-                />
+                <g key={`${edge.a}-${edge.b}`}>
+                  <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`map-edge${active ? " map-edge-active" : ""}`} />
+                  {/* Segunda línea punteada animada, solo sobre relaciones
+                      tocadas por la selección: "luminosa" sin animar las
+                      decenas de líneas que puede tener un historial grande. */}
+                  {active && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="map-edge-flow" />}
+                </g>
               );
             })}
           </g>
+          {history.length === 1 && positions.get(history[0].id) && (
+            <g
+              transform={`translate(${positions.get(history[0].id)!.x} ${positions.get(history[0].id)!.y})`}
+              className="map-node-pedestal-group"
+              style={{ color: LIGHT_COLOR[history[0].light] }}
+              aria-hidden="true"
+            >
+              <circle r={44} className="map-node-pedestal" />
+              <circle r={60} className="map-node-pedestal" />
+            </g>
+          )}
           {history.map((entry) => {
             const pos = positions.get(entry.id);
             if (!pos) return null;
             const isSelected = selected === entry.id;
             const isolated = !connected.has(entry.id);
             const radius = 10 + Math.min(entry.signals, 6);
+            const color = LIGHT_COLOR[entry.light];
             return (
               <g
                 key={entry.id}
                 transform={`translate(${pos.x} ${pos.y})`}
                 className={`map-node${isSelected ? " map-node-selected" : ""}${isolated ? " map-node-isolated" : ""}`}
+                style={{ color }}
                 tabIndex={0}
                 role="button"
                 aria-pressed={isSelected}
@@ -151,13 +204,22 @@ export default function InvestigationMap({ history, lang }: { history: HistoryEn
                   }
                 }}
               >
-                <circle r={radius} fill={LIGHT_COLOR[entry.light]} />
+                <circle r={radius + 9} className="map-node-aura" />
+                <circle r={radius} className="map-node-base" fill={color} />
+                <g className="map-node-glyph">{glyphFor(entry.kind)}</g>
                 {isSelected && <circle r={radius + 5} className="map-node-ring" />}
               </g>
             );
           })}
         </svg>
       </div>
+      {history.length === 1 && (
+        <p className="map-single-note">
+          {lang === "en"
+            ? "A single case stands at the centre. Run more analyses to see verified relationships form between them."
+            : "Un único caso está en el centro. Haz más análisis para ver relaciones verificadas formarse entre ellos."}
+        </p>
+      )}
 
       {campaigns.length > 0 && (
         <div className="correlation-box">

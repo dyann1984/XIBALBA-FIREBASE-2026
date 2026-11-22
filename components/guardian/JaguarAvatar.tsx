@@ -253,6 +253,42 @@ export default function JaguarAvatar({
               );
             })}
           </g>
+          {/* Anillo de runas: una tercera capa de energía, más evidente en
+              "analizando" (ver CSS), para que el holograma no dependa solo de
+              los dos anillos lisos de abajo para leerse como "activo". */}
+          <g className="jg-rune-ring">
+            {Array.from({ length: 8 }, (_, i) => {
+              const a = (i / 8) * Math.PI * 2;
+              const x = 150 + Math.cos(a) * 139;
+              const y = 162 + Math.sin(a) * 139;
+              const deg = (a * 180) / Math.PI + 90;
+              return (
+                <path
+                  key={i}
+                  className="jg-rune"
+                  d="M0,-6 L5,0 L0,6 L-5,0 Z"
+                  transform={`translate(${x} ${y}) rotate(${deg})`}
+                />
+              );
+            })}
+          </g>
+          {/* Motas de energía: no decoran, leen como partículas volumétricas
+              reales del holograma (profundidad), sin depender de física ni
+              de números aleatorios en el render (misma posición siempre,
+              solo la anima el CSS). */}
+          <g className="jg-particles">
+            {[
+              { x: 82, y: 244, r: 2.1, d: "0s" },
+              { x: 222, y: 238, r: 1.6, d: "1.1s" },
+              { x: 66, y: 176, r: 1.8, d: "2.3s" },
+              { x: 238, y: 182, r: 2.3, d: "3.4s" },
+              { x: 104, y: 294, r: 1.5, d: ".6s" },
+              { x: 198, y: 300, r: 1.9, d: "2.9s" },
+              { x: 150, y: 318, r: 1.4, d: "1.8s" },
+            ].map((p, i) => (
+              <circle key={i} className="jg-particle" cx={p.x} cy={p.y} r={p.r} style={{ "--pd": p.d } as CSSProperties} />
+            ))}
+          </g>
         </g>
 
         {/* ---- Ondas acústicas holográficas (solo en escuchando / hablando) ---- */}

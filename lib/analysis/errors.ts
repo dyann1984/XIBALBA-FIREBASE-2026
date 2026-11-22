@@ -11,6 +11,18 @@
 import { InputError } from './guardian.ts';
 
 /**
+ * Se agotó el tiempo de espera de la interpretación de IA, incluyendo el
+ * reintento forzado en la nube (ver `withTimeout` en `analyze.ts`). Es una
+ * clase propia, no un `SyntaxError` ni un error de red del proveedor, para que
+ * `errorKey` pueda distinguirla de un fallo de formato o de conexión y mostrar
+ * un mensaje que diga la verdad: no fue la IA que respondió mal, fue que nunca
+ * respondió a tiempo.
+ */
+export class AiTimeoutError extends Error {
+  constructor(message: string) { super(message); this.name = 'AiTimeoutError'; }
+}
+
+/**
  * Clave del mensaje que debe verse, para que la interfaz pueda mostrarlo en el
  * idioma elegido. `explainError` se conserva tal cual —devuelve el texto en
  * español— porque hay código y pruebas que dependen de él; esta función es la
@@ -26,6 +38,7 @@ export type ErrorKey =
   | 'permission'
   | 'network'
   | 'format'
+  | 'timeout'
   | 'generic';
 
 /**
@@ -40,6 +53,7 @@ const SPANISH_MESSAGE: Record<Exclude<ErrorKey, 'inputEmpty' | 'inputLong' | 'in
   permission: 'Firebase rechazó la solicitud. Revisa App Check y los permisos del proyecto.',
   network: 'No se pudo conectar. Comprueba tu conexión y vuelve a intentar.',
   format: 'El modelo devolvió una respuesta que no cumple el formato exigido; se descartó.',
+  timeout: 'La interpretación de IA tardó demasiado, incluso tras intentar la nube, y se canceló. La auditoría local ya se completó y el resultado es válido.',
   generic: 'No se pudo completar el análisis. Inténtalo de nuevo.',
 };
 
@@ -51,6 +65,9 @@ export function errorKey(error: unknown): ErrorKey {
   // navegador, donde quien depura la vista previa o producción puede leerlo,
   // sin exponerlo a quien solo usa la aplicación.
   if (typeof console !== 'undefined') console.error('[xibalba] interpretación de IA falló:', error);
+  // Antes que cualquier clasificación por texto: es un tipo propio, no un
+  // mensaje del proveedor que haya que interpretar con una expresión regular.
+  if (error instanceof AiTimeoutError) return 'timeout';
   const message = error instanceof Error ? error.message : '';
   // Antes que la rama de App Check: «Falta configurar Firebase y App Check»
   // contiene «App Check» y caía en el mensaje de rechazo, que acusaba a

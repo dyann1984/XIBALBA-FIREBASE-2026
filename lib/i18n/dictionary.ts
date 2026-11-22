@@ -510,6 +510,7 @@ export const es = {
     permission: "Firebase rechazó la solicitud. Revisa App Check y los permisos del proyecto.",
     network: "No se pudo conectar. Comprueba tu conexión y vuelve a intentar.",
     format: "El modelo devolvió una respuesta que no cumple el formato exigido; se descartó.",
+    timeout: "La interpretación de IA tardó demasiado, incluso tras intentar la nube, y se canceló. La auditoría local ya se completó y el resultado es válido.",
     generic: "No se pudo completar el análisis. Inténtalo de nuevo.",
   },
 } ;
@@ -1007,6 +1008,7 @@ export const en: Dictionary = {
     permission: "Firebase rejected the request. Check App Check and the project permissions.",
     network: "Could not connect. Check your connection and try again.",
     format: "The model returned a response that does not meet the required format; it was discarded.",
+    timeout: "The AI interpretation took too long, even after trying the cloud, and was cancelled. The on-device audit already finished and the result is valid.",
     generic: "The analysis could not be completed. Try again.",
   },
 };

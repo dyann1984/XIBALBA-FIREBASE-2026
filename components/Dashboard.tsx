@@ -23,9 +23,11 @@ import { agents, type Agent } from "@/lib/agents";
 import demoData from "@/data/demo-cases.json";
 import { append as appendHistory, clear as clearStoredHistory, describeWhen, load as loadStoredHistory, save as saveStoredHistory, summarize, HISTORY_LIMIT, type HistoryEntry } from "@/lib/history";
 import { extractUrls } from "@/lib/analysis/audit";
+import { localizeIndicator } from "@/lib/i18n/evidence";
 import { extractPhoneNumbers } from "@/lib/analysis/phone";
 import { correlateIncidents } from "@/lib/analysis/correlation";
 import { buildReportData, formatReportMarkdown } from "@/lib/analysis/report";
+import { buildReportPdf } from "@/lib/analysis/pdf";
 import type { Translate } from "@/lib/i18n";
 
 const icons: Record<string, typeof Shield> = { voice: AudioLines, message: MessageSquareText, wallet: WalletCards, link: Link2, shield: ShieldCheck };
@@ -60,6 +62,23 @@ const AVAILABILITY_KEY: Record<string, "availabilityUnsupported" | "availability
   downloading: "availabilityDownloading",
   unavailable: "availabilityUnavailable",
   unknown: "availabilityUnknown",
+};
+
+/**
+ * `event.task` lo redacta el coordinador (`lib/analysis/coordinator.ts`) en
+ * español, igual que el resto del motor determinista: ver la nota de
+ * `lib/i18n/evidence.ts` sobre por qué el motor no se traduce a sí mismo. Son
+ * siete valores fijos, así que se traducen aquí en lugar de añadir una capa
+ * de `phrase()` para una lista cerrada tan pequeña.
+ */
+const TASK_LABEL: Record<string, { es: string; en: string }> = {
+  "coordinación": { es: "coordinación", en: "coordination" },
+  "en cola": { es: "en cola", en: "queued" },
+  "teléfonos": { es: "teléfonos", en: "phone numbers" },
+  "voz y texto": { es: "voz y texto", en: "voice and text" },
+  "finanzas y texto": { es: "finanzas y texto", en: "finance and text" },
+  "mensaje": { es: "mensaje", en: "message" },
+  "enlaces": { es: "enlaces", en: "links" },
 };
 
 /** Una línea del historial. Muestra el resultado, no el contenido analizado. */
@@ -151,11 +170,19 @@ export default function Dashboard() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
  };
  const currentCorrelation = outcome ? correlateIncidents(fingerprintsOf(outcome, input), history.slice(1)) : { relatedEntries: [], campaigns: [] };
- const exportReport = (format: "md" | "json") => {
+ const exportReport = async (format: "md" | "json" | "pdf") => {
   if (!outcome) return;
   const data = buildReportData(outcome, currentCorrelation, lang);
   const stamp = new Date().toISOString().slice(0, 10);
   if (format === "json") downloadFile(JSON.stringify(data, null, 2), `xibalba-report-${stamp}.json`, "application/json");
+  else if (format === "pdf") {
+   const bytes = await buildReportPdf(data);
+   const blob = new Blob([bytes], { type: "application/pdf" });
+   const url = URL.createObjectURL(blob);
+   const a = document.createElement("a");
+   a.href = url; a.download = `xibalba-report-${stamp}.pdf`; a.click();
+   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   else downloadFile(formatReportMarkdown(data), `xibalba-report-${stamp}.md`, "text/markdown;charset=utf-8");
  };
  const allowHistory = (value: boolean) => {
@@ -346,11 +373,11 @@ export default function Dashboard() {
 {kind==="transcripcion" && <><label htmlFor="audio">{t("analyze","audioLabel")}</label><AudioAttachment audio={audio} transcription={transcription} onChange={next=>{setAudio(next);setTranscription(null);clearResult();}} disabled={busy} onError={setError}/></>}<div className="form-foot"><span><LockKeyhole size={14}/> {t("analyze","footPrivacy")}</span><span>{t("analyze","chars",{n:input.length})}</span></div><label className="consent"><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);clearResult();}}/> {t("analyze","consent")}</label>{audio && <label className="consent"><input type="checkbox" checked={audioConsent} onChange={e=>{setAudioConsent(e.target.checked);setTranscription(null);clearResult();}}/> {t("analyze","audioConsent")}</label>}<button className="primary" disabled={busy || !hasContent} onClick={submit}><ScanLine size={17}/> {busy ? t("analyze","submitBusy") : consent && configured ? t("analyze","submitAi") : t("analyze","submitLocal")} <ArrowRight size={16}/></button>{!hasContent && <p className="notice">{t("analyze","needContent")}</p>}<p className="notice">{!configured ? t("analyze","statusNotConfigured") : consent ? t("analyze","statusConsent") : t("analyze","statusLocal")} {t("analyze","historyNote")}</p>{error && <p role="alert" className="notice error-notice">{error}</p>}</div>
 <div className={`panel lab-area lab-area-investigation hud ${labTab === "investigation" ? "lab-area-active" : ""}`} aria-live="polite">
   <div className="eyebrow">{lang === "en" ? "B · INVESTIGATION DESK" : "B · MESA DE INVESTIGACIÓN"}</div>
-  {(busy || outcome || ocr || events.length > 0) && <div className="investigation" aria-live="polite">{busy && <p><Activity size={15}/> {stage}</p>}<AgentOperationsBoard events={events} executed={outcome?.executed ?? []} busy={busy} lang={lang}/>{(busy || events.length > 0) && <div className="agent-status-grid">{agents.map(agent => { const records = events.filter(event => event.agent === agent.id); const latest = records.at(-1); return <div className="agent-status" key={agent.id}><b>{agent.name}</b><small>{agentText(agent).role}</small><span>{!latest ? (busy ? (lang === "en" ? "Not started" : "Sin iniciar") : (lang === "en" ? "Not used" : "No participó")) : latest.phase === "queued" ? (lang === "en" ? "Queued" : "En cola") : latest.phase === "started" ? (busy ? (lang === "en" ? "Running" : "En ejecución") : (lang === "en" ? "Interrupted" : "Interrumpido")) : latest.phase === "error" ? "Error" : (lang === "en" ? "Completed" : "Completado")}</span></div>; })}</div>}{events.length > 0 && <details className="timeline"><summary>{lang === "en" ? "Execution timeline" : "Cronología de ejecución"}</summary><ol>{events.map((event, index) => <li key={index}><b>{AGENT_NAMES[event.agent]}</b> · {event.task} · {event.phase === "queued" ? (lang === "en" ? "queued" : "en cola") : event.phase === "started" ? (lang === "en" ? "started" : "inició") : event.phase === "completed" ? (lang === "en" ? "completed" : "completó") : "error"}{event.elapsedMs !== undefined && <> · {event.elapsedMs.toFixed(1)} ms</>}{event.findings !== undefined && <> · {event.findings} {lang === "en" ? "indicators" : "indicadores"}</>}</li>)}</ol><small>{lang === "en" ? "The coordinator encloses the specialist tasks; durations must not be added together." : "La coordinación incluye las tareas especializadas; sus tiempos no deben sumarse."}</small></details>}{outcome && <div className="investigation-agents">{outcome.executed.map((id, index) => { const findings = outcome.attributed.filter(item => item.agents.includes(id)); return <div className="investigation-agent" key={id}><div><b>{String(index + 1).padStart(2, "0")} · {AGENT_NAMES[id]}</b><span>{lang === "en" ? "Completed" : "Completado"}</span></div><p>{id === "guardian" ? (lang === "en" ? "Merged evidence and calculated combined risk." : "Fusionó la evidencia y calculó el riesgo combinado.") : findings.length ? findings.map(item => item.indicator).join(" · ") : (lang === "en" ? "No findings attributed." : "Sin hallazgos atribuidos.")}</p>{findings.slice(0, 2).map(item => <small key={item.id}>{item.evidence}</small>)}</div>; })}</div>}</div>}
+  {(busy || outcome || ocr || events.length > 0) && <div className="investigation" aria-live="polite">{busy && <p><Activity size={15}/> {stage}</p>}<AgentOperationsBoard events={events} executed={outcome?.executed ?? []} busy={busy} lang={lang}/>{(busy || events.length > 0) && <div className="agent-status-grid">{agents.map(agent => { const records = events.filter(event => event.agent === agent.id); const latest = records.at(-1); return <div className="agent-status" key={agent.id}><b>{agent.name}</b><small>{agentText(agent).role}</small><span>{!latest ? (busy ? (lang === "en" ? "Not started" : "Sin iniciar") : (lang === "en" ? "Not used" : "No participó")) : latest.phase === "queued" ? (lang === "en" ? "Queued" : "En cola") : latest.phase === "started" ? (busy ? (lang === "en" ? "Running" : "En ejecución") : (lang === "en" ? "Interrupted" : "Interrumpido")) : latest.phase === "error" ? "Error" : (lang === "en" ? "Completed" : "Completado")}</span></div>; })}</div>}{events.length > 0 && <details className="timeline"><summary>{lang === "en" ? "Execution timeline" : "Cronología de ejecución"}</summary><ol>{events.map((event, index) => <li key={index}><b>{AGENT_NAMES[event.agent]}</b> · {lang === "en" ? (TASK_LABEL[event.task]?.en ?? event.task) : (TASK_LABEL[event.task]?.es ?? event.task)} · {event.phase === "queued" ? (lang === "en" ? "queued" : "en cola") : event.phase === "started" ? (lang === "en" ? "started" : "inició") : event.phase === "completed" ? (lang === "en" ? "completed" : "completó") : "error"}{event.elapsedMs !== undefined && <> · {event.elapsedMs.toFixed(1)} ms</>}{event.findings !== undefined && <> · {event.findings} {lang === "en" ? "indicators" : "indicadores"}</>}</li>)}</ol><small>{lang === "en" ? "The coordinator encloses the specialist tasks; durations must not be added together." : "La coordinación incluye las tareas especializadas; sus tiempos no deben sumarse."}</small></details>}{outcome && <div className="investigation-agents">{outcome.executed.map((id, index) => { const findings = outcome.attributed.filter(item => item.agents.includes(id)); return <div className="investigation-agent" key={id}><div><b>{String(index + 1).padStart(2, "0")} · {AGENT_NAMES[id]}</b><span>{lang === "en" ? "Completed" : "Completado"}</span></div><p>{id === "guardian" ? (lang === "en" ? "Merged evidence and calculated combined risk." : "Fusionó la evidencia y calculó el riesgo combinado.") : findings.length ? findings.map(item => localizeIndicator(item, lang).indicator).join(" · ") : (lang === "en" ? "No findings attributed." : "Sin hallazgos atribuidos.")}</p>{findings.slice(0, 2).map(item => <small key={item.id}>{localizeIndicator(item, lang).evidence}</small>)}</div>; })}</div>}</div>}
 </div>
 <div className={`panel result-panel lab-area lab-area-evaluation hud ${labTab === "evaluation" ? "lab-area-active" : ""}`} aria-live="polite">
   <div className="eyebrow">C · {outcome ? `${t("analyze","agentsEyebrow")} · ${describeAgents(outcome.contributing.length ? outcome.contributing : outcome.selection.agents)}` : t("analyze","resultEyebrow")}</div>
-  {outcome ? <><RiskVerdict risk={outcome.risk}/>{(currentCorrelation.campaigns.length > 0 || currentCorrelation.relatedEntries.length > 0) && <div className="correlation-box"><div className="eyebrow">{t("analyze","correlationTitle")}</div>{currentCorrelation.relatedEntries.length > 0 && <p className="notice">{t("analyze","correlationRelated",{n:currentCorrelation.relatedEntries.length})}</p>}{currentCorrelation.campaigns.map(c => <div key={c.id} className="campaign-chip"><strong>{lang==="en"?c.nameEn:c.nameEs}</strong><span>{lang==="en"?c.descriptionEn:c.descriptionEs}</span></div>)}</div>}<div className="export-row"><button type="button" className="export-btn" onClick={()=>exportReport("md")}><Download size={14}/> {t("analyze","exportMd")}</button><button type="button" className="export-btn" onClick={()=>exportReport("json")}><Download size={14}/> {t("analyze","exportJson")}</button></div><ul className="agent-reasons">{outcome.selection.agents.map(id=><li key={id}><b>{AGENT_NAMES[id]}</b> · {t("agentReasons",outcome.selection.reasons[id])}{id !== "guardian" && !outcome.contributing.includes(id) && ` ${t("analyze","noContribution")}`}</li>)}</ul><EvidenceList audit={outcome.audit} assessment={outcome.assessment} aiError={outcome.aiError}/></>
+  {outcome ? <><RiskVerdict risk={outcome.risk}/>{(currentCorrelation.campaigns.length > 0 || currentCorrelation.relatedEntries.length > 0) && <div className="correlation-box"><div className="eyebrow">{t("analyze","correlationTitle")}</div>{currentCorrelation.relatedEntries.length > 0 && <p className="notice">{t("analyze","correlationRelated",{n:currentCorrelation.relatedEntries.length})}</p>}{currentCorrelation.campaigns.map(c => <div key={c.id} className="campaign-chip"><strong>{lang==="en"?c.nameEn:c.nameEs}</strong><span>{lang==="en"?c.descriptionEn:c.descriptionEs}</span></div>)}</div>}<div className="export-row"><button type="button" className="export-btn" onClick={()=>void exportReport("md")}><Download size={14}/> {t("analyze","exportMd")}</button><button type="button" className="export-btn" onClick={()=>void exportReport("json")}><Download size={14}/> {t("analyze","exportJson")}</button><button type="button" className="export-btn" onClick={()=>void exportReport("pdf")}><Download size={14}/> {t("analyze","exportPdf")}</button></div><ul className="agent-reasons">{outcome.selection.agents.map(id=><li key={id}><b>{AGENT_NAMES[id]}</b> · {t("agentReasons",outcome.selection.reasons[id])}{id !== "guardian" && !outcome.contributing.includes(id) && ` ${t("analyze","noContribution")}`}</li>)}</ul><EvidenceList audit={outcome.audit} assessment={outcome.assessment} aiError={outcome.aiError}/></>
    : <><div className="result-icon"><ShieldAlert size={30}/></div><h2 className="risk-indicator risk-gris">● {t("analyze","resultEmptyTitle")}</h2><p>{t("analyze","resultEmptyText")}</p><div className="risk-pills"><span>{t("verdict","lightVerde")}</span><span>{t("verdict","lightAmarillo")}</span><span>{t("verdict","lightRojo")}</span><span>{t("verdict","lightGris")}</span></div></>}
   <div className="inference"><Activity size={16}/> {t("analyze","engine")}: <b>{sourceLabel(outcome?.source ?? null).toUpperCase()}</b> · {t("analyze","aiLocal")}: {availability ? t("analyze", AVAILABILITY_KEY[availability] ?? "availabilityUnknown") : t("analyze","availabilityChecking")}</div>
  </div></div>

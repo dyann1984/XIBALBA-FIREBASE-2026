@@ -64,6 +64,26 @@ const BLINK_MIN_MS = 4000;
 const BLINK_MAX_MS = 8000;
 const BLINK_DURATION_MS = 140;
 
+/** Detecta, de forma conservadora, un dispositivo con pocos recursos: poca
+ * memoria reportada, pocos núcleos, o el propio usuario con "Ahorro de
+ * datos" activado en el navegador. Cualquiera de las tres basta — el umbral
+ * es a propósito bajo (2 GB / 2 núcleos) para no degradar la experiencia de
+ * la mayoría de los teléfonos de gama media, que sí reportan 4 GB/núcleos y
+ * mueven estas animaciones sin esfuerzo. Sin estas APIs (Safari no las
+ * expone), se asume que el dispositivo es capaz: mejor no degradar de más
+ * que degradar sin necesidad. */
+function prefersLiteMode(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & {
+    deviceMemory?: number;
+    connection?: { saveData?: boolean };
+  };
+  if (typeof nav.deviceMemory === "number" && nav.deviceMemory <= 2) return true;
+  if (typeof nav.hardwareConcurrency === "number" && nav.hardwareConcurrency <= 2) return true;
+  if (nav.connection?.saveData) return true;
+  return false;
+}
+
 export default function JaguarPortrait({
   state,
   light,
@@ -80,6 +100,9 @@ export default function JaguarPortrait({
   const [blinking, setBlinking] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const [gaze, setGaze] = useState({ x: 0, y: 0 });
+  // Se calcula una sola vez: el estado "ligero" de un dispositivo no cambia
+  // durante la sesión, y leerlo en cada render no aportaría nada.
+  const [lite] = useState(prefersLiteMode);
 
   useEffect(() => {
     const element = host.current;
@@ -102,7 +125,10 @@ export default function JaguarPortrait({
   // táctiles nunca llega `pointermove`, así que una deriva autónoma y suave
   // mantiene al jaguar con vida sin fingir ningún estado que no sea real.
   useEffect(() => {
-    if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // El seguimiento de mirada recalcula en cada `pointermove`: es justo el
+    // tipo de costo continuo que un modo ligero existe para evitar, no una
+    // animación decorativa suelta.
+    if (lite || !active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const element = host.current;
     if (!element) return;
     const onMove = (event: PointerEvent) => {
@@ -114,16 +140,16 @@ export default function JaguarPortrait({
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => window.removeEventListener("pointermove", onMove);
-  }, [active]);
+  }, [lite, active]);
 
   useEffect(() => {
-    if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (lite || !active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (!window.matchMedia("(hover: none), (pointer: coarse)").matches) return;
     const timer = setInterval(() => {
       setGaze({ x: Math.random() * 1.2 - 0.6, y: Math.random() * 0.7 - 0.35 });
     }, 3600);
     return () => clearInterval(timer);
-  }, [active]);
+  }, [lite, active]);
 
   useEffect(() => {
     if (!active || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -146,7 +172,15 @@ export default function JaguarPortrait({
     };
   }, [active]);
 
-  if (imageFailed) {
+  // El retrato fotográfico con sus capas superpuestas (respiración, parpadeo,
+  // mirada, barrido de escaneo, halos) es más caro de pintar que el avatar
+  // SVG vectorial de `JaguarAvatar`, que ya respeta por su cuenta
+  // `prefers-reduced-motion` y pausa fuera de vista. En vez de inventar un
+  // tercer modo "ligero" a medias, un dispositivo con pocos recursos
+  // detectados (`prefersLiteMode`) recibe el mismo componente que ya sirve
+  // como alternativa cuando la imagen no carga — es, literalmente, la
+  // alternativa ligera que pedía el encargo, no una nueva.
+  if (imageFailed || lite) {
     return <JaguarAvatar state={state} light={light} speaking={speaking} lang={lang} />;
   }
 

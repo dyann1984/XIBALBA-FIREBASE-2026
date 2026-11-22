@@ -2,7 +2,8 @@
 import { type CombinedRisk, type TrafficLight } from "@/lib/analysis/risk";
 import { useI18n } from "@/components/LanguageProvider";
 import { translate } from "@/lib/i18n";
-import { localizeCoverageLabel } from "@/lib/i18n/evidence";
+import { localizeCoverageLabel, localizeJoinedList } from "@/lib/i18n/evidence";
+import type { Lang } from "@/lib/i18n";
 import { ShieldAlert, ShieldCheck, ShieldQuestion, TriangleAlert } from "lucide-react";
 
 const ORDER: TrafficLight[] = ["verde", "amarillo", "rojo", "gris"];
@@ -40,6 +41,24 @@ const ICON: Record<TrafficLight, typeof ShieldCheck> = {
 };
 
 /**
+ * `risk.rationaleKeys` trae motivos ya traducibles (clave + plantilla), pero
+ * dos de sus variables (`signals`, `pending`) son listas de nombres de
+ * indicador que el motor determinista siempre redacta en español — ver la
+ * nota de `lib/i18n/evidence.ts` sobre por qué el motor no se traduce a sí
+ * mismo. Sin esto, una pantalla en inglés mostraba la plantilla traducida
+ * pero la lista de nombres intacta en español (visto en una vista previa real
+ * con el caso de demostración de BBVA). Se traduce cada nombre por separado,
+ * con el mismo separador que usó `risk.ts` al unirlos.
+ */
+function localizeListVars(vars: Record<string, string> | undefined, lang: Lang): Record<string, string> | undefined {
+  if (!vars) return vars;
+  const out = { ...vars };
+  if (typeof out.signals === "string") out.signals = localizeJoinedList(out.signals, lang, "; ");
+  if (typeof out.pending === "string") out.pending = localizeJoinedList(out.pending, lang, ", ");
+  return out;
+}
+
+/**
  * Presenta por separado las tres magnitudes que no deben confundirse:
  * nivel de riesgo, confianza de la evaluación y cobertura de la auditoría.
  */
@@ -53,7 +72,7 @@ export default function RiskVerdict({ risk }: { risk: CombinedRisk }) {
   // veredicto se lee entero en el idioma elegido. Si una clave no estuviera en
   // el diccionario, `translate` cae al español en lugar de mostrar la clave.
   const reasons = risk.rationaleKeys.length
-    ? risk.rationaleKeys.map((item) => translate(lang, "reason", item.key, item.vars))
+    ? risk.rationaleKeys.map((item) => translate(lang, "reason", item.key, localizeListVars(item.vars, lang)))
     : risk.rationale;
   const confidenceReason = risk.confidenceKey
     ? translate(lang, "reason", risk.confidenceKey)

@@ -1136,5 +1136,21 @@ export function localizePending(item: string, lang: Lang): string {
   return phrase(item, lang) ?? item;
 }
 
+/**
+ * Traduce una lista de nombres de indicador unidos en una sola cadena (como
+ * `risk.ts` arma `rationaleKeys[].vars.signals` y `.vars.pending`), elemento
+ * por elemento y con el mismo separador. El motor determinista siempre
+ * redacta en español (ver la nota al inicio de este archivo); sin esto, una
+ * plantilla ya traducida («Pending checks: …», «Deterministic evidence of
+ * high severity: …») dejaba la lista intacta en español — defecto real visto
+ * en una vista previa desplegada con el caso de demostración de BBVA.
+ */
+export function localizeJoinedList(value: string, lang: Lang, separator: string): string {
+  return value
+    .split(separator)
+    .map((item) => localizePending(item, lang))
+    .join(separator);
+}
+
 /** Para las pruebas: cuántas frases cubre el diccionario de evidencias. */
 export const EVIDENCE_PHRASES = Object.keys(EN).length;

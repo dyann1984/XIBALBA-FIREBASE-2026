@@ -9,6 +9,7 @@
 import type { AnalysisResult } from './analyze.ts';
 import type { IncidentCorrelation } from './correlation.ts';
 import { maskSensitive } from '../history.ts';
+import { es as esDictionary, en as enDictionary } from '../i18n/dictionary.ts';
 
 export type ExportableReport = {
   schema: 'xibalba-report/v1';
@@ -87,7 +88,11 @@ export function buildReportData(
       summary: result.assessment?.summary ?? null,
       evidence: result.assessment?.evidence ?? [],
       recommendations: result.assessment?.recommendations ?? [],
-      error: result.aiError,
+      // `result.aiError` es una clave (ver `lib/analysis/errors.ts`), no texto:
+      // se traduce aquí, en el único lugar que ya conoce `lang`, para que el
+      // reporte exportado (Markdown, JSON, PDF) respete el idioma elegido en
+      // vez de mostrar siempre español como pasaba antes.
+      error: result.aiError ? (lang === 'en' ? enDictionary : esDictionary).errors[result.aiError] : null,
     },
     pendingChecks: result.audit.coverage.pendingExternal,
     campaigns: correlation.campaigns.map((c) => ({

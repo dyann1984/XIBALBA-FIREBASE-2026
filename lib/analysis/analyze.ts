@@ -1,5 +1,5 @@
 import { parseAssessment, promptFor, validateInput, type AgentKind } from "./guardian.ts";
-import { explainError } from "./errors.ts";
+import { errorKey, type ErrorKey } from "./errors.ts";
 import { type Audit, type ImageFacts } from "./audit.ts";
 import {
   auditCoordinated,
@@ -48,8 +48,11 @@ export type AnalysisResult = {
   assessment: ReturnType<typeof parseAssessment> | null;
   /** Ruta de ejecución comunicada por el SDK, o `null` si no la informó. */
   source: string | null;
-  /** Mensaje cuando la interpretación de IA falló pero la auditoría local sirvió. */
-  aiError: string | null;
+  /** Clave del motivo cuando la interpretación de IA falló pero la auditoría
+   * local sirvió. Es una clave (no el texto ya en español) para que la
+   * interfaz la traduzca al idioma elegido en vez de mostrar siempre
+   * español, como pasaba antes al interpolar `explainError()` directamente. */
+  aiError: ErrorKey | null;
   /** Agentes elegidos por EL GUARDIÁN y el motivo de cada uno. */
   selection: AgentSelection;
   /** Evidencias con la atribución por agente, ya sin duplicados. */
@@ -171,7 +174,7 @@ export async function analyze(request: AnalysisRequest): Promise<AnalysisResult>
 
   let assessment: AnalysisResult["assessment"] = null;
   let source: string | null = null;
-  let aiError: string | null = null;
+  let aiError: ErrorKey | null = null;
 
   // Sin texto y sin imágenes no hay nada que interpretar: solo se adjuntó un
   // audio y su transcripción no está disponible. Se devuelve la auditoría del
@@ -223,7 +226,7 @@ export async function analyze(request: AnalysisRequest): Promise<AnalysisResult>
     assessment = parseAssessment(result.response.text());
     source = result.response.inferenceSource ?? null;
   } catch (error) {
-    aiError = explainError(error);
+    aiError = errorKey(error);
   }
 
   return {
@@ -280,4 +283,4 @@ export function describeSource(source: string | null): string {
 // La traducción de errores vive en `errors.ts` para poder probarla sin Next:
 // este módulo importa `@/lib/firebase`, cuyo alias solo resuelve en el bundler.
 // Se reexporta para que la interfaz siga importándola de aquí.
-export { explainError } from "./errors.ts";
+export { explainError, errorKey } from "./errors.ts";

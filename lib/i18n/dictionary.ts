@@ -16,6 +16,7 @@
 
 export const es = {
   app: {
+    documentTitle: "XIBALBÁ AI | Protección inteligente",
     tagline: "INTELIGENCIA DE PROTECCIÓN",
     menu: "MENÚ PRINCIPAL",
     breadcrumb: "ESPACIO DE PROTECCIÓN",
@@ -140,6 +141,7 @@ export const es = {
     availabilityUnknown: "estado desconocido",
     exportMd: "Exportar reporte (.md)",
     exportJson: "Exportar JSON",
+    exportPdf: "Exportar PDF",
     correlationTitle: "Correlación local y campañas sospechosas",
     correlationRelated: "{n} incidente(s) relacionado(s) en tu historial",
     correlationCampaigns: "Posible patrón de campaña detectado",
@@ -516,6 +518,7 @@ export type Dictionary = typeof es;
 
 export const en: Dictionary = {
   app: {
+    documentTitle: "XIBALBÁ AI | Smart Protection",
     tagline: "PROTECTION INTELLIGENCE",
     menu: "MAIN MENU",
     breadcrumb: "PROTECTION WORKSPACE",
@@ -640,6 +643,7 @@ export const en: Dictionary = {
     availabilityUnknown: "unknown state",
     exportMd: "Export report (.md)",
     exportJson: "Export JSON",
+    exportPdf: "Export PDF",
     correlationTitle: "Local correlation & suspicious campaigns",
     correlationRelated: "{n} related incident(s) in your history",
     correlationCampaigns: "Possible campaign pattern detected",

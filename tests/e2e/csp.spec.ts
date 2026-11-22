@@ -2,15 +2,21 @@ import { test, expect } from "@playwright/test";
 
 // Verifica la CSP real que sirve el servidor, no una copia del código: lee la
 // cabecera `Content-Security-Policy` de la respuesta HTTP tal como llega al
-// navegador. Dos cosas, exactas, nada más:
+// navegador. Tres cosas, exactas, nada más:
 //   1. `connect-src` permite `https://www.google.com` — sin este origen,
 //      reCAPTCHA Enterprise no puede reportar su propia telemetría
 //      (`/recaptcha/enterprise/clr`) y Firebase App Check rechaza el token
 //      resultante con 400 (encontrado y corregido en producción el 21 de
 //      noviembre de 2026).
-//   2. La política sigue siendo una lista cerrada de orígenes HTTPS
-//      concretos: ni comodín (`*`), ni `'unsafe-eval'` fuera de desarrollo,
-//      ni ningún origen fuera de los que el proyecto documenta y necesita.
+//   2. `connect-src` permite `data:` — el propio SDK de Firebase AI Logic
+//      convierte cada imagen adjunta con `fetch("data:...;base64,...")` para
+//      pasarla al modelo integrado de Chrome; sin `data:` aquí el navegador
+//      bloquea esa llamada con "Failed to fetch" y la interpretación de IA
+//      queda en "No disponible" (encontrado y corregido el 21 de noviembre
+//      de 2026, probando un análisis real con imagen en la Preview).
+//   3. La política sigue siendo una lista cerrada de orígenes concretos: ni
+//      comodín (`*`), ni `'unsafe-eval'` fuera de desarrollo, ni ningún
+//      origen fuera de los que el proyecto documenta y necesita.
 
 function directive(csp: string, name: string): string[] {
   const match = csp.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name} `));
@@ -20,6 +26,7 @@ function directive(csp: string, name: string): string[] {
 
 const EXPECTED_CONNECT_ORIGINS = [
   "'self'",
+  "data:",
   "https://www.google.com",
   "https://firebaseappcheck.googleapis.com",
   "https://content-firebaseappcheck.googleapis.com",
@@ -50,7 +57,7 @@ test("CSP: connect-src permite reCAPTCHA Enterprise y sigue siendo una lista cer
   // (sin subdominio) que abriría cualquier servicio de Google, no solo los
   // que este proyecto usa de verdad.
   for (const origin of connectSrc) {
-    if (origin === "'self'") continue;
+    if (origin === "'self'" || origin === "data:") continue;
     expect(origin.startsWith("https://"), `${origin} debe ser HTTPS explícito`).toBe(true);
   }
 

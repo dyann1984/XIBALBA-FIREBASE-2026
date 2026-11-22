@@ -64,7 +64,18 @@ const csp = [
   // y Firebase App Check lo rechaza con 400 — confirmado en producción: la
   // consola mostraba exactamente ese bloqueo de CSP seguido del error 400 de
   // App Check. Ningún otro origen de reCAPTCHA Enterprise apareció bloqueado.
-  `connect-src 'self' https://www.google.com ${FIREBASE_ENDPOINTS.join(" ")}`,
+  //
+  // `data:` aquí (no solo en `img-src`): el propio SDK de Firebase AI Logic
+  // convierte cada imagen adjunta a `fetch(\`data:${mime};base64,${datos}\`)`
+  // para pasarla al modelo integrado de Chrome cuando intenta inferencia
+  // on-device (`chrome-adapter.ts::toLanguageModelMessageContent`). Sin
+  // `data:` en `connect-src`, esa llamada la bloquea el propio navegador con
+  // "Failed to fetch" — confirmado en vivo en la Preview desplegada al
+  // analizar una imagen con consentimiento: la interpretación de IA quedaba
+  // en "No disponible" pese a que App Check y la llamada en la nube ya
+  // funcionaban. No amplía a qué host puede hablar la página: el dato ya
+  // vive en memoria del propio navegador: no sale a ningún servidor.
+  `connect-src 'self' data: https://www.google.com ${FIREBASE_ENDPOINTS.join(" ")}`,
   // reCAPTCHA Enterprise, proveedor de App Check.
   "frame-src https://www.google.com https://recaptcha.google.com",
   "worker-src 'self' blob:",

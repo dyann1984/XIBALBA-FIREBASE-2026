@@ -28,9 +28,55 @@ export function validateInput(kind: AgentKind, input: string): string {
  }
  return value;
 }
+/**
+ * Repara, solo a nivel de sintaxis JSON, una respuesta del modelo que casi es
+ * válida: una barra invertida que no forma un escape JSON reconocido (visto en
+ * producción el 22 de noviembre de 2026 citando un fragmento con «CLABE» —
+ * `SyntaxError: Bad escaped character`) o un carácter de control sin escapar
+ * dentro de una cadena (un salto de línea real que el modelo copió tal cual al
+ * citar texto de OCR). No decide qué significa el contenido ni lo recorta:
+ * cada carácter literal que el modelo escribió se conserva, solo se expresa
+ * con el escape JSON que le corresponde para que `JSON.parse` lo acepte.
+ */
+function repairModelJson(raw: string): string {
+ let out = "";
+ let inString = false;
+ for (let i = 0; i < raw.length; i++) {
+  const ch = raw[i];
+  if (!inString) {
+   out += ch;
+   if (ch === '"') inString = true;
+   continue;
+  }
+  if (ch === '"') { out += ch; inString = false; continue; }
+  if (ch === "\\") {
+   const next = raw[i + 1];
+   if (next !== undefined && '"\\/bfnrt'.includes(next)) { out += ch + next; i += 1; continue; }
+   if (next === "u" && /^[0-9a-fA-F]{4}$/.test(raw.slice(i + 2, i + 6))) { out += raw.slice(i, i + 6); i += 5; continue; }
+   out += "\\\\"; // Barra invertida literal sin escape válido: se escapa a sí misma.
+   continue;
+  }
+  const code = ch.charCodeAt(0);
+  if (code < 0x20) {
+   const named: Record<number, string> = { 8: "\\b", 9: "\\t", 10: "\\n", 12: "\\f", 13: "\\r" };
+   out += named[code] ?? `\\u${code.toString(16).padStart(4, "0")}`;
+   continue;
+  }
+  out += ch;
+ }
+ return out;
+}
 export function parseAssessment(raw: string): Assessment {
  const text = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
- const x: unknown = JSON.parse(text);
+ let x: unknown;
+ try {
+  x = JSON.parse(text);
+ } catch {
+  // No se oculta el fallo: si tras reparar solo la sintaxis sigue sin ser
+  // JSON válido, se rechaza igual que antes, en lugar de inventar un resultado.
+  try { x = JSON.parse(repairModelJson(text)); }
+  catch { throw new Error("La respuesta no tiene el formato esperado."); }
+ }
  if (!x || typeof x !== "object") throw new Error("La respuesta no tiene el formato esperado.");
  const v = x as Record<string, unknown>;
  if (!(v.risk === "bajo" || v.risk === "medio" || v.risk === "alto") || typeof v.summary !== "string" || !v.summary.trim() || !Array.isArray(v.evidence) || !v.evidence.length || !v.evidence.every(s => typeof s === "string" && s.trim()) || !Array.isArray(v.recommendations) || !v.recommendations.length || !v.recommendations.every(s => typeof s === "string" && s.trim())) throw new Error("La respuesta no tiene el formato esperado.");

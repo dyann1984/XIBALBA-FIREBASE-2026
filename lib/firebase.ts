@@ -20,6 +20,10 @@ const config = {
   appId: clean(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
 };
 const siteKey = clean(process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY);
+/** Único lugar donde se nombra el modelo en la nube, para que el modo
+ * preferente y el reintento forzado a la nube (ver `getCloudModel`) nunca
+ * diverjan entre sí. */
+const CLOUD_MODEL_NAME = "gemini-3.5-flash-lite";
 function localDebugEnabled() {
   return process.env.NODE_ENV === "development" && typeof window !== "undefined" &&
     window.location.hostname === "localhost" && process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG === "true";
@@ -36,10 +40,27 @@ function createServices() {
   const provider = debug ? new CustomProvider({ getToken: async () => { throw new Error("App Check debug no está activo."); } }) : new ReCaptchaEnterpriseProvider(siteKey!);
   const appCheck = initializeAppCheck(app, { provider, isTokenAutoRefreshEnabled: true });
   const ai = getAI(app, { backend: new GoogleAIBackend() });
-  const model = getGenerativeModel(ai, { mode: InferenceMode.PREFER_ON_DEVICE, inCloudParams: { model: "gemini-3.5-flash-lite" } });
+  const model = getGenerativeModel(ai, { mode: InferenceMode.PREFER_ON_DEVICE, inCloudParams: { model: CLOUD_MODEL_NAME } });
   return { model, ai, firestore: getFirestore(app), appCheck };
 }
 export function getServices() { return services ??= createServices(); }
+/**
+ * Modelo que fuerza la nube, sin considerar el on-device/híbrido.
+ *
+ * Lo usa `analyze()` como único reintento cuando el modo preferente
+ * (`PREFER_ON_DEVICE`, el de `getServices().model`) agota su tiempo de
+ * espera: un navegador que reporta el modelo integrado "disponible" pero
+ * cuya inferencia nunca progresa se queda colgado indefinidamente si nada
+ * más lo saca de ahí (visto en producción el 22 de noviembre de 2026). El
+ * consentimiento ya se dio para llegar hasta aquí: este modelo no lo pide de
+ * nuevo, solo cambia la ruta de inferencia del mismo contenido consentido.
+ */
+export function getCloudModel() {
+  return getGenerativeModel(getServices().ai, {
+    mode: InferenceMode.ONLY_IN_CLOUD,
+    inCloudParams: { model: CLOUD_MODEL_NAME },
+  });
+}
 let debugPreparation: Promise<void> | undefined;
 async function prepareLocalDebug(): Promise<void> {
   if (!localDebugEnabled() || localDebugReady) return;
@@ -190,11 +211,7 @@ export async function diagnoseFirebaseStack(
   // `ONLY_IN_CLOUD` únicamente para esta verificación, sin cambiar el modo de
   // inferencia que usa el resto de la aplicación.
   try {
-    const { ai } = getServices();
-    const cloudModel = getGenerativeModel(ai, {
-      mode: InferenceMode.ONLY_IN_CLOUD,
-      inCloudParams: { model: "gemini-3.5-flash-lite" },
-    });
+    const cloudModel = getCloudModel();
     const response = await cloudModel.generateContent(sampleText);
     const text = response.response.text();
     result.cloudCallVerified = text && text.trim() ? "ok" : "fallo";

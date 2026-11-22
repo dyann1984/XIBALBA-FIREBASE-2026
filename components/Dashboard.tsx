@@ -267,6 +267,9 @@ export default function Dashboard() {
     transcription: activeAudio ? (state ?? TRANSCRIPTION_PENDING) : undefined,
     containsOcr: Boolean(ocrExcerpt),
     onEvent: (event: AgentEvent) => setEvents(previous => [...previous, event]),
+    onAiStage: (stage: "ondevice" | "cloud-fallback") => {
+     if (stage === "cloud-fallback") setStage(lang === "en" ? "Local AI is taking too long: switching to the cloud" : "La IA local tarda demasiado: cambiando a la nube");
+    },
    };
    const attachments = Boolean(activeImages.length || activeAudio);
    setStage(lang === "en" ? "Running coordinated audit" : "Ejecutando auditoría coordinada");

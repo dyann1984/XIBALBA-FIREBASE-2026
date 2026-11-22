@@ -13,20 +13,18 @@ function newAnalysisButton(page: import("@playwright/test").Page) {
 }
 
 /**
- * Captura real del retrato premium del Guardián (Fase 5.4) en los estados
- * alcanzables sin servicios en la nube. El estado "seguridad" (verde) solo
- * ocurre con interpretación de IA real: ver tests/e2e/cloud-ai.spec.ts.
+ * Captura real del holograma del Guardián (Fase 6: avatar SVG procedural,
+ * ver docs/mejora-visual-holograma-y-mapa.md) en los estados alcanzables sin
+ * servicios en la nube. El estado "seguridad" (verde) solo ocurre con
+ * interpretación de IA real: ver tests/e2e/cloud-ai.spec.ts.
  */
-test("Retrato del Guardián: reposo y alerta reales", async ({ page }) => {
+test("Holograma del Guardián: reposo y alerta reales", async ({ page }) => {
   await page.goto("/");
   await newAnalysisButton(page).click();
 
-  const portrait = page.locator(".guardian-stage.portrait");
+  const portrait = page.locator(".guardian-stage.jaguar");
   await expect(portrait).toHaveAttribute("data-guardian-state", "reposo");
-  // La imagen real debe cargar: si fallara, el componente caería al SVG
-  // (`.guardian-stage.jaguar`), que no debe estar presente aquí.
-  await expect(page.locator(".portrait-img")).toBeVisible();
-  await expect(page.locator(".guardian-stage.jaguar")).toHaveCount(0);
+  await expect(page.locator(".jaguar-svg")).toBeVisible();
   await portrait.screenshot({ path: path.join(ARTIFACTS_DIR, "01-retrato-reposo.png") });
 
   await page.locator("#content").fill(

@@ -177,9 +177,27 @@
    de un félido necesita control exacto del contorno, que con primitivas de
    Three.js no se conseguía a tamaño de panel. Todo es SVG en línea. */
 
-.guardian-stage.jaguar { display: block; padding: 0; }
-.jaguar-svg { display: block; width: 100%; height: 100%; }
+.guardian-stage.jaguar { display: block; padding: 0; position: relative; isolation: isolate; }
+.jaguar-svg { display: block; width: 100%; height: 100%; position: relative; z-index: 1; }
 .jaguar { --jg-energy: 1; }
+
+/* Resplandor volumétrico detrás del SVG: lo que hace que el jaguar se lea
+   como una proyección suspendida en el aire y no como un dibujo plano sobre
+   un panel. Vive dentro de `.guardian-stage.jaguar` (que ya recorta su propio
+   desbordamiento), así que el halo se queda contenido en la tarjeta; el halo
+   que sí se derrama fuera de la tarjeta es el de `.jaguar-frame::after`, más
+   abajo, modulado por el mismo estado con `:has()`. */
+.guardian-stage.jaguar::before {
+  content: "";
+  position: absolute;
+  inset: -15%;
+  z-index: 0;
+  background: radial-gradient(ellipse 60% 55% at 50% 46%, color-mix(in srgb, var(--guardian-accent) 38%, transparent) 0%, transparent 72%);
+  filter: blur(18px);
+  opacity: .7;
+  pointer-events: none;
+}
+.jaguar:not(.paused)::before { animation: jg-aura-breathe 4.4s ease-in-out infinite; }
 
 /* Fondo */
 .jg-portal { fill: var(--guardian-accent); opacity: .055; }
@@ -187,6 +205,11 @@
 .jg-ring-outer { stroke-width: 1; opacity: .3; }
 .jg-ring-inner { stroke-width: .6; opacity: .16; stroke-dasharray: 5 9; }
 .jg-glyph-ring rect { fill: #d9ad5a; opacity: .24; }
+.jg-rune { fill: var(--guardian-accent); opacity: .22; filter: url(#jg-glow); }
+
+/* Motas de energía: profundidad volumétrica, siempre presentes y discretas. */
+.jg-particle { fill: var(--guardian-accent); opacity: 0; filter: url(#jg-glow); }
+.jaguar:not(.paused) .jg-particle { animation: jg-drift 6.5s ease-in infinite; animation-delay: var(--pd); }
 
 /* Penacho */
 .jg-plume { transform-origin: 150px 96px; transform: rotate(calc(var(--a) * var(--plume-spread))) scaleY(var(--s)); transition: transform .7s cubic-bezier(.2,.7,.3,1); }
@@ -235,8 +258,9 @@
 .jg-medallion { fill: url(#jg-gold); stroke: #6d5222; stroke-width: 1.2; }
 .jg-medallion-glyph { fill: var(--guardian-accent); filter: url(#jg-glow); }
 
-/* Barrido de escaneo: invisible salvo durante el análisis */
-.jg-scan { opacity: 0; }
+/* Barrido de escaneo: sutil en reposo (el holograma siempre "respira"),
+   mucho más marcado durante el análisis (ver sección de estados). */
+.jg-scan { opacity: .1; }
 
 /* --- Animación continua --- */
 .jaguar:not(.paused) .jg-head { animation: jg-breathe 5.4s ease-in-out infinite; }
@@ -246,14 +270,27 @@
 .jaguar:not(.paused) .jg-plume > path { transform-origin: 150px 96px; animation: jg-sway 4.6s ease-in-out infinite; animation-delay: var(--d); }
 .jaguar:not(.paused) .jg-ring-inner { animation: jg-spin 46s linear infinite; transform-origin: 150px 162px; }
 .jaguar:not(.paused) .jg-glyph-ring { animation: jg-spin 90s linear infinite reverse; transform-origin: 150px 162px; }
+.jaguar:not(.paused) .jg-rune-ring { animation: jg-spin 60s linear infinite; transform-origin: 150px 162px; }
+.jaguar:not(.paused) .jg-scan { animation: jg-scan-slow 9s linear infinite; }
 
 @keyframes jg-breathe { 50% { translate: 0 -2.6px; } }
 @keyframes jg-blink { 0%, 92%, 100% { scale: 1 1; } 95% { scale: 1 .08; } }
 @keyframes jg-sway { 50% { rotate: 1.6deg; } }
 @keyframes jg-spin { to { rotate: 360deg; } }
 @keyframes jg-scan { from { translate: 0 -40px; } to { translate: 0 330px; } }
+@keyframes jg-scan-slow { from { translate: 0 -40px; } to { translate: 0 330px; } }
 @keyframes jg-talk { 50% { scale: 1 1.5; } }
 @keyframes jg-tense { 25% { translate: -1.5px 0; } 75% { translate: 1.5px 0; } }
+@keyframes jg-aura-breathe { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: .85; transform: scale(1.04); } }
+@keyframes jg-drift {
+  0% { opacity: 0; translate: 0 0; }
+  12% { opacity: .5; }
+  80% { opacity: .35; }
+  100% { opacity: 0; translate: 0 -46px; }
+}
+@keyframes jg-aura-think { 0%, 100% { opacity: .65; transform: scale(1.02); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes jg-aura-alert { 0%, 100% { opacity: .75; transform: scale(1.03); } 50% { opacity: 1; transform: scale(1.14); } }
+@keyframes jg-aura-calm { 0%, 100% { opacity: .45; transform: scale(1); } 50% { opacity: .6; transform: scale(1.03); } }
 
 /* --- Estados --- */
 /* Escuchando: orejas al frente, pupila abierta. */
@@ -261,7 +298,8 @@
 .state-escuchando .jg-ear-right { transform: rotate(9deg); }
 .state-escuchando .jg-pupil { scale: 1.3 1; }
 
-/* Analizando: mirada entrecerrada, barrido activo, energía alta. */
+/* Analizando: mirada entrecerrada, barrido activo, energía alta, capa
+   holográfica (runas + aura) mucho más evidente mientras dura. */
 .state-analizando .jg-eye-ball { scale: 1 .62; }
 .state-analizando .jg-pupil { scale: .7 .62; }
 .state-analizando .jg-scan { opacity: 1; }
@@ -269,13 +307,22 @@
 .state-analizando .jg-ring-outer { opacity: .55; }
 .state-analizando .jg-crown-glyph,
 .state-analizando .jg-medallion-glyph { opacity: 1; }
+.state-analizando .jg-rune { opacity: .85; }
+.jaguar.state-analizando:not(.paused) .jg-rune-ring { animation: jg-spin 7s linear infinite; }
+.jaguar.state-analizando:not(.paused)::before { animation: jg-aura-think 1.4s ease-in-out infinite; }
 
-/* Alerta: orejas aplastadas, tocado abierto, tensión contenida. */
+/* Alerta: orejas aplastadas, tocado abierto, tensión contenida, vigilancia
+   roja/ámbar sin perder el estilo premium (sin romper la paleta general). */
 .state-alerta .jg-ear-left { transform: rotate(17deg); }
 .state-alerta .jg-ear-right { transform: rotate(-17deg); }
 .state-alerta .jg-pupil { scale: 1.5 1; }
 .state-alerta .jg-ring-outer { opacity: .6; }
+.state-alerta .jg-rune { opacity: .6; }
 .jaguar.state-alerta:not(.paused) .jg-head { animation: jg-breathe 2.2s ease-in-out infinite, jg-tense 2.6s ease-in-out infinite; }
+.jaguar.state-alerta:not(.paused)::before { animation: jg-aura-alert 1.1s ease-in-out infinite; }
+
+/* Seguridad: energía serena, sin urgencia, aura calma y lenta. */
+.jaguar.state-seguridad:not(.paused)::before { animation: jg-aura-calm 5.5s ease-in-out infinite; }
 
 /* Error / no disponible: no es enfado, es «no puedo ver». */
 .state-error .jg-head,
@@ -292,7 +339,8 @@
 .jaguar.paused * { animation: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
-  .jaguar * { animation: none !important; transition: none !important; }
+  .jaguar *,
+  .jaguar::before { animation: none !important; transition: none !important; }
   .jaguar .jg-scan { opacity: 0; }
 }
 
@@ -1012,6 +1060,41 @@ footer { border-top-color: var(--line); color: var(--muted); }
 .jaguar-frame-verde { color: var(--jade); }
 .jaguar-frame-gris { color: var(--gris); }
 .jaguar-frame .guardian-stage { border-radius: 12px; width: 100%; }
+
+/* El halo del marco (fuera de la tarjeta, no recortado por su overflow)
+   reacciona al estado real del jaguar, no solo al semáforo: una proyección
+   holográfica "siente" distinto analizando que en reposo. `:has()` evita
+   duplicar el estado en dos componentes distintos. */
+@supports selector(:has(a)) {
+  .jaguar-frame:has(.jaguar.state-analizando:not(.paused))::after { animation: jf-halo-think 1.4s ease-in-out infinite; }
+  .jaguar-frame:has(.jaguar.state-alerta:not(.paused))::after { animation: jf-halo-alert 1.1s ease-in-out infinite; }
+  .jaguar-frame:has(.jaguar.state-seguridad:not(.paused))::after { animation: jf-halo-calm 5.5s ease-in-out infinite; }
+}
+@keyframes jf-halo-think { 0%, 100% { opacity: .16; } 50% { opacity: .3; } }
+@keyframes jf-halo-alert { 0%, 100% { opacity: .18; } 50% { opacity: .36; } }
+@keyframes jf-halo-calm { 0%, 100% { opacity: .14; } 50% { opacity: .22; } }
+
+/* Zócalo de luz: el pie del holograma, como si proyectara desde una base en
+   vez de simplemente estar pegado al fondo del panel ("reflejos y
+   profundidad" del encargo, sin fingir un reflejo especular literal). */
+.jaguar-frame::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  width: 72%;
+  height: 22px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, currentColor 0%, transparent 72%);
+  opacity: .3;
+  filter: blur(3px);
+  pointer-events: none;
+  z-index: -1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jaguar-frame::after { animation: none !important; }
+}
 .jaguar-frame-tag {
   position: absolute;
   bottom: 10px;
@@ -1240,24 +1323,118 @@ footer { border-top-color: var(--line); color: var(--muted); }
   .guardian-stage.portrait { min-height: 260px; }
 }
 
-/* --- Mapa de relaciones entre investigaciones ------------------------------ */
+/* --- Mapa de relaciones entre investigaciones -------------------------------
+   "Cosmología de inteligencia y protección": fondo de constelación/templo
+   digital, nodos como pequeñas entidades (no puntos genéricos) y líneas que
+   fluyen cuando hay una relación real comprobada. Todo sigue siendo SVG en
+   línea + CSS: ningún dato nuevo, solo cómo se lee lo que ya existía. */
 .investigation-map { display: grid; gap: 18px; }
-.map-canvas { display: grid; place-items: center; padding: 8px; }
-.map-canvas svg { width: 100%; max-width: 440px; height: auto; }
-.map-edge { stroke: rgba(94, 234, 212, .35); stroke-width: 1.4; }
-.map-edge-active { stroke: var(--jade, #2fd697); stroke-width: 2.2; }
-.map-node { cursor: pointer; }
-.map-node circle:first-child { stroke: rgba(5, 8, 12, .7); stroke-width: 1.5; transition: r .2s ease; }
+.map-canvas {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 42%, rgba(20, 60, 64, .5) 0%, rgba(5, 11, 16, .2) 60%, transparent 100%),
+    #050a0f;
+}
+/* Constelación de fondo: puntos finos en rejilla + un leve giro conic, nunca
+   tan intenso como para competir con los nodos reales. */
+.map-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(94, 234, 212, .22) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: .55;
+  pointer-events: none;
+}
+.map-canvas::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: conic-gradient(from 0deg, transparent 0 85%, rgba(94, 234, 212, .12) 92%, transparent 100%);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-canvas::after { animation: map-constellation-spin 90s linear infinite; }
+}
+@keyframes map-constellation-spin { to { transform: rotate(360deg); } }
+.map-canvas svg { position: relative; width: 100%; max-width: 440px; height: auto; }
+
+.map-edge { stroke: rgba(94, 234, 212, .3); stroke-width: 1.3; fill: none; }
+.map-edge-active { stroke: var(--jade, #2fd697); stroke-width: 2.4; }
+.map-edge-flow {
+  stroke: #e7fffb;
+  stroke-width: 1.6;
+  stroke-dasharray: 2 10;
+  opacity: .8;
+  fill: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .map-edge-flow { animation: map-edge-flow 1.4s linear infinite; }
+}
+@keyframes map-edge-flow { to { stroke-dashoffset: -24; } }
+
+.map-node { cursor: pointer; transition: filter .2s ease; }
+.map-node:hover, .map-node:focus-visible { filter: brightness(1.18); }
+.map-node-aura {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: .28;
+  stroke-dasharray: 3 5;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Un `<circle>` SVG dentro de un `<g>` ya trasladado no tiene forma
+     estable de girar sobre su propio centro con `transform`/`rotate` en
+     Chromium (el bbox calculado queda atado al giro y "crece" en vez de
+     quedarse fijo — inestable para Playwright). En vez de rotar el anillo,
+     se anima el propio patrón de guiones con `stroke-dashoffset`, igual que
+     `.map-edge-flow`: el mismo efecto visual de "energía recorriendo el
+     anillo", sin tocar ninguna transformación geométrica.
+   */
+  .map-node-aura { animation: map-node-dash 8s linear infinite; }
+  .map-node-isolated .map-node-aura { animation-duration: 4.5s; }
+}
+@keyframes map-node-dash { to { stroke-dashoffset: -32; } }
+.map-node-base { stroke: rgba(5, 8, 12, .75); stroke-width: 1.5; transition: r .2s ease, filter .2s ease; filter: drop-shadow(0 0 6px currentColor); }
+.map-node-glyph { fill: none; stroke: #04070a; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .map-node-ring { fill: none; stroke: #e7fffb; stroke-width: 1.4; stroke-dasharray: 3 3; }
-.map-node-isolated circle:first-child { opacity: .55; }
-.map-node:focus-visible circle:first-child { outline: 2px solid var(--jade, #2fd697); outline-offset: 2px; }
-.map-detail { padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(6, 14, 18, .6); display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) {
+  .map-node-selected .map-node-ring { animation: map-node-dash 4s linear infinite; }
+  .map-node-selected .map-node-base { animation: map-node-pulse 1.6s ease-in-out infinite; }
+}
+@keyframes map-node-pulse { 0%, 100% { filter: drop-shadow(0 0 6px currentColor); } 50% { filter: drop-shadow(0 0 14px currentColor); } }
+.map-node-isolated .map-node-base { opacity: .85; }
+.map-node:focus-visible .map-node-base { outline: 2px solid var(--jade, #2fd697); outline-offset: 2px; }
+
+/* Caso único: no es un punto perdido en el vacío, es un pedestal ritual. */
+.map-node-pedestal { fill: none; stroke: currentColor; stroke-width: .8; opacity: .4; }
+.map-single-note {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.map-detail { position: relative; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(6, 14, 18, .6); display: grid; gap: 8px; }
 .map-detail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .map-detail-head time { color: var(--muted); font-size: 11px; }
 .map-reasons { display: grid; gap: 6px; padding-left: 0; list-style: none; }
 .map-reasons li { font-size: 12px; color: var(--ink-2); border-left: 2px solid var(--line-strong); padding-left: 8px; }
 @media (max-width: 700px) {
   .map-canvas svg { max-width: 320px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-canvas::after,
+  .map-edge-flow,
+  .map-node-aura,
+  .map-node-selected .map-node-ring,
+  .map-node-selected .map-node-base { animation: none !important; }
 }
 
 /* --- Escudo Global (directorio internacional) ------------------------------ */

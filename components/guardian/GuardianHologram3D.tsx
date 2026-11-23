@@ -110,7 +110,17 @@ function JaguarModel({
     const mesh: THREE.Mesh = found;
     if (!mesh.geometry.getAttribute("normal")) mesh.geometry.computeVertexNormals();
 
+    // Inspecciona la caja delimitadora real de la malla (nunca una
+    // coordenada Y fija adivinada) para que el shader sepa qué cuenta como
+    // "mitad superior del cuerpo" al localizar el resplandor de los ojos.
+    mesh.geometry.computeBoundingBox();
+    const bbox = mesh.geometry.boundingBox;
+
     const material = createHologramMaterial(accent, gold);
+    if (bbox) {
+      material.uniforms.uBoundsMinY.value = bbox.min.y;
+      material.uniforms.uBoundsMaxY.value = bbox.max.y;
+    }
     mesh.material = material;
 
     const wire = new THREE.Mesh(mesh.geometry, createHologramWireMaterial(accent));

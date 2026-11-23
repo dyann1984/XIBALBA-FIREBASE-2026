@@ -193,6 +193,13 @@ function GodFigure({
         document.body.style.cursor = "auto";
       }}
     >
+      {/* Blanco de clic/toque invisible, más grande que la figura: sin esto,
+          la animación de "respiración" hace que la figura real se mueva
+          bajo el dedo y la selección en móvil falla la mayoría de las veces. */}
+      <mesh position={[0, -0.1, 0]}>
+        <cylinderGeometry args={[0.32, 0.32, 0.6, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
       <GodCore id={id} color={color} />
       {selected && (
         <mesh>

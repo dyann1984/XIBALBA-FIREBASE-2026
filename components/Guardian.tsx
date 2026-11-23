@@ -6,6 +6,7 @@ import { VERIFIED_CLASSES } from "@/lib/analysis/risk";
 import { useI18n } from "@/components/LanguageProvider";
 import { localizeIndicator, localizePending } from "@/lib/i18n/evidence";
 import JaguarAvatar, { type GuardianState } from "@/components/guardian/JaguarAvatar";
+import { useQueryFlag } from "@/lib/useQueryFlag";
 import { Mic, MicOff, Pause, Send, Volume2, VolumeX } from "lucide-react";
 
 // Prototipo en evaluación (ver docs/holograma-3d-jaguar.md). Solo se carga si
@@ -94,7 +95,7 @@ export default function Guardian({
   configured: boolean;
 }) {
   const { t, lang } = useI18n();
-  const [preview3d, setPreview3d] = useState(false);
+  const preview3d = useQueryFlag("preview3d");
   const [voiceOn, setVoiceOn] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [micActive, setMicActive] = useState(false);
@@ -112,7 +113,6 @@ export default function Guardian({
   useEffect(() => {
     setSttSupported(Boolean(getSpeechRecognitionCtor()));
     setTtsSupported(typeof window !== "undefined" && "speechSynthesis" in window);
-    setPreview3d(new URLSearchParams(window.location.search).get("preview3d") === "1");
   }, []);
 
   const light = outcome?.risk.light ?? "gris";

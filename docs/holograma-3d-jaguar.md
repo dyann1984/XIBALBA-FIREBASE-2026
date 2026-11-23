@@ -39,20 +39,50 @@ decidir si reemplaza al avatar actual. Ningún usuario real lo recibe hoy.
   "First Load JS" de la ruta `/`; la librería va en chunks separados que solo
   se piden bajo demanda).
 
+## Fase 1 — de "corriendo siempre" a reposo real
+
+El prototipo inicial reproducía el único clip (`mountainlionRun_A`) en bucle
+incluso en `reposo`/`seguridad`/`error`, lo que el usuario señaló como
+incorrecto: un guardián no debe correr de forma continua. Cambios:
+
+- **Reposo sin inventar rig:** en los estados quietos, la animación ya NO se
+  reproduce; se detiene en un fotograma fijo del ciclo (`action.time = 0.17`,
+  el que deja las patas más recogidas bajo el cuerpo de los 12 disponibles —
+  elegido comparando capturas de varios tiempos, no al azar). El GLB no trae
+  ninguna pose de pie quieto, así que esto es lo más parecido a reposo que
+  permite el dato real, documentado como limitación, no simulado como si
+  fuera una pose auténtica de "guardián sentado".
+- **Respiración procedural, sin deformar la malla:** el único movimiento en
+  reposo es a nivel de grupo (nunca por vértice/morph target): una escala
+  oscilante de ±1.4 % y un leve vaivén de posición/rotación en Z, ambos
+  function de `Math.sin(t)`. La anatomía del modelo no se toca.
+- **Ornamentos mayas:** anillo ceremonial doble (dorado + acento) y tres
+  motas de energía orbitando, añadidos como geometría propia (no asset
+  descargado ni textura). Viven en un `<group>` separado del jaguar — corregido
+  un bug donde estaban anidados dentro del grupo con `BASE_SCALE` del jaguar
+  y por eso salían ~180× más pequeños que su tamaño real (invisibles).
+- **"Ojos luminosos" desde dato real:** el shader ya usaba `COLOR_0` (pintura
+  original de la pantera) para un resplandor (`brightSpot`) en las zonas más
+  claras pintadas en el modelo; se mantiene así, sin inventar una coordenada
+  3D fija de "dónde están los ojos" que podría no coincidir con la pose.
+- **Bug de shader corregido:** `hologramMaterial.ts` declaraba manualmente
+  `attribute vec3 color;` en el vertex shader, duplicando la que three.js
+  inyecta automáticamente al poner `vertexColors: true` en cualquier
+  `ShaderMaterial` — causaba `ERROR: 'color' : redefinition` y el canvas
+  quedaba en blanco. Se quitó la declaración manual; confirmado con consola
+  limpia (tras descartar errores viejos repetidos en el buffer del
+  navegador) y captura visual del jaguar renderizando de nuevo.
+
 ## Verificación hecha
 
 - `npm run typecheck` y `npm run lint`: limpios.
 - `npm test` (228 pruebas: Gemini, OCR, IA local, correlación, traducciones,
   reportes): **sin tocar**, todas pasan igual que antes de este cambio.
-- `npm run build`: compila. Tamaño de `/` sin cambios relevantes (153 KB /
-  274 KB First Load JS); el pipeline 3D vive en chunks separados cargados
-  solo bajo `?preview3d=1`.
-- Verificación visual en el navegador (desktop y viewport móvil 375×812):
-  el jaguar se renderiza completo, con volumen, silueta reconocible de felino
-  corriendo, brillo Fresnel en los bordes, wireframe superpuesto, y la
-  animación de carrera visiblemente en marcha (comparación de dos capturas
-  separadas en el tiempo). Sin errores en consola ni en el servidor de
-  desarrollo.
+- Verificación visual (Fase 1, en el navegador, `?preview3d=1`): el jaguar se
+  renderiza en pose de reposo fija (sin correr), con el anillo ceremonial y
+  las motas doradas visibles debajo de la figura, brillo Fresnel en los
+  bordes y wireframe superpuesto. Confirmado sin errores nuevos en consola
+  tras el arreglo del shader.
 
 ## Limitaciones honestas (no se declara "terminado")
 

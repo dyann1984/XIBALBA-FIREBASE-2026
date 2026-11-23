@@ -1061,6 +1061,24 @@ footer { border-top-color: var(--line); color: var(--muted); }
 .jaguar-frame-gris { color: var(--gris); }
 .jaguar-frame .guardian-stage { border-radius: 12px; width: 100%; }
 
+/* Prototipo holograma 3D real (?preview3d=1) — ver docs/holograma-3d-jaguar.md. */
+.jaguar-hologram-3d {
+  width: 100%;
+  /* Altura explícita, no min-height: el div interno de react-three-fiber usa
+     height:100% para medir el lienzo, y un porcentaje solo se resuelve contra
+     una altura explícita del contenedor (min-height no cuenta), o el canvas
+     colapsa a un alto mínimo intrínseco. */
+  height: 330px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  background: radial-gradient(ellipse at 50% 42%, #10343a 0%, #0a1b21 48%, #070f13 100%);
+}
+.jaguar-hologram-3d canvas { display: block; width: 100%; height: 100%; }
+@media (max-width: 600px) {
+  .jaguar-hologram-3d { height: 260px; }
+}
+
 /* El halo del marco (fuera de la tarjeta, no recortado por su overflow)
    reacciona al estado real del jaguar, no solo al semáforo: una proyección
    holográfica "siente" distinto analizando que en reposo. `:has()` evita

@@ -1079,6 +1079,34 @@ footer { border-top-color: var(--line); color: var(--muted); }
   .jaguar-hologram-3d { height: 260px; }
 }
 
+/* Prototipo mapa 3D de los 5 agentes (?preview3d=1) — ver docs/mapa-3d-dioses.md. */
+.gods-map-3d-wrap { margin-top: 12px; }
+.gods-map-3d {
+  width: 100%;
+  height: 300px; /* altura explícita: misma razón que .jaguar-hologram-3d */
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  background: radial-gradient(ellipse at 50% 30%, #10232c 0%, #0a1620 55%, #070f13 100%);
+}
+.gods-map-3d canvas { display: block; width: 100%; height: 100%; }
+.gods-map-info {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(10, 20, 26, .5);
+  min-height: 52px;
+}
+.gods-map-info strong { font-size: 13px; color: var(--ink); }
+.gods-map-info .role { display: block; font-size: 10px; color: var(--cyan); margin-bottom: 4px; }
+.gods-map-info p { font-size: 11.5px; color: var(--muted); margin: 2px 0; }
+.gods-map-info-phase { font-size: 10px; color: var(--jade); margin-top: 4px; }
+.gods-map-info .muted { font-size: 11px; color: var(--muted); }
+@media (max-width: 600px) {
+  .gods-map-3d { height: 240px; }
+}
+
 /* El halo del marco (fuera de la tarjeta, no recortado por su overflow)
    reacciona al estado real del jaguar, no solo al semáforo: una proyección
    holográfica "siente" distinto analizando que en reposo. `:has()` evita

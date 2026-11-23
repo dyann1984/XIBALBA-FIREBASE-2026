@@ -1,5 +1,6 @@
 "use client";
 import { AGENT_NAMES, type AgentEvent, type AgentId } from "@/lib/analysis/coordinator";
+import { participatedIn, phaseOf, PHASE_LABEL } from "@/lib/analysis/agentPhase";
 import { agents as agentRoster } from "@/lib/agents";
 import type { Lang } from "@/lib/i18n";
 
@@ -23,24 +24,6 @@ const POS: Record<AgentId, { x: number; y: number }> = {
   hun: { x: 252, y: 252 },
 };
 
-type Phase = AgentEvent["phase"] | "idle";
-
-function phaseOf(events: AgentEvent[], agent: AgentId, busy: boolean): Phase {
-  const records = events.filter((event) => event.agent === agent);
-  const latest = records.at(-1);
-  if (!latest) return "idle";
-  if (latest.phase === "started" && !busy) return "error"; // se interrumpió
-  return latest.phase;
-}
-
-const PHASE_LABEL: Record<Phase, Record<Lang, string>> = {
-  idle: { es: "Sin iniciar", en: "Not started" },
-  queued: { es: "En cola", en: "Queued" },
-  started: { es: "En ejecución", en: "Running" },
-  completed: { es: "Completado", en: "Completed" },
-  error: { es: "Error", en: "Error" },
-};
-
 export default function AgentOperationsBoard({
   events,
   executed,
@@ -54,10 +37,7 @@ export default function AgentOperationsBoard({
   lang: Lang;
 }) {
   const guardianPhase = phaseOf(events, "guardian", busy);
-  // Real participación: el resultado final (`executed`) una vez terminado, o
-  // ya durante el análisis, que un evento real de ese agente haya llegado.
-  // Sin esto, el tablero se quedaría «apagado» mientras un agente trabaja.
-  const participated = (id: AgentId) => executed.includes(id) || events.some((event) => event.agent === id);
+  const participated = (id: AgentId) => participatedIn(events, executed, id);
   return (
     <div className="ops-board" role="img" aria-label={lang === "en" ? "Agent operations board" : "Centro de operaciones de agentes"}>
       <svg className="ops-lines" viewBox="0 0 300 300" aria-hidden="true">

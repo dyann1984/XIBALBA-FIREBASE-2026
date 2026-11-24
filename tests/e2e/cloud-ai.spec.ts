@@ -106,7 +106,7 @@ test("Holograma del Guardián en estado de seguridad (verde) con IA real", async
   test.skip(!answered, "La llamada real al modelo no respondió en 30s (red o cuota del proveedor).");
 
   await expect(page.locator(".verdict-verde")).toBeVisible({ timeout: 15_000 });
-  const portrait = page.locator(".guardian-stage.jaguar");
+  const portrait = page.locator("[data-guardian-state]");
   await expect(portrait).toHaveAttribute("data-guardian-state", "seguridad");
   await portrait.screenshot({ path: path.join(ARTIFACTS_DIR, "03-retrato-seguridad.png") });
 });

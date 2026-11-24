@@ -6,12 +6,11 @@ import { VERIFIED_CLASSES } from "@/lib/analysis/risk";
 import { useI18n } from "@/components/LanguageProvider";
 import { localizeIndicator, localizePending } from "@/lib/i18n/evidence";
 import JaguarAvatar, { type GuardianState } from "@/components/guardian/JaguarAvatar";
-import { useQueryFlag } from "@/lib/useQueryFlag";
+import Scene3DBoundary from "@/components/guardian/Scene3DBoundary";
+import { isWebGLAvailable } from "@/lib/graphicsQuality";
+import { use3DEnabled } from "@/lib/useQueryFlag";
 import { Mic, MicOff, Pause, Send, Volume2, VolumeX } from "lucide-react";
 
-// Prototipo en evaluación (ver docs/holograma-3d-jaguar.md). Solo se carga si
-// la URL trae ?preview3d=1: nunca se sirve a usuarios reales por defecto, y
-// JaguarAvatar sigue siendo la única representación en producción.
 const GuardianHologram3D = dynamic(() => import("@/components/guardian/GuardianHologram3D"), {
   ssr: false,
 });
@@ -95,7 +94,8 @@ export default function Guardian({
   configured: boolean;
 }) {
   const { t, lang } = useI18n();
-  const preview3d = useQueryFlag("preview3d");
+  const show3d = use3DEnabled();
+  const [webglAvailable] = useState(isWebGLAvailable);
   const [voiceOn, setVoiceOn] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [micActive, setMicActive] = useState(false);
@@ -414,8 +414,10 @@ export default function Guardian({
   return (
     <section className="panel guardian-panel hud" aria-label={t("guardian", "panelLabel")}>
       <div className={`jaguar-frame jaguar-frame-${light}`}>
-        {preview3d ? (
-          <GuardianHologram3D state={state} light={light} />
+        {show3d && webglAvailable ? (
+          <Scene3DBoundary fallback={<JaguarAvatar state={state} light={light} speaking={speaking} lang={lang} />}>
+            <GuardianHologram3D state={state} light={light} />
+          </Scene3DBoundary>
         ) : (
           <JaguarAvatar state={state} light={light} speaking={speaking} lang={lang} />
         )}

@@ -15,6 +15,7 @@ import { useAnimations, useGLTF } from "@react-three/drei";
 import type { GuardianLight, GuardianState } from "@/components/guardian/JaguarAvatar";
 import { guardianAccentFor } from "@/components/guardian/JaguarAvatar";
 import { createHologramMaterial, createHologramWireMaterial } from "@/components/guardian/hologramMaterial";
+import { detectGraphicsQuality, dprRangeFor, type GraphicsQuality } from "@/lib/graphicsQuality";
 
 const MODEL_URL = "/guardian/models/black-panther-base.glb";
 
@@ -82,10 +83,12 @@ function JaguarModel({
   state,
   light,
   reducedMotion,
+  quality,
 }: {
   state: GuardianState;
   light: GuardianLight;
   reducedMotion: boolean;
+  quality: GraphicsQuality;
 }) {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(MODEL_URL);
@@ -123,18 +126,21 @@ function JaguarModel({
     }
     mesh.material = material;
 
-    const wire = new THREE.Mesh(mesh.geometry, createHologramWireMaterial(accent));
-    wire.morphTargetDictionary = mesh.morphTargetDictionary;
-    wire.morphTargetInfluences = mesh.morphTargetInfluences;
-    mesh.add(wire);
+    let wire: THREE.Mesh | null = null;
+    if (quality !== "baja") {
+      wire = new THREE.Mesh(mesh.geometry, createHologramWireMaterial(accent));
+      wire.morphTargetDictionary = mesh.morphTargetDictionary;
+      wire.morphTargetInfluences = mesh.morphTargetInfluences;
+      mesh.add(wire);
+    }
 
     mainMeshRef.current = mesh;
     wireMeshRef.current = wire;
     materialRef.current = material;
-    wireMaterialRef.current = wire.material as THREE.MeshBasicMaterial;
+    wireMaterialRef.current = wire ? (wire.material as THREE.MeshBasicMaterial) : null;
 
     return () => {
-      mesh.remove(wire);
+      if (wire) mesh.remove(wire);
     };
     // Solo se reconstruye cuando cambia el GLB cargado; el color de acento se
     // sincroniza aparte, sin rehacer geometría ni material cada vez.
@@ -212,6 +218,7 @@ export default function GuardianHologram3D({
   const host = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(true);
   const [reducedMotion] = useState(prefersReducedMotion);
+  const [quality] = useState(detectGraphicsQuality);
 
   useEffect(() => {
     const element = host.current;
@@ -236,14 +243,14 @@ export default function GuardianHologram3D({
     <div ref={host} className="jaguar-hologram-3d" data-guardian-state={state}>
       <Canvas
         frameloop={active ? "always" : "never"}
-        dpr={[1, 1.5]}
+        dpr={dprRangeFor(quality)}
         gl={{ antialias: false, alpha: true, powerPreference: "high-performance" }}
         camera={{ position: [0, 0.1, 2.6], fov: 36 }}
       >
         <ambientLight intensity={0.4} color={lights.accent} />
         <pointLight position={[1, 1.5, 2]} intensity={1.1} color="#f4b942" />
         <Suspense fallback={null}>
-          <JaguarModel state={state} light={light} reducedMotion={reducedMotion} />
+          <JaguarModel state={state} light={light} reducedMotion={reducedMotion} quality={quality} />
         </Suspense>
       </Canvas>
     </div>

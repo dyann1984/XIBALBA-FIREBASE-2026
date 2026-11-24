@@ -17,6 +17,7 @@ import { Line, OrbitControls } from "@react-three/drei";
 import { AGENT_NAMES, type AgentEvent, type AgentId } from "@/lib/analysis/coordinator";
 import { participatedIn, phaseOf, PHASE_LABEL, type Phase } from "@/lib/analysis/agentPhase";
 import type { Lang, Translate } from "@/lib/i18n";
+import { detectGraphicsQuality, dprRangeFor, type GraphicsQuality } from "@/lib/graphicsQuality";
 
 const SPECIALISTS: AgentId[] = ["camazotz", "ixbalanque", "vucub", "hun"];
 
@@ -49,10 +50,6 @@ const PHASE_INTENSITY: Record<Phase, number> = {
 
 function prefersReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function isLowDetailViewport() {
-  return typeof window !== "undefined" && window.innerWidth < 640;
 }
 
 /**
@@ -440,6 +437,7 @@ function Scene({
   setSelected,
   reducedMotion,
   lowDetail,
+  quality,
 }: {
   events: AgentEvent[];
   executed: AgentId[];
@@ -448,6 +446,7 @@ function Scene({
   setSelected: (id: AgentId) => void;
   reducedMotion: boolean;
   lowDetail: boolean;
+  quality: GraphicsQuality;
 }) {
   const guardianPhase = phaseOf(events, "guardian", busy);
   const frames = useRef(0);
@@ -469,7 +468,8 @@ function Scene({
       <ambientLight intensity={0.55} />
       <pointLight position={[2, 3, 2]} intensity={1.1} color="#f4b942" />
       <pointLight position={[-2, 2, -2]} intensity={0.6} color="#3ae8e0" />
-      {!lowDetail && <AmbientParticles count={70} />}
+      {quality === "alta" && <AmbientParticles count={70} />}
+      {quality === "media" && <AmbientParticles count={35} />}
       <group position={[0, -0.3, 0]}>
         <Platform color={AGENT_COLOR.guardian} active={guardianPhase !== "idle"} big lowDetail={lowDetail} />
         <GodFigure
@@ -526,7 +526,8 @@ export default function GodsMap3D({
   const host = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(true);
   const [reducedMotion] = useState(prefersReducedMotion);
-  const [lowDetail] = useState(isLowDetailViewport);
+  const [quality] = useState(detectGraphicsQuality);
+  const lowDetail = quality === "baja";
   const [selected, setSelected] = useState<AgentId | null>(null);
 
   useEffect(() => {
@@ -550,13 +551,13 @@ export default function GodsMap3D({
       <div ref={host} className="gods-map-3d" role="img" aria-label={lang === "en" ? "3D map of the five agents" : "Mapa 3D de los cinco agentes"}>
         <Canvas
           frameloop={active ? "always" : "never"}
-          dpr={[1, lowDetail ? 1 : 1.5]}
+          dpr={dprRangeFor(quality)}
           gl={{ antialias: false, alpha: true, powerPreference: "high-performance" }}
           camera={{ position: [0, 3.0, 3.5], fov: 38 }}
           onPointerMissed={() => setSelected(null)}
         >
           <Suspense fallback={null}>
-            <Scene events={events} executed={executed} busy={busy} selected={selected} setSelected={setSelected} reducedMotion={reducedMotion} lowDetail={lowDetail} />
+            <Scene events={events} executed={executed} busy={busy} selected={selected} setSelected={setSelected} reducedMotion={reducedMotion} lowDetail={lowDetail} quality={quality} />
           </Suspense>
           <OrbitControls
             enablePan={false}

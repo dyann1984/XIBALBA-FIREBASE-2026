@@ -19,7 +19,7 @@ function newAnalysisButton(page: import("@playwright/test").Page) {
  * interpretación de IA real: ver tests/e2e/cloud-ai.spec.ts.
  */
 test("Holograma del Guardián: reposo y alerta reales", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?preview3d=0");
   await newAnalysisButton(page).click();
 
   const portrait = page.locator(".guardian-stage.jaguar");

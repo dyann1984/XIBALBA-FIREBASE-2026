@@ -1,0 +1,9 @@
+node_modules
+.next
+.next-phase2
+test-results
+artifacts
+playwright-report
+.env*
+!.env.example
+*.tsbuildinfo

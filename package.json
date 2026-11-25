@@ -24,9 +24,10 @@
     "three": "^0.187.0",
     "tldts": "^7.5.2"
   },
-  "overridesComment": "postcss 8.4.31 (fijado por next 15.5.29) arrastra 4 avisos de lectura arbitraria de .map vía sourceMappingURL. 8.5.x es el mismo major y los corrige sin tocar dependencias directas. NO se fuerza @grpc/grpc-js: @firebase/firestore lo fija en ~1.9.0 y sus avisos solo afectan a un servidor gRPC, que este proyecto no ejecuta. Ver docs/seguridad-dependencias.md.",
+  "overridesComment": "postcss 8.4.31 y @grpc/grpc-js 1.9.16 (transitivo de @firebase/firestore) se fijan en el mismo major 1.x/8.x sin romper Firebase ni Next.js.",
   "overrides": {
-    "postcss": "^8.5.32"
+    "postcss": "^8.5.32",
+    "@grpc/grpc-js": "^1.13.6"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

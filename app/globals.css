@@ -1726,3 +1726,27 @@ footer { border-top-color: var(--line); color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   .ops-status-card:hover { transform: none; }
 }
+
+
+/* --- SOS XIBALBA, QR Defense & XIBALBA Academy --- */
+.sos-panel, .qr-panel, .academy-panel { margin-top: 16px; padding: 18px; border-radius: 14px; border: 1px solid rgba(255,255,255,.1); background: rgba(10,18,28,.78); }
+.sos-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.sos-head h3 { margin: 4px 0 0; font-size: 1.05rem; }
+.sos-progress { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(58,232,224,.12); color: #3ae8e0; font-size: .82rem; font-weight: 600; }
+.sos-steps { display: grid; gap: 10px; }
+.sos-step { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.02); cursor: pointer; min-height: 44px; }
+.sos-step input { margin-top: 3px; width: 18px; height: 18px; accent-color: #3ae8e0; flex-shrink: 0; }
+.sos-step p { margin: 3px 0 0; font-size: .86rem; color: #9db0c4; }
+.sos-step-done { border-color: rgba(47,214,151,.4); background: rgba(47,214,151,.06); }
+.sos-authority { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; font-size: .88rem; }
+.sos-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.qr-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+.qr-result { margin-top: 12px; padding: 12px; border-radius: 10px; border: 1px solid rgba(58,232,224,.25); background: rgba(58,232,224,.05); }
+.qr-payload { word-break: break-all; font-family: monospace; font-size: .85rem; margin: 6px 0; }
+.academy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.academy-card { padding: 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.1); background: rgba(12,20,30,.72); }
+.academy-card h3 { margin: 6px 0; font-size: 1rem; }
+.academy-card p { font-size: .88rem; color: #b5c4d4; margin: 0 0 8px; }
+.academy-quiz-options { display: grid; gap: 8px; margin-top: 10px; }
+.academy-opt { text-align: left; padding: 10px 14px; min-height: 44px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.03); color: #eef5fc; cursor: pointer; }
+.academy-opt.selected { border-color: #3ae8e0; background: rgba(58,232,224,.12); }

@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { Mail, MapPin, Phone, ShieldAlert, ShieldCheck, ShieldQuestion } from "lucide-react";
 import { useI18n } from "@/components/LanguageProvider";
+import SosXibalba from "@/components/SosXibalba";
 import { KNOWN_COUNTRIES, recordsFor, statusFor } from "@/lib/global-shield/directory";
 import { ALL_INCIDENT_CATEGORIES, procedureFor } from "@/lib/global-shield/procedures";
 import type { HelpChannel, IncidentCategory, VerificationStatus } from "@/lib/global-shield/types";
@@ -190,6 +191,7 @@ export default function GlobalShield({
           ))}
         </ul>
       )}
+      <SosXibalba country={country} />
     </div>
   );
 }

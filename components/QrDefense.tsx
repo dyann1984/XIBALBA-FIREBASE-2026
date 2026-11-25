@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QrCode, ScanLine } from "lucide-react";
 import { useI18n } from "@/components/LanguageProvider";
 import { auditQrPayload, type QrInspection } from "@/lib/analysis/qr";
 
-type BarcodeDetectorCtor = new (options?: { formats?: string[] }) => {
-  detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
-};
+async function decodeQr(source: CanvasImageSource, width: number, height: number): Promise<string> {
+  const { default: jsQR } = await import("jsqr");
+  const scale = Math.min(1, 1600 / Math.max(width, height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("canvas unavailable");
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+  return jsQR(pixels.data, pixels.width, pixels.height)?.data ?? "";
+}
 
 export default function QrDefense({
   onSendUrlToLab,
@@ -18,6 +27,72 @@ export default function QrDefense({
   const [payload, setPayload] = useState("");
   const [result, setResult] = useState<QrInspection | null>(null);
   const [statusNote, setStatusNote] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const mountedRef = useRef(false);
+  const requestingRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; streamRef.current?.getTracks().forEach((track) => track.stop()); };
+  }, []);
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setScanning(false);
+  };
+
+  useEffect(() => {
+    if (!scanning) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const scan = async () => {
+      const video = videoRef.current;
+      if (video && video.readyState >= 2 && video.videoWidth) {
+        try {
+          const raw = await decodeQr(video, video.videoWidth, video.videoHeight);
+          if (!cancelled && raw) {
+            setPayload(raw);
+            setResult(auditQrPayload(raw));
+            setStatusNote("");
+            streamRef.current?.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+            setScanning(false);
+            return;
+          }
+        } catch { /* Try the next frame. */ }
+      }
+      if (!cancelled) timer = setTimeout(scan, 400);
+    };
+    void scan();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [scanning]);
+
+  const startCamera = async () => {
+    if (requestingRef.current) return;
+    requestingRef.current = true;
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("unavailable");
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      if (!mountedRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
+      streamRef.current = stream;
+      setStatusNote("");
+      setScanning(true);
+    } catch {
+      if (mountedRef.current) setStatusNote(lang === "en" ? "Camera unavailable or permission denied. You can upload an image instead." : "Cámara no disponible o permiso denegado. También puedes cargar una imagen.");
+    } finally {
+      requestingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (scanning && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      void videoRef.current.play().catch(() => setStatusNote(lang === "en" ? "Camera preview could not start." : "No se pudo iniciar la cámara."));
+    }
+  }, [scanning, lang]);
 
   const inspectText = (text: string) => {
     setPayload(text);
@@ -28,21 +103,14 @@ export default function QrDefense({
   const handleImageFile = async (file: File | undefined) => {
     if (!file) return;
     setStatusNote("");
-    const w = window as unknown as { BarcodeDetector?: BarcodeDetectorCtor };
-    if (!w.BarcodeDetector) {
-      setStatusNote(
-        lang === "en"
-          ? "Browser BarcodeDetector is unavailable here; paste the decoded QR text or URL below."
-          : "BarcodeDetector no está disponible en este navegador; pega abajo el texto o enlace del QR.",
-      );
+    if (!file.type.startsWith("image/") || file.size > 20 * 1024 * 1024) {
+      setStatusNote(lang === "en" ? "Choose an image under 20 MB." : "Elige una imagen de menos de 20 MB.");
       return;
     }
     try {
       const bitmap = await createImageBitmap(file);
-      const detector = new w.BarcodeDetector({ formats: ["qr_code"] });
-      const codes = await detector.detect(bitmap);
-      bitmap.close();
-      const raw = codes[0]?.rawValue?.trim() ?? "";
+      let raw: string;
+      try { raw = await decodeQr(bitmap, bitmap.width, bitmap.height); } finally { bitmap.close(); }
       if (!raw) {
         setStatusNote(
           lang === "en"
@@ -106,12 +174,16 @@ export default function QrDefense({
             onChange={(e) => void handleImageFile(e.target.files?.[0])}
           />
         </label>
+        <button type="button" className="export-btn" onClick={() => scanning ? stopCamera() : void startCamera()}>
+          {scanning ? (lang === "en" ? "Stop camera" : "Detener cámara") : (lang === "en" ? "Scan with camera" : "Escanear con cámara")}
+        </button>
       </div>
+      {scanning && <video ref={videoRef} muted playsInline aria-label={lang === "en" ? "QR camera preview" : "Vista de cámara QR"} style={{ width: "100%", maxWidth: 480 }} />}
       {statusNote && <p className="notice">{statusNote}</p>}
       {result && (
         <div className="qr-result" role="status">
           <strong>
-            {lang === "en" ? `Risk: ${result.risk}` : `Riesgo: ${result.risk}`} ·{" "}
+            {lang === "en" ? `Risk: ${{ alto: "high", medio: "medium", bajo: "low", "no concluyente": "inconclusive" }[result.risk]}` : `Riesgo: ${result.risk}`} ·{" "}
             {result.scheme.toUpperCase()}
           </strong>
           <p className="qr-payload">{result.payload}</p>

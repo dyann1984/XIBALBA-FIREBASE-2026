@@ -1750,3 +1750,40 @@ footer { border-top-color: var(--line); color: var(--muted); }
 .academy-quiz-options { display: grid; gap: 8px; margin-top: 10px; }
 .academy-opt { text-align: left; padding: 10px 14px; min-height: 44px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.03); color: #eef5fc; cursor: pointer; }
 .academy-opt.selected { border-color: #3ae8e0; background: rgba(58,232,224,.12); }
+
+
+/* --- Rediseño Premium de Mapas (Mapa 1 Inteligencia + Mapa 2 Maya 3D) --- */
+.map-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.map-stat-card { padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(58,232,224,.18); background: rgba(7,15,24,.78); }
+.map-stat-card small { display: block; font-size: 10px; letter-spacing: .8px; color: #8da2b8; }
+.map-stat-card strong { font-size: 1.25rem; color: #f1f7fc; }
+.map-hud-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.map-legend-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; min-height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(10,18,28,.72); color: #dce8f3; font-size: 11.5px; cursor: pointer; }
+.map-legend-pill.active { border-color: #3ae8e0; background: rgba(58,232,224,.14); }
+.map-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.map-zoom-controls { display: inline-flex; align-items: center; gap: 4px; }
+.map-zoom-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; min-height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(10,18,28,.8); color: #e2edf8; font-size: 11.5px; cursor: pointer; }
+.map-zoom-readout { font-size: 11.5px; color: #9db2c7; min-width: 40px; text-align: center; }
+.map-radar-ring { fill: none; stroke: rgba(58,232,224,.14); stroke-width: 1; stroke-dasharray: 4 6; }
+.map-node-dimmed { opacity: .28; }
+.map-node-caption { fill: #c8d8e8; font-size: 10px; font-weight: 600; pointer-events: none; }
+.map-detail-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid; font-size: 11px; font-weight: 600; margin-right: 6px; }
+.map-empty-state { display: grid; gap: 14px; }
+.map-empty-guide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.map-empty-guide > div { padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.08); background: rgba(8,16,24,.7); display: grid; gap: 4px; font-size: 12px; color: #b7c8da; }
+.map-empty-guide b { color: #3ae8e0; font-size: 11px; letter-spacing: .8px; }
+
+.gods-map-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.gods-map-agent-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.gods-map-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; min-height: 32px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(8,16,24,.8); color: #cde0f2; font-size: 11px; cursor: pointer; }
+.gods-map-pill.active { border-color: rgba(58,232,224,.45); }
+.gods-map-pill.selected { border-color: #f4b942; background: rgba(244,185,66,.14); color: #fff6df; }
+.gods-map-actions { display: inline-flex; gap: 6px; }
+.gods-map-fullscreen { position: fixed; inset: 0; z-index: 9999; background: #050a0f; padding: 16px; display: flex; flex-direction: column; }
+.gods-map-fullscreen .gods-map-3d { flex: 1; height: auto; }
+
+@media (max-width: 700px) {
+  .map-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .map-empty-guide { grid-template-columns: 1fr; }
+}

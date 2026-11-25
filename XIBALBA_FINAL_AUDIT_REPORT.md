@@ -42,7 +42,7 @@
 | E2E Playwright (Chromium) | `npx.cmd playwright test --reporter=list` | **PASS** | `41 passed`, `3 skipped` (`tests/e2e/cloud-ai.spec.ts` omitido por diseño sin `RUN_CLOUD_AI_E2E=1`), `0 failed`. |
 | E2E Live Cloud AI (Firebase + Gemini) | `$env:RUN_CLOUD_AI_E2E="1"; npx.cmd playwright test --config=playwright.cloud.config.ts --reporter=list` | **PASS** | `3 passed` (`0 failed`) con App Check debug token y `gemini-3.5-flash-lite` reales en `localhost:3103` (ES rojo, ES verde y EN verde + revocación). |
 | Auditoría de dependencias | `npm.cmd audit --json` | **PASS** | `0` vulnerabilidades (`0` críticas, `0` altas, `0` moderadas, `0` bajas) con `@grpc/grpc-js: ^1.13.6`. |
-| Firefox / WebKit / Edge / móvil físico | — | **NOT TESTED** | Binarios de Firefox/WebKit no instalados en caché local de Playwright; pruebas móviles y de voz/cámara ejecutadas por emulación/mocks en Chromium. |
+| Firefox 159 / WebKit 27.2 / Node 24.22.3 | `playwright.cross.config.ts` | **PASS** | `11/11` en Firefox y `11/11` en WebKit bajo Node `v24.22.3` (`audit-fases`, `global-shield`, `new-modules`). Hardware físico y Chrome DevTools sobre Preview autenticado: ver límites. |
 
 ---
 

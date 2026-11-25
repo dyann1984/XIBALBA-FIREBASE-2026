@@ -192,3 +192,49 @@ test("Capturas reales ES/EN en escritorio (1440px) y móvil (390px)", async ({ p
   await page.getByRole("navigation").getByRole("button", { name: /New analysis/i }).click();
   await page.screenshot({ path: path.join(AUDIT_SHOTS, "09-lab-en-mobile.png"), fullPage: true });
 });
+
+test("Descarga real de reportes (MD, JSON, PDF) y diploma PDF de XIBALBÁ Academy", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("navigation").getByRole("button", { name: /Nuevo análisis/i }).click();
+  await page.locator(".demo-chip").first().click();
+  await page.getByRole("button", { name: /Auditar solo en este dispositivo/i }).click();
+  await expect(page.locator(".verdict-rojo")).toBeVisible();
+
+  const [mdDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: /Exportar reporte \(.md\)|Export report \(.md\)/i }).click(),
+  ]);
+  expect(mdDownload.suggestedFilename()).toMatch(/xibalba-report-.*\.md$/);
+
+  const [jsonDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: /Exportar JSON|Export JSON/i }).click(),
+  ]);
+  expect(jsonDownload.suggestedFilename()).toMatch(/xibalba-report-.*\.json$/);
+
+  const [pdfDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: /Exportar PDF|Export PDF/i }).click(),
+  ]);
+  expect(pdfDownload.suggestedFilename()).toMatch(/xibalba-report-.*\.pdf$/);
+
+  // Diploma PDF de XIBALBÁ Academy
+  await page.getByRole("navigation").getByRole("button", { name: /Academia/i }).click();
+  const completeButtons = page.locator(".academy-card button", { hasText: /Marcar completada|Mark complete/i });
+  const count = await completeButtons.count();
+  for (let i = 0; i < count; i++) {
+    await completeButtons.first().click();
+  }
+  await page.locator(".academy-panel").first().locator(".academy-opt").nth(1).click();
+  // Responder todas las preguntas del quiz
+  const quizCards = page.locator(".academy-panel .academy-card");
+  const quizCount = await quizCards.count();
+  for (let i = 0; i < quizCount; i++) {
+    await quizCards.nth(i).locator(".academy-opt").nth(1).click();
+  }
+  const [diplomaDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: /Descargar diploma|Download participation diploma/i }).click(),
+  ]);
+  expect(diplomaDownload.suggestedFilename()).toBe("xibalba-academy.pdf");
+});

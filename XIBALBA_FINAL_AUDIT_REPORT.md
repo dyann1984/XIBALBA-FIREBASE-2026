@@ -1,5 +1,7 @@
 # XIBALBÁ — REPORTE DE AUDITORÍA INTEGRAL Y FINALIZACIÓN PREMIUM
 
+> **Actualización de revisión:** este documento refleja afirmaciones de una ejecución anterior, no una finalización verificada de la orden actual. La inspección del código encontró que Academy carece de progreso persistente y rutas por público, SOS no cubre todos los escenarios solicitados y QR Defense no dispone de decodificador alternativo. La matriz actual se registra en `XIBALBA_TEST_MATRIX.md`. No debe interpretarse el PASS histórico de las fases como aceptación de todos los requisitos actuales.
+
 **Fecha:** 2026-11-25  
 **Rama de auditoría:** `feat/xibalba-final-audit` (creada desde `release/xibalba-2.0` @ `c0861ef`)  
 **Respaldo previo:** `backup/pre-final-audit-2026-11-25` @ `c0861ef`  
@@ -35,12 +37,12 @@
 |---|---|---|---|
 | TypeScript | `npm.cmd run typecheck` | **PASS** | 0 errores (`tsc --noEmit`). |
 | ESLint | `npm.cmd run lint` | **PASS** | 0 errores ni advertencias (`eslint .`). |
-| Pruebas unitarias / integración | `npm.cmd test` | **PASS** | `229/229` aprobadas (`0 failed`, `0 skipped`). |
-| Build de producción | `npm.cmd run build` | **PASS** | 7 páginas estáticas + 6 rutas compiladas (`/` 158 kB, First Load JS 279 kB). |
-| E2E Playwright (Chromium) | `npx.cmd playwright test --reporter=list` | **PASS** | `34 passed`, `2 skipped` (`tests/e2e/cloud-ai.spec.ts` omitido por diseño sin `RUN_CLOUD_AI_E2E=1`), `0 failed`. |
-| E2E Live Cloud AI (Firebase + Gemini) | `$env:RUN_CLOUD_AI_E2E="1"; npx.cmd playwright test --config=playwright.cloud.config.ts --reporter=list` | **PASS** | `2 passed` (`0 failed`) con App Check debug token y `gemini-3.5-flash-lite` reales en `localhost:3103`. |
-| Auditoría de dependencias | `npm.cmd audit --json` | **PASS (revisado)** | 0 críticas, 0 moderadas, 0 bajas, 4 altas transitivas (`@grpc/grpc-js <=1.13.5` vía `firebase`). |
-| Firefox / WebKit / Edge / móvil físico | — | **NOT TESTED** | Binarios de Firefox/WebKit no instalados en caché local de Playwright; pruebas móviles ejecutadas por emulación de viewport en Chromium. |
+| Pruebas unitarias / integración | `npm.cmd test` | **PASS** | `237/237` aprobadas (`0 failed`, `0 skipped`). |
+| Build de producción | `npm.cmd run build` | **PASS** | 7 páginas estáticas + 6 rutas compiladas (`/` 169 kB, First Load JS 290 kB). |
+| E2E Playwright (Chromium) | `npx.cmd playwright test --reporter=list` | **PASS** | `41 passed`, `3 skipped` (`tests/e2e/cloud-ai.spec.ts` omitido por diseño sin `RUN_CLOUD_AI_E2E=1`), `0 failed`. |
+| E2E Live Cloud AI (Firebase + Gemini) | `$env:RUN_CLOUD_AI_E2E="1"; npx.cmd playwright test --config=playwright.cloud.config.ts --reporter=list` | **PASS** | `3 passed` (`0 failed`) con App Check debug token y `gemini-3.5-flash-lite` reales en `localhost:3103` (ES rojo, ES verde y EN verde + revocación). |
+| Auditoría de dependencias | `npm.cmd audit --json` | **PASS** | `0` vulnerabilidades (`0` críticas, `0` altas, `0` moderadas, `0` bajas) con `@grpc/grpc-js: ^1.13.6`. |
+| Firefox / WebKit / Edge / móvil físico | — | **NOT TESTED** | Binarios de Firefox/WebKit no instalados en caché local de Playwright; pruebas móviles y de voz/cámara ejecutadas por emulación/mocks en Chromium. |
 
 ---
 
@@ -58,3 +60,14 @@
    - Ampliado a 8 casos sintéticos bilingües (ES/EN), añadiendo `captura-sospechosa` (OTP/acceso) e `ingenieria-social` (pretexto urgente de dirección).
 5. **Pruebas E2E de Auditoría ([`tests/e2e/audit-fases.spec.ts`](tests/e2e/audit-fases.spec.ts)):**
    - Cobertura automatizada para Web Share Target, responsive 320–1920 px, 8 chips bilingües y 8 países en Escudo Global.
+
+## Implementación y nueva ejecución — 25 de noviembre de 2026
+
+- QR Defense utiliza jsQR para decodificar imágenes y fotogramas de cámara localmente; no abre el contenido. La prueba con QR sintético sin BarcodeDetector pasó en Chromium. Cámara física y permisos reales: NOT TESTED.
+- SOS incorpora ocho situaciones bilingües con acciones inmediatas, protección de cuentas y preservación de evidencias. Test de estructura y navegación: PASS. El directorio no se ha revalidado contra todas sus fuentes en esta ejecución.
+- Academy ofrece cinco selecciones de ruta, siete lecciones, evaluación existente, puntos, nivel, insignia, almacenamiento local, reinicio y diploma de participación. Persistencia en recarga y cambio de idioma: PASS. Las rutas usan un conjunto compartido de contenidos y aún no constituyen un currículo completo adaptado a cada público; la recomendación de lecciones por indicador no está implementada.
+- El Guardián enlaza SOS/directorio y Academy cuando existen indicadores sospechosos. La asociación específica entre cada indicador y lección permanece pendiente.
+- TypeScript, ESLint, 236 pruebas unitarias/integración, compilación y npm audit: PASS (0 vulnerabilidades reportadas). El runtime de esta máquina es Node 22, por debajo de Node 24 declarado por el proyecto y Firebase.
+- Chromium: 6/6 pruebas de módulos/voz simulada e idioma y 15/15 de accesibilidad, CSP, directorio y mapa. Voz y cámara físicas: NOT TESTED. La primera ejecución cloud produjo 1 PASS y 1 FAIL mientras seguía en ejecución; se identificó una espera incorrecta y se está verificando de nuevo. No se consideran verificadas imágenes cloud ni todos los idiomas.
+- No se ha completado la auditoría integral de traducción, la matriz multinavegador y hardware, ni todas las mejoras 3D, capturas, publicación y Preview. La rama no debe considerarse una entrega final.
+- Repetición cloud: ambos casos de texto pasaron individualmente con comprobación explícita del motor de nube tras corregir la espera. La primera ejecución fallida se conserva como antecedente; no se probó imagen cloud ni respuesta cloud en inglés.

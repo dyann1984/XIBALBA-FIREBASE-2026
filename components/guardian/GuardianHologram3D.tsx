@@ -174,7 +174,13 @@ function JaguarModel({
   }, [actions, state, isStill]);
 
   useFrame(({ clock }, delta) => {
-    if (materialRef.current) materialRef.current.uniforms.uTime.value += reducedMotion ? 0 : delta;
+    if (materialRef.current) {
+      materialRef.current.uniforms.uTime.value += reducedMotion ? 0 : delta;
+      // Parpadeo natural discreto cada ~4.2 segundos en los ojos del jaguar.
+      const cycle = clock.elapsedTime % 4.2;
+      const blink = !reducedMotion && cycle > 4.02 ? 0.15 : 1.0;
+      materialRef.current.uniforms.uBlink.value = blink;
+    }
     if (wireMeshRef.current && mainMeshRef.current) {
       wireMeshRef.current.morphTargetInfluences = mainMeshRef.current.morphTargetInfluences;
     }
@@ -185,10 +191,19 @@ function JaguarModel({
       const breathe = Math.sin(t * 1.1) * 0.014;
       g.scale.setScalar(BASE_SCALE * (1 + breathe));
       g.position.set(BASE_POSITION[0], BASE_POSITION[1] + Math.sin(t * 1.1) * 0.01, BASE_POSITION[2]);
+      g.rotation.y = Math.PI * 0.2 + Math.sin(t * 0.45) * 0.03;
       g.rotation.z = Math.sin(t * 0.55) * 0.012;
+    } else if (!reducedMotion) {
+      const t = clock.elapsedTime;
+      const scanSpeed = state === "alerta" ? 2.2 : state === "escuchando" ? 1.1 : 0.7;
+      g.scale.setScalar(BASE_SCALE * (1 + Math.sin(t * 2.0) * 0.008));
+      g.position.set(...BASE_POSITION);
+      g.rotation.y = Math.PI * 0.2 + Math.sin(t * scanSpeed) * 0.07;
+      g.rotation.z = 0;
     } else {
       g.scale.setScalar(BASE_SCALE);
       g.position.set(...BASE_POSITION);
+      g.rotation.y = Math.PI * 0.2;
       g.rotation.z = 0;
     }
   });

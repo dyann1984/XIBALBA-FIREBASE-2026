@@ -3,22 +3,21 @@
 import { useEffect, useState } from "react";
 import { BookOpenCheck, CheckCircle2, GraduationCap, XCircle } from "lucide-react";
 import { useI18n } from "@/components/LanguageProvider";
-import { ACADEMY_LESSONS, ACADEMY_QUIZ } from "@/lib/academy/lessons";
+import { ACADEMY_LESSONS, ACADEMY_PATHS, ACADEMY_QUIZ, type AcademyPathId } from "@/lib/academy/lessons";
 
 const STORAGE_KEY = "xibalba-academy-v1";
-const PATHS = [
-  { id: "children", es: "Niños", en: "Children", lessons: ["phishing-domain", "identity-ai", "qr-traps"] },
-  { id: "teens", es: "Adolescentes", en: "Teens", lessons: ["identity-ai", "extortion", "phishing-domain", "qr-traps"] },
-  { id: "adults", es: "Adultos", en: "Adults", lessons: ["phishing-domain", "otp-isolation", "qr-traps", "jobs", "extortion"] },
-  { id: "seniors", es: "Adultos mayores", en: "Older adults", lessons: ["otp-isolation", "extortion", "identity-ai", "qr-traps"] },
-  { id: "business", es: "Empresas", en: "Businesses", lessons: ["phishing-domain", "identity-ai", "jobs", "otp-isolation", "guaranteed-yield"] },
-];
 
-export default function Academy({ onTryLab }: { onTryLab: () => void }) {
+export default function Academy({
+  onTryLab,
+  recommendedIds = [],
+}: {
+  onTryLab: () => void;
+  recommendedIds?: string[];
+}) {
   const { lang } = useI18n();
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [completed, setCompleted] = useState<string[]>([]);
-  const [path, setPath] = useState("adults");
+  const [path, setPath] = useState<AcademyPathId>("adults");
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     let active = true;
@@ -29,7 +28,7 @@ export default function Academy({ onTryLab }: { onTryLab: () => void }) {
       if (stored && typeof stored === "object") {
         if (Array.isArray(stored.completed)) setCompleted(stored.completed.filter((id: unknown) => typeof id === "string" && ACADEMY_LESSONS.some((lesson) => lesson.id === id)));
         if (stored.answers && typeof stored.answers === "object") setAnswers(stored.answers);
-        if (PATHS.some((item) => item.id === stored.path)) setPath(stored.path);
+        if (ACADEMY_PATHS.some((item) => item.id === stored.path)) setPath(stored.path);
       }
     } catch { /* Storage is optional. */ }
     setLoaded(true);
@@ -42,7 +41,9 @@ export default function Academy({ onTryLab }: { onTryLab: () => void }) {
   }, [loaded, completed, answers, path]);
   const answeredCount = Object.keys(answers).length;
   const correctCount = ACADEMY_QUIZ.filter((q) => answers[q.id] === q.correctIndex).length;
-  const selectedPath = PATHS.find((item) => item.id === path) ?? PATHS[0];
+  const selectedPath = ACADEMY_PATHS.find((item) => item.id === path) ?? ACADEMY_PATHS[0];
+  const pathLessons = ACADEMY_LESSONS.filter((lesson) => lesson.paths.includes(path));
+  const recommendedLessons = ACADEMY_LESSONS.filter((lesson) => recommendedIds.includes(lesson.id));
   const xp = completed.length * 10 + correctCount * 20;
   const diploma = async () => {
     const { jsPDF } = await import("jspdf");
@@ -62,16 +63,22 @@ export default function Academy({ onTryLab }: { onTryLab: () => void }) {
     <div className="academy-view">
       <section className="academy-card">
         <label htmlFor="academy-path">{lang === "en" ? "Learning path" : "Ruta de aprendizaje"}</label>{" "}
-        <select id="academy-path" value={path} onChange={(event) => setPath(event.target.value)}>
-          {PATHS.map((item) => <option key={item.id} value={item.id}>{lang === "en" ? item.en : item.es}</option>)}
+        <select id="academy-path" value={path} onChange={(event) => setPath(event.target.value as AcademyPathId)}>
+          {ACADEMY_PATHS.map((item) => <option key={item.id} value={item.id}>{lang === "en" ? item.en : item.es}</option>)}
         </select>
         <p>{xp} XP · {lang === "en" ? "Level" : "Nivel"} {1 + Math.floor(xp / 50)} · {completed.length >= 3 ? (lang === "en" ? "Badge: Guardian learner" : "Insignia: aprendiz del Guardián") : (lang === "en" ? "Complete 3 lessons to earn a badge" : "Completa 3 lecciones para obtener una insignia")}</p>
         <p className="notice">{lang === "en" ? "Guardian: pause, verify through a trusted channel, and never share a verification code." : "Guardián: detente, verifica por un canal confiable y nunca compartas un código de verificación."}</p>
         <button type="button" className="export-btn" onClick={() => { if (window.confirm(lang === "en" ? "Reset your Academy progress on this device?" : "¿Reiniciar el progreso de Academy en este dispositivo?")) { setCompleted([]); setAnswers({}); } }}>{lang === "en" ? "Reset progress" : "Reiniciar progreso"}</button>{" "}
-        {selectedPath.lessons.every((id) => completed.includes(id)) && answeredCount === ACADEMY_QUIZ.length && <button type="button" className="export-btn" onClick={() => void diploma()}>{lang === "en" ? "Download participation diploma" : "Descargar diploma de participación"}</button>}
+        {pathLessons.every((lesson) => completed.includes(lesson.id)) && answeredCount === ACADEMY_QUIZ.length && <button type="button" className="export-btn" onClick={() => void diploma()}>{lang === "en" ? "Download participation diploma" : "Descargar diploma de participación"}</button>}
       </section>
+      {recommendedLessons.length > 0 && (
+        <section className="academy-card" aria-label={lang === "en" ? "Recommended from your latest analysis" : "Recomendado según tu último análisis"}>
+          <div className="eyebrow">{lang === "en" ? "RECOMMENDED FROM YOUR ANALYSIS" : "RECOMENDADO POR TU ANÁLISIS"}</div>
+          <p>{recommendedLessons.map((lesson) => (lang === "en" ? lesson.titleEn : lesson.titleEs)).join(" · ")}</p>
+        </section>
+      )}
       <div className="academy-grid">
-        {ACADEMY_LESSONS.filter((lesson) => selectedPath.lessons.includes(lesson.id)).map((lesson) => (
+        {pathLessons.map((lesson) => (
           <article key={lesson.id} className="academy-card">
             <div className="eyebrow">{lesson.agent}</div>
             <h3>{lang === "en" ? lesson.titleEn : lesson.titleEs}</h3>

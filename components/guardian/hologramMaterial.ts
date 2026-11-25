@@ -40,6 +40,7 @@ export function createHologramMaterial(accent: string, gold = "#f4b942", eyeColo
       uColorGold: { value: new THREE.Color(gold) },
       uEyeColor: { value: new THREE.Color(eyeColor) },
       uOpacity: { value: 0.92 },
+      uBlink: { value: 1.0 },
       uFresnelPower: { value: 2.0 },
       uScanSpeed: { value: 0.6 },
       uBoundsMinY: { value: -1 },
@@ -68,6 +69,7 @@ export function createHologramMaterial(accent: string, gold = "#f4b942", eyeColo
       uniform vec3 uColorGold;
       uniform vec3 uEyeColor;
       uniform float uOpacity;
+      uniform float uBlink;
       uniform float uFresnelPower;
       uniform float uScanSpeed;
       uniform float uBoundsMinY;
@@ -108,7 +110,7 @@ export function createHologramMaterial(accent: string, gold = "#f4b942", eyeColo
         // se SUMA como refuerzo de contorno, nunca reemplaza el color base.
         vec3 base = uColor * (0.22 + diffKey * 0.62) + uColorBlue * diffFill * 0.4 + uColorGold * diffGold * 0.32;
         vec3 color = base + uColor * rim * 0.55 + uColorGold * band * 0.22;
-        color += uEyeColor * brightSpot * (0.75 + rim * 0.5);
+        color += uEyeColor * brightSpot * (0.75 + rim * 0.5) * uBlink;
 
         float alpha = clamp(0.52 + rim * 0.3 + band * 0.08 + brightSpot * 0.3, 0.0, 1.0) * uOpacity;
         gl_FragColor = vec4(color, alpha);

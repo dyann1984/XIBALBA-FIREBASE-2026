@@ -30,6 +30,7 @@ test.beforeAll(() => {
 test("Interpretación de IA en la nube real (Firebase + Gemini) nunca baja un veredicto determinista", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   await page.goto("/");
 
   // Confirma, DESDE EL INICIO (la tarjeta "Nube" solo vive ahí), que App
@@ -52,27 +53,14 @@ test("Interpretación de IA en la nube real (Firebase + Gemini) nunca baja un ve
   );
   await page.getByRole("button", { name: /Analizar contenido/i }).click();
 
-  // Hasta 30s: una llamada real a Gemini, no una respuesta de caché local.
-  const answered = await page
-    .locator(".inference")
-    .filter({ hasText: /LOCAL|NUBE|ON-DEVICE|CLOUD/i })
-    .waitFor({ timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false);
-  test.skip(!answered, "La llamada real al modelo no respondió en 30s (red o cuota del proveedor).");
+  // El texto fijo «IA local» siempre aparece en .inference; no indica que
+  // haya terminado la solicitud. Esperar al resultado evita falsos positivos.
+  await expect(page.getByRole("button", { name: /Analizar contenido/i })).toBeEnabled({ timeout: 70_000 });
 
   // El resultado determinista es inequívocamente alto: la IA real no debe
   // haberlo rebajado, sea cual sea su propia lectura del texto.
-  //
-  // Timeout ampliado a propósito, igual que en `answered` arriba: el filtro
-  // de `.inference` por LOCAL/NUBE/ON-DEVICE/CLOUD puede cumplirse mientras
-  // el análisis todavía muestra "SIN VERIFICAR" un instante (el motor aún no
-  // terminó de combinar el veredicto), así que el locator por defecto de 5s
-  // podía fallar aquí aunque la llamada real a la nube sí hubiera respondido
-  // — visto de forma reproducible corriendo esta prueba contra servicios
-  // reales el 21 de noviembre de 2026.
   await expect(page.locator(".verdict-rojo")).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator(".inference")).not.toContainText(/SIN VERIFICAR|UNVERIFIED/i);
+  await expect(page.locator(".inference b")).toContainText(/NUBE|CLOUD/i);
 });
 
 /**
@@ -82,6 +70,7 @@ test("Interpretación de IA en la nube real (Firebase + Gemini) nunca baja un ve
  * esta captura vive aquí y no en la batería principal.
  */
 test("Holograma del Guardián en estado de seguridad (verde) con IA real", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.goto("/");
   const cloudReady = await page
     .getByText(/Nube: configurada|Cloud: configured/i)
@@ -97,16 +86,37 @@ test("Holograma del Guardián en estado de seguridad (verde) con IA real", async
   );
   await page.getByRole("button", { name: /Analizar contenido/i }).click();
 
-  const answered = await page
-    .locator(".inference")
-    .filter({ hasText: /LOCAL|NUBE|ON-DEVICE|CLOUD/i })
-    .waitFor({ timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false);
-  test.skip(!answered, "La llamada real al modelo no respondió en 30s (red o cuota del proveedor).");
+  await expect(page.getByRole("button", { name: /Analizar contenido/i })).toBeEnabled({ timeout: 70_000 });
+  await expect(page.locator(".inference b")).toContainText(/NUBE|CLOUD/i);
 
   await expect(page.locator(".verdict-verde")).toBeVisible({ timeout: 15_000 });
   const portrait = page.locator("[data-guardian-state]");
   await expect(portrait).toHaveAttribute("data-guardian-state", "seguridad");
   await portrait.screenshot({ path: path.join(ARTIFACTS_DIR, "03-retrato-seguridad.png") });
+});
+
+test("IA en la nube en inglés y recuperación limpia si se revoca el consentimiento", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  const cloudReady = await page
+    .getByText(/Nube: configurada|Cloud: configured/i)
+    .waitFor({ timeout: 25_000 })
+    .then(() => true)
+    .catch(() => false);
+  test.skip(!cloudReady, "App Check no entregó un token de depuración en 25s (sin red o sin cuota disponible ahora mismo).");
+
+  await page.locator("button.language").click();
+  await page.getByRole("navigation").getByRole("button", { name: /New analysis/i }).click();
+  await page.locator(".consent input[type='checkbox']").first().check();
+  await page.locator("#content").fill(
+    "Hello, confirming our Thursday 10 AM appointment at the downtown branch with the documents requested.",
+  );
+  await page.getByRole("button", { name: /Analyse content/i }).click();
+  await expect(page.getByRole("button", { name: /Analyse content/i })).toBeEnabled({ timeout: 70_000 });
+  await expect(page.locator(".inference b")).toContainText(/CLOUD/i);
+  await expect(page.locator(".verdict-verde")).toBeVisible({ timeout: 15_000 });
+
+  // Sin consentimiento, vuelve a análisis local y nunca envía a la nube.
+  await page.locator(".consent input[type='checkbox']").first().uncheck();
+  await expect(page.getByRole("button", { name: /Audit on this device only/i })).toBeVisible();
 });

@@ -24,8 +24,8 @@ export const ACADEMY_LESSONS: AcademyLesson[] = [
   {
     id: "phishing-domain",
     agent: "HUN CAMÉ",
-    titleEs: "El dominio real siempre está justo antes del primer '/'",
-    titleEn: "The real domain always sits right before the first '/'",
+    titleEs: "Revisa el dominio registrable del enlace",
+    titleEn: "Check the link's registrable domain",
     summaryEs: "En https://bbva-mx.validacion.example.com/acceso, la marca está en el subdominio; el dueño real es example.com.",
     summaryEn: "In https://bbva-mx.verify.example.com/login, the brand sits in the subdomain; the true owner is example.com.",
     redFlagEs: "Subdominios con nombres de bancos + urgencia de bloqueo.",
@@ -54,12 +54,33 @@ export const ACADEMY_LESSONS: AcademyLesson[] = [
   {
     id: "qr-traps",
     agent: "IXBALANQUÉ",
-    titleEs: "Un código QR de pago nunca sirve para recibir dinero",
-    titleEn: "A payment QR code never receives incoming money for you",
-    summaryEs: "Al escanear un QR de pago autorizas un envío saliente. Inspecciona siempre la URL o esquema antes de confirmar.",
-    summaryEn: "Scanning a payment QR authorizes an outgoing transfer. Always inspect the URL or scheme before confirming.",
+    titleEs: "Revisa qué acción propone un código QR de pago",
+    titleEn: "Check what action a payment QR code proposes",
+    summaryEs: "Un QR puede contener instrucciones para pagar o recibir dinero. Escanearlo no autoriza por sí solo una transferencia: revisa el destinatario, el importe y la acción antes de confirmar.",
+    summaryEn: "A QR code may contain instructions to pay or receive money. Scanning alone does not authorize a transfer: check the recipient, amount, and action before confirming.",
     redFlagEs: "Acortadores opacos o QRs pegados encima de avisos físicos.",
     redFlagEn: "Opaque shorteners or stickers pasted over physical signs.",
+  },
+  {
+    id: "extortion", agent: "CAMAZOTZ",
+    titleEs: "Reconoce la extorsión", titleEn: "Recognize extortion",
+    summaryEs: "Una amenaza urgente que exige dinero o silencio requiere apoyo: conserva evidencias y contacta a una persona de confianza y a las autoridades.",
+    summaryEn: "An urgent threat demanding money or silence calls for support: preserve evidence and contact someone you trust and the authorities.",
+    redFlagEs: "Amenazas, aislamiento y exigencias de pago.", redFlagEn: "Threats, isolation and payment demands.",
+  },
+  {
+    id: "identity-ai", agent: "IXBALANQUÉ",
+    titleEs: "Verifica identidades y contenido generado por IA", titleEn: "Verify identities and AI-generated content",
+    summaryEs: "Una voz, imagen o video puede manipularse. Confirma por un canal independiente antes de enviar dinero o datos.",
+    summaryEn: "A voice, image or video can be manipulated. Verify through an independent channel before sending money or information.",
+    redFlagEs: "Petición inesperada y presión para evitar una verificación.", redFlagEn: "An unexpected request and pressure to avoid verification.",
+  },
+  {
+    id: "jobs", agent: "VUCUB CAMÉ",
+    titleEs: "Examina las ofertas laborales", titleEn: "Examine job offers",
+    summaryEs: "Verifica la empresa por sus canales oficiales y desconfía de pagos anticipados para conseguir empleo.",
+    summaryEn: "Verify the company through official channels and be wary of upfront fees to obtain a job.",
+    redFlagEs: "Pago previo, promesas de ganancias y entrevistas inexistentes.", redFlagEn: "Upfront fees, earnings promises and absent interviews.",
   },
 ];
 

@@ -95,12 +95,20 @@ export async function buildReportPdf(report: ExportableReport): Promise<Uint8Arr
   );
   y += 6;
   doc.setFontSize(9);
+  const engineLabel =
+    report.verdict.source === "on_device"
+      ? en ? "On-device AI + Deterministic Engine" : "IA local en dispositivo + Motor determinista"
+      : report.verdict.source === "in_cloud"
+        ? en ? "Cloud AI (Gemini) + Deterministic Engine" : "IA en la nube (Gemini) + Motor determinista"
+        : en ? "Deterministic Engine (No AI)" : "Motor determinista (Sin IA)";
   doc.text(
-    `${en ? "Generated" : "Generado"}: ${report.generatedAt}`,
+    `${en ? "Analysis ID" : "ID de análisis"}: ${report.analysisId} · ${en ? "Generated" : "Generado"}: ${report.generatedAt}`,
     marginX,
     y,
   );
-  y += 10;
+  y += 5;
+  doc.text(`${en ? "Engine" : "Motor"}: ${engineLabel}`, marginX, y);
+  y += 9;
 
   // Semáforo y veredicto, como un bloque destacado.
   const [r, g, b] = lightColor(report.verdict.light);
@@ -240,8 +248,8 @@ export async function buildReportPdf(report: ExportableReport): Promise<Uint8Arr
     doc.setTextColor(...COLORS.muted);
     doc.text(
       en
-        ? "This report masks sensitive sequences and does not confirm fraud or guarantee safety."
-        : "Este reporte enmascara secuencias sensibles y no confirma un fraude ni garantiza que algo sea seguro.",
+        ? "Masks sensitive sequences. Does not confirm fraud, guarantee safety, or constitute official certification."
+        : "Enmascara secuencias sensibles. No confirma fraude, no garantiza seguridad ni constituye certificación oficial.",
       marginX,
       pageHeight - 10,
     );

@@ -80,3 +80,9 @@ test("statusFor refleja el estado real: verificado, en revisión, o pendiente si
   assert.equal(statusFor("ES"), "en-revision");
   assert.equal(statusFor("ZZ"), "pendiente");
 });
+
+test("el directorio cubre los 8 países clave de Fase 7 con registros válidos", () => {
+  for (const code of ["MX", "US", "ES", "IN", "CO", "AR", "CL", "PE"]) {
+    assert.ok(recordsFor(code).length >= 1, `${code} debe tener al menos un registro real`);
+  }
+});

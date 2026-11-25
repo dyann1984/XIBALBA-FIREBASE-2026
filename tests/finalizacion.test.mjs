@@ -292,9 +292,13 @@ test('cada caso de demostración produce el semáforo que anuncia', () => {
     'llamada-secuestro': 'rojo',
     'inversion-garantizada': 'rojo',
     'empleo-falso': 'rojo',
+    'captura-sospechosa': 'rojo',
     'mensaje-legitimo': 'gris',
+    'ingenieria-social': 'rojo',
   };
+  assert.equal(demo.cases.length, 8, 'deben existir exactamente 8 casos de demostración');
   for (const caso of demo.cases) {
+    assert.ok(caso.titleEn && caso.expectEn && caso.textEn, `${caso.id} debe ser bilingüe (ES/EN)`);
     const { audit } = auditCoordinated({ kind: caso.kind, text: caso.text });
     const risk = combineRisk(audit, null);
     assert.equal(risk.light, esperado[caso.id], `${caso.id} dio ${risk.light}`);

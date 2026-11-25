@@ -39,7 +39,7 @@ test("15. Usuario de España ve el registro marcado honestamente como 'en revisi
 test("16. Un país sin directorio verificado lo dice explícitamente, sin inventar un contacto", async ({ page }) => {
   await page.goto("/");
   await openGlobalShield(page);
-  await page.locator("#shield-country").selectOption("CL");
+  await page.locator("#shield-country").selectOption("UY");
   await expect(page.locator(".shield-records")).toHaveCount(0);
   await expect(page.getByText(/Todavía sin datos verificados|No verified data yet/i)).toBeVisible();
 });

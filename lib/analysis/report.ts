@@ -13,6 +13,7 @@ import { es as esDictionary, en as enDictionary } from '../i18n/dictionary.ts';
 
 export type ExportableReport = {
   schema: 'xibalba-report/v1';
+  analysisId: string;
   generatedAt: string;
   lang: 'es' | 'en';
   verdict: {
@@ -68,8 +69,10 @@ export function buildReportData(
       limitation: i.limitation,
     }));
 
+  const analysisId = `XIB-${now.toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)}`;
   return {
     schema: 'xibalba-report/v1',
+    analysisId,
     generatedAt: now.toISOString(),
     lang,
     verdict: {

@@ -41,6 +41,7 @@ test('buildReportPdf genera un PDF valido que enmascara datos sensibles', async 
 
   const full = toAsciiString(bytes);
   assert.equal(full.includes('9876 5432'), false, 'el numero de telefono completo no debe aparecer en el PDF');
+  assert.match(report.analysisId, /^XIB-\d{14}$/);
 });
 
 test('buildReportPdf produce contenido en ingles cuando el reporte esta en ingles', async () => {

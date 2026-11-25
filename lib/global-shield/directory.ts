@@ -21,6 +21,9 @@ export const KNOWN_COUNTRIES: CountryEntry[] = [
   { code: "CO", nameEs: "Colombia", nameEn: "Colombia" },
   { code: "BR", nameEs: "Brasil", nameEn: "Brazil" },
   { code: "CL", nameEs: "Chile", nameEn: "Chile" },
+  { code: "IN", nameEs: "India", nameEn: "India" },
+  { code: "PE", nameEs: "Perú", nameEn: "Peru" },
+  { code: "UY", nameEs: "Uruguay", nameEn: "Uruguay" },
 ];
 
 export const SEED_RECORDS: EmergencyRecord[] = [
@@ -142,6 +145,55 @@ export const SEED_RECORDS: EmergencyRecord[] = [
     lastVerifiedAt: "2026-11-21",
     status: "en-revision",
     notes: "La propia Polícia Federal aclara que solo investiga casos de alcance federal o transnacional; la mayoría de los fraudes financieros contra una persona en Brasil se denuncian ante la Polícia Civil estatal (Boletim de Ocorrência), que varía por estado y no tiene aquí un portal único verificado. Queda 'en revisión' hasta confirmar un canal estatal representativo con una segunda fuente independiente.",
+  },
+  {
+    id: "IN-i4c",
+    countryCode: "IN",
+    incidentCategories: ["fraude-financiero", "phishing", "suplantacion", "ciberdelito"],
+    agencyName: "Indian Cyber Crime Coordination Centre (I4C) — National Cyber Crime Reporting Portal",
+    channels: [
+      { kind: "telefono", value: "1930", languages: ["en-IN", "hi-IN"], hoursNote: "24/7 National Cyber Crime Helpline" },
+      { kind: "portal", value: "https://www.cybercrime.gov.in", languages: ["en-IN", "hi-IN"] },
+    ],
+    sourceUrls: [
+      "https://www.cybercrime.gov.in",
+      "https://www.indianbank.bank.in",
+    ],
+    lastVerifiedAt: "2026-11-25",
+    status: "verificado",
+    notes: "La línea nacional 1930 (atención 24/7 para fraude financiero digital) y el portal oficial cybercrime.gov.in coinciden en el portal gubernamental de I4C y en avisos oficiales de banca pública india.",
+  },
+  {
+    id: "CL-pdi-cibercrimen",
+    countryCode: "CL",
+    incidentCategories: ["fraude-financiero", "phishing", "suplantacion", "ciberdelito"],
+    agencyName: "Policía de Investigaciones de Chile (PDI) — Brigada Investigadora del Cibercrimen",
+    channels: [
+      { kind: "telefono", value: "134", languages: ["es-CL"], hoursNote: "Emergencias y denuncias PDI" },
+      { kind: "portal", value: "https://www.pdichile.cl", languages: ["es-CL"] },
+    ],
+    sourceUrls: [
+      "https://www.chileatiende.gob.cl",
+      "https://www.pdichile.cl",
+    ],
+    lastVerifiedAt: "2026-11-25",
+    status: "verificado",
+    notes: "ChileAtiende (gob.cl) y el sitio institucional de la PDI (pdichile.cl) confirman el canal de denuncia ante la PDI y la línea 134; para Ley de Fraudes (Ley 20.009) también se requiere bloquear tarjetas con el banco y conservar el comprobante de denuncia.",
+  },
+  {
+    id: "PE-mpfn-divindat",
+    countryCode: "PE",
+    incidentCategories: ["fraude-financiero", "phishing", "suplantacion", "ciberdelito"],
+    agencyName: "Ministerio Público (Fiscalía de la Nación) — Portal de Denuncias / DIVINDAT PNP",
+    channels: [
+      { kind: "portal", value: "https://www.mpfn.gob.pe", languages: ["es-PE"] },
+    ],
+    sourceUrls: [
+      "https://www.mpfn.gob.pe",
+    ],
+    lastVerifiedAt: "2026-11-25",
+    status: "en-revision",
+    notes: "El portal del Ministerio Público (mpfn.gob.pe) habilita denuncias en línea. Los teléfonos atribuidos a DIVINDAT PNP y Línea 1818 aparecieron solo en directorios secundarios durante esta verificación, por lo que no se listan como teléfonos verificados y el registro permanece 'en revisión'.",
   },
 ];
 

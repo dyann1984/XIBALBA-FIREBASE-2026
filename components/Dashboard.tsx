@@ -38,7 +38,17 @@ const GodsMap3D = dynamic(() => import("@/components/guardian/GodsMap3D"), { ssr
 
 const icons: Record<string, typeof Shield> = { voice: AudioLines, message: MessageSquareText, wallet: WalletCards, link: Link2, shield: ShieldCheck };
 type Section = "inicio" | "analizar" | "agentes" | "historial" | "mapa" | "escudo" | "privacidad";
-type DemoCase = { id: string; title: string; kind: string; agent: string; expect: string; text: string };
+type DemoCase = {
+  id: string;
+  title: string;
+  titleEn?: string;
+  kind: string;
+  agent: string;
+  expect: string;
+  expectEn?: string;
+  text: string;
+  textEn?: string;
+};
 const demoCases = (demoData as { cases: DemoCase[] }).cases;
 /** Clave del permiso explícito para conservar el historial en este navegador. */
 const HISTORY_CONSENT_KEY = "xibalba.historial.permiso.v1";
@@ -157,6 +167,28 @@ export default function Dashboard() {
   });
   return () => { active = false; };
  }, []);
+ // Web Share Target (PWA): si la aplicación se abre con ?share_title / ?share_text / ?share_url,
+ // precarga el laboratorio sin enviar nada automáticamente ni perder el flujo manual.
+ useEffect(() => {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const shared = [params.get("share_title"), params.get("share_text"), params.get("share_url")]
+   .map((item) => item?.trim() ?? "")
+   .filter(Boolean);
+  if (!shared.length) return;
+  const combined = shared.join("\n");
+  queueMicrotask(() => {
+   setSection("analizar");
+   setInput(combined);
+   if (!params.get("share_text") && params.get("share_url")) setKind("url");
+   params.delete("share_title");
+   params.delete("share_text");
+   params.delete("share_url");
+   const nextSearch = params.toString();
+   const cleanUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+   window.history.replaceState(null, "", cleanUrl);
+  });
+ }, []);
  /** Extrae huellas seguras (dominios, prefijos telefónicos, IDs de señales) para correlación local. */
  const fingerprintsOf = (result: AnalysisResult, analysed: string) => {
   const domains = [...new Set(extractUrls(analysed).map(u => { try { return new URL(u).hostname; } catch { return ""; } }).filter(Boolean))];
@@ -210,8 +242,11 @@ export default function Dashboard() {
  // Al cambiar de tipo se libera el audio: solo CAMAZOTZ lo usa y mantenerlo en
  // memoria sin que la interfaz lo muestre sería guardarlo a espaldas de la persona.
  const dropAudio = () => { if (audio) releaseAudio(audio); setAudio(null); setAudioConsent(false); setTranscription(null); };
+ const demoTitle = (demo: DemoCase) => (lang === "en" ? (demo.titleEn ?? demo.title) : demo.title);
+ const demoExpect = (demo: DemoCase) => (lang === "en" ? (demo.expectEn ?? demo.expect) : demo.expect);
+ const demoText = (demo: DemoCase) => (lang === "en" ? (demo.textEn ?? demo.text) : demo.text);
  /** Carga un caso de demostración. Son textos inventados: ver `data/demo-cases.json`. */
- const loadDemo = (demo: DemoCase) => { const next = demo.kind as AgentKind; setKind(next); if (next !== "transcripcion") dropAudio(); setInput(demo.text); clearResult(); };
+ const loadDemo = (demo: DemoCase) => { const next = demo.kind as AgentKind; setKind(next); if (next !== "transcripcion") dropAudio(); setInput(demoText(demo)); clearResult(); };
  /** Nombre legible del motor que respondió, en el idioma de la interfaz. */
  const sourceLabel = (source: string | null) => source === "on_device" ? t("guardian", "sourceLocal") : source === "in_cloud" ? t("guardian", "sourceCloud") : source ? t("guardian", "sourceUnknown") : t("app", "aiUnverified");
  // Hay algo que analizar en cuanto exista texto, una imagen o un audio. Antes
@@ -365,7 +400,7 @@ export default function Dashboard() {
   <button type="button" className="text-link" onClick={() => go("historial")}>{lang === "en" ? "Review" : "Revisar"} <ArrowRight size={13}/></button>
  </section>}
  <section className="hero lab-texture"><div className="hero-copy"><div className="hero-kicker"><span className="pulse"/> {t("home","heroKicker")}</div><h2>{t("home","heroTitle")}<br/><em>{t("home","heroTitleEm")}</em></h2><p>{t("home","heroText")}</p><button className="primary" onClick={() => go("analizar")}><ScanLine size={17}/> {t("home","heroCta")} <ArrowRight size={16}/></button><div className="hero-note"><LockKeyhole size={13}/> {t("home","heroNote")}</div></div><div className="hero-art"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><Image src="/xibalba-logo.jpg" alt="" width={330} height={235} priority/></div><div className="hero-index">01 / 05 <span>✦</span></div></section>
- <section className="panel quick-scan" aria-label={t("home","quickTitle")}><div className="quick-scan-head"><div className="eyebrow"><span/> {t("home","quickTitle")}</div><button type="button" className="text-link" onClick={() => setQuickInput(demoCases[0]?.text ?? "")}><FlaskConical size={13}/> {t("home","quickSample")}</button></div><div className="quick-scan-row"><input type="text" value={quickInput} onChange={e => setQuickInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && quickInput.trim()) void runQuickScan(); }} placeholder={t("home","quickPlaceholder")} aria-label={t("home","quickPlaceholder")} /><button type="button" className="primary" disabled={!quickInput.trim() || busy} onClick={() => void runQuickScan()}><ScanLine size={16}/> {t("home","quickCta")}</button></div></section>
+ <section className="panel quick-scan" aria-label={t("home","quickTitle")}><div className="quick-scan-head"><div className="eyebrow"><span/> {t("home","quickTitle")}</div><button type="button" className="text-link" onClick={() => setQuickInput(demoCases[0] ? demoText(demoCases[0]) : "")}><FlaskConical size={13}/> {t("home","quickSample")}</button></div><div className="quick-scan-row"><input type="text" value={quickInput} onChange={e => setQuickInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && quickInput.trim()) void runQuickScan(); }} placeholder={t("home","quickPlaceholder")} aria-label={t("home","quickPlaceholder")} /><button type="button" className="primary" disabled={!quickInput.trim() || busy} onClick={() => void runQuickScan()}><ScanLine size={16}/> {t("home","quickCta")}</button></div></section>
  <div className="section-title"><div><div className="eyebrow muted">{t("home","agentsEyebrow")}</div><h2>{t("home","agentsTitle")} <span>✦</span></h2><p>{t("home","agentsText")}</p></div><button className="text-link" onClick={() => go("agentes")}>{t("home","agentsCta")} <ArrowRight size={15}/></button></div><div className="agent-grid">{agentActivity.map(({ agent: a, count }, i) => {const Icon=icons[a.icon]; const text=agentText(a); return <button className="agent-card" key={a.id} onClick={() => {setSection("agentes");setSelected(a)}}><div className="agent-top"><div className={`agent-icon ${a.color}`}><Icon size={22}/></div>{count > 0 ? <span className="agent-activity-badge">{lang === "en" ? `${count}× this session` : `${count}× esta sesión`}</span> : <span>0{i+1}</span>}</div><h3>{a.name}</h3><div className="role">{text.role}</div><p>{text.description}</p><div className="card-link">{t("home","agentCardCta")} <ArrowRight size={14}/></div></button>})}</div>
  <div className="lower-grid"><section className="panel activity"><div className="panel-head"><div><div className="eyebrow muted">{t("home","activityEyebrow")}</div><h2>{t("home","activityTitle")}</h2></div><button className="text-link" onClick={()=>go("historial")}>{t("home","activityCta")} <ArrowRight size={14}/></button></div>{history.length ? <ul className="history-list compact">{history.slice(0,3).map(entry => <HistoryRow key={entry.id} entry={entry} t={t} lang={lang}/>)}</ul> : <div className="empty-row"><div className="empty-icon"><Clock3 size={20}/></div><div><strong>{t("home","emptyTitle")}</strong><p>{t("home","emptyText")}</p></div><ArrowRight size={17}/></div>}</section><section className="panel privacy-panel"><div className="privacy-icon"><Fingerprint size={25}/></div><div><div className="eyebrow muted">{t("home","privacyEyebrow")}</div><h2>{t("home","privacyTitle")}</h2><p>{t("home","privacyText")}</p><button className="text-link" onClick={()=>go("privacidad")}>{t("home","privacyCta")} <ArrowRight size={14}/></button></div></section></div></>}
  {section === "analizar" && <div className="inner-page"><div className="eyebrow"><span/> {t("analyze","eyebrow")}</div><h1>{t("analyze","title")} <em>{t("analyze","titleEm")}</em></h1><p className="lead">{t("analyze","lead")}</p>
@@ -379,7 +414,7 @@ export default function Dashboard() {
      accesible del botón pasaba a ser el `title` —el resultado esperado— y
      quien usa lector de pantalla oía la explicación en lugar del nombre
      del caso. El `title` se queda para la ayuda emergente al pasar el ratón. */}
-{demoCases.map(demo => <button key={demo.id} type="button" className="demo-chip" disabled={busy} aria-label={demo.title} title={demo.expect} onClick={()=>loadDemo(demo)}><FlaskConical size={13}/> {demo.title}</button>)}</div><p className="notice">{t("analyze","demoNotice")}{t("analyze","demoLanguageNote") ? ` ${t("analyze","demoLanguageNote")}` : ""}</p><label htmlFor="content">{t("analyze","contentLabel")}</label><textarea id="content" disabled={busy} value={input} onChange={e=>{setInput(e.target.value);clearResult();}} placeholder={kind==="url"?t("analyze","placeholderUrl"):kind==="transcripcion"?t("analyze","placeholderCall"):kind==="financiero"?t("analyze","placeholderFinance"):t("analyze","placeholderMessage")}/><label htmlFor="photo">{t("analyze","imagesLabel")}</label><ImageAttachments images={images} onChange={next=>{setImages(next);clearResult();}} disabled={busy} onError={setError}/>{imageOnly && <p className="notice">{consent && configured ? t("images","onlyImageAi") : t("images","onlyImageLocal")}</p>}
+{demoCases.map(demo => <button key={demo.id} type="button" className="demo-chip" disabled={busy} aria-label={demoTitle(demo)} title={demoExpect(demo)} onClick={()=>loadDemo(demo)}><FlaskConical size={13}/> {demoTitle(demo)}</button>)}</div><p className="notice">{t("analyze","demoNotice")}{t("analyze","demoLanguageNote") ? ` ${t("analyze","demoLanguageNote")}` : ""}</p><label htmlFor="content">{t("analyze","contentLabel")}</label><textarea id="content" disabled={busy} value={input} onChange={e=>{setInput(e.target.value);clearResult();}} placeholder={kind==="url"?t("analyze","placeholderUrl"):kind==="transcripcion"?t("analyze","placeholderCall"):kind==="financiero"?t("analyze","placeholderFinance"):t("analyze","placeholderMessage")}/><label htmlFor="photo">{t("analyze","imagesLabel")}</label><ImageAttachments images={images} onChange={next=>{setImages(next);clearResult();}} disabled={busy} onError={setError}/>{imageOnly && <p className="notice">{consent && configured ? t("images","onlyImageAi") : t("images","onlyImageLocal")}</p>}
 {ocr && <div className="ocr-evidence"><strong>OCR {ocr.source === "model" ? "· AI" : (lang === "en" ? "· browser" : "· navegador")} · {ocr.status === "available" ? (lang === "en" ? "Text recognized" : "Texto reconocido") : (lang === "en" ? "Reading incomplete" : "Lectura incompleta")}{ocrEdited && <span className="ocr-edited-badge"> {t("analyze","ocrEditedBadge")}</span>}</strong><label className="ocr-correction-label" htmlFor="ocr-correction">{t("analyze","ocrCorrectionLabel")}</label><textarea id="ocr-correction" className="ocr-correction" disabled={busy} value={ocr.text} onChange={e => editOcrText(e.target.value)} placeholder={t("analyze","ocrCorrectionEmpty")}/><small>{ocr.text ? (lang === "en" ? "Automatic or model transcription may contain errors or invented text. Only the text shown here is analysed; verify it against the image." : "La transcripción automática o del modelo puede contener errores o texto inventado. Solo se analiza el texto mostrado aquí; compáralo con la imagen.") : t("analyze","ocrCorrectionEmpty")}</small><div className="ocr-correction-actions"><small>{t("analyze","ocrCorrectionHint")}</small>{ocrEdited && <button type="button" className="text-link" disabled={busy} onClick={retryOcr}>{t("analyze","ocrRetry")}</button>}</div></div>}
 {kind==="transcripcion" && <><label htmlFor="audio">{t("analyze","audioLabel")}</label><AudioAttachment audio={audio} transcription={transcription} onChange={next=>{setAudio(next);setTranscription(null);clearResult();}} disabled={busy} onError={setError}/></>}<div className="form-foot"><span><LockKeyhole size={14}/> {t("analyze","footPrivacy")}</span><span>{t("analyze","chars",{n:input.length})}</span></div><label className="consent"><input type="checkbox" checked={consent} onChange={e=>{setConsent(e.target.checked);clearResult();}}/> {t("analyze","consent")}</label>{audio && <label className="consent"><input type="checkbox" checked={audioConsent} onChange={e=>{setAudioConsent(e.target.checked);setTranscription(null);clearResult();}}/> {t("analyze","audioConsent")}</label>}<button className="primary" disabled={busy || !hasContent} onClick={submit}><ScanLine size={17}/> {busy ? t("analyze","submitBusy") : consent && configured ? t("analyze","submitAi") : t("analyze","submitLocal")} <ArrowRight size={16}/></button>{!hasContent && <p className="notice">{t("analyze","needContent")}</p>}<p className="notice">{!configured ? t("analyze","statusNotConfigured") : consent ? t("analyze","statusConsent") : t("analyze","statusLocal")} {t("analyze","historyNote")}</p>{error && <p role="alert" className="notice error-notice">{error}</p>}</div>
 <div className={`panel lab-area lab-area-investigation hud ${labTab === "investigation" ? "lab-area-active" : ""}`} aria-live="polite">

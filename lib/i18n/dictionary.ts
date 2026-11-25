@@ -41,6 +41,7 @@ export const es = {
     historial: "Historial",
     mapa: "Mapa de relaciones",
     escudo: "Escudo Global",
+    academia: "Academia",
     privacidad: "Privacidad",
   },
   home: {
@@ -544,6 +545,7 @@ export const en: Dictionary = {
     historial: "History",
     mapa: "Relationship map",
     escudo: "Global Shield",
+    academia: "Academy",
     privacidad: "Privacy",
   },
   home: {

@@ -18,9 +18,10 @@ import EvidenceList from "@/components/EvidenceList";
 import ImageAttachments from "@/components/ImageAttachments";
 import AudioAttachment from "@/components/AudioAttachment";
 import QrDefense from "@/components/QrDefense";
+import Academy from "@/components/Academy";
 import { useI18n } from "@/components/LanguageProvider";
 import { LANG_LABEL, LANG_TAG, type Lang } from "@/lib/i18n";
-import { Activity, ArrowDownLeft, ArrowRight, AudioLines, BookOpen, ChevronDown, CircleHelp, Clock3, Download, Eye, Fingerprint, FlaskConical, Globe2, LayoutDashboard, Link2, LockKeyhole, Menu, MessageSquareText, Network, ScanLine, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, WalletCards, X } from "lucide-react";
+import { Activity, ArrowDownLeft, ArrowRight, AudioLines, BookOpen, ChevronDown, CircleHelp, Clock3, Download, Eye, Fingerprint, FlaskConical, Globe2, GraduationCap, LayoutDashboard, Link2, LockKeyhole, Menu, MessageSquareText, Network, ScanLine, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, WalletCards, X } from "lucide-react";
 import { agents, type Agent } from "@/lib/agents";
 import demoData from "@/data/demo-cases.json";
 import { append as appendHistory, clear as clearStoredHistory, describeWhen, load as loadStoredHistory, save as saveStoredHistory, summarize, HISTORY_LIMIT, type HistoryEntry } from "@/lib/history";
@@ -38,7 +39,7 @@ import { isWebGLAvailable } from "@/lib/graphicsQuality";
 const GodsMap3D = dynamic(() => import("@/components/guardian/GodsMap3D"), { ssr: false });
 
 const icons: Record<string, typeof Shield> = { voice: AudioLines, message: MessageSquareText, wallet: WalletCards, link: Link2, shield: ShieldCheck };
-type Section = "inicio" | "analizar" | "agentes" | "historial" | "mapa" | "escudo" | "privacidad";
+type Section = "inicio" | "analizar" | "agentes" | "historial" | "mapa" | "escudo" | "academia" | "privacidad";
 type DemoCase = {
   id: string;
   title: string;
@@ -335,7 +336,7 @@ export default function Dashboard() {
   await submitText(trimmed, inferredKind);
  };
  const go = (s: Section) => { setSection(s); setSelected(null); setMenu(false); };
- const nav: { id: Section; icon: typeof Shield }[] = [{id:"inicio",icon:LayoutDashboard},{id:"analizar",icon:ScanLine},{id:"agentes",icon:Sparkles},{id:"historial",icon:Clock3},{id:"mapa",icon:Network},{id:"escudo",icon:ShieldCheck},{id:"privacidad",icon:Fingerprint}];
+ const nav: { id: Section; icon: typeof Shield }[] = [{id:"inicio",icon:LayoutDashboard},{id:"analizar",icon:ScanLine},{id:"agentes",icon:Sparkles},{id:"historial",icon:Clock3},{id:"mapa",icon:Network},{id:"escudo",icon:ShieldCheck},{id:"academia",icon:GraduationCap},{id:"privacidad",icon:Fingerprint}];
  /** Textos de cada agente, tomados del diccionario y no del módulo en español. */
  const agentText = (agent: Agent) => ({
   role: t("agents", `${agent.id}Role` as "camazotzRole"),
@@ -444,6 +445,7 @@ export default function Dashboard() {
   <p className="notice">{t("history","note")}</p></div></div>}
  {section === "mapa" && <div className="inner-page"><div className="eyebrow"><span/> {t("map","eyebrow")}</div><h1>{t("map","title")} <em>{t("map","titleEm")}</em></h1><p className="lead">{t("map","lead")}</p><div className="panel"><InvestigationMap history={history} lang={lang}/></div></div>}
  {section === "escudo" && <div className="inner-page"><div className="eyebrow"><span/> {t("globalShield","eyebrow")}</div><h1>{t("globalShield","title")} <em>{t("globalShield","titleEm")}</em></h1><p className="lead">{t("globalShield","lead")}</p><div className="panel"><GlobalShield/></div></div>}
+ {section === "academia" && <div className="inner-page"><div className="eyebrow"><span/> XIBALBÁ ACADEMY</div><h1>{lang === "en" ? "Learn to spot" : "Aprende a detectar"} <em>{lang === "en" ? "scams." : "engaños."}</em></h1><p className="lead">{lang === "en" ? "Short interactive lessons and synthetic drills to recognize fraud patterns before clicking or transferring." : "Microlecciones interactivas y simulacros sintéticos para reconocer patrones de fraude antes de hacer clic o transferir."}</p><Academy onTryLab={() => go("analizar")} /></div>}
  {section === "privacidad" && <div className="inner-page"><div className="eyebrow"><span/> {t("privacy","eyebrow")}</div><h1>{t("privacy","title")} <em>{t("privacy","titleEm")}</em></h1><p className="lead">{t("privacy","lead")}</p><div className="privacy-grid"><div className="panel info-card"><LockKeyhole/><h2>{t("privacy","card1Title")}</h2><p>{t("privacy","card1Text")}</p></div><div className="panel info-card"><Eye/><h2>{t("privacy","card2Title")}</h2><p>{t("privacy","card2Text")}</p></div><div className="panel info-card"><BookOpen/><h2>{t("privacy","card3Title")}</h2><p>{t("privacy","card3Text")}</p></div></div></div>}
  <footer><span>© 2026 XIBALBÁ AI <i>✦</i> {t("app","footerLeft")} · 3D: Google Data Arts Team (CC BY 3.0)</span><span>{t("app","footerRight")} <ArrowDownLeft size={13}/></span></footer></div></main><HelpButton onOpenDirectory={() => go("escudo")}/></div>;
 }

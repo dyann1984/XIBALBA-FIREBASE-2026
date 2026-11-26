@@ -126,84 +126,94 @@ function EyeDots({ y = 0.18, spread = 0.02, z = 0.05 }: { y?: number; spread?: n
 
 function CamazotzFigure({ body, wingRef }: BodyParts & { wingRef: (group: THREE.Group | null) => void }) {
   return (
-    <group>
+    <group scale={1.16}>
       <HumanoidBase body={body} />
-      <Part geometry={unitCone} material={body} position={[-0.028, 0.225, 0.01]} rotation={[0, 0, 0.35]} scale={[0.016, 0.048, 0.016]} />
-      <Part geometry={unitCone} material={body} position={[0.028, 0.225, 0.01]} rotation={[0, 0, -0.35]} scale={[0.016, 0.048, 0.016]} />
-      <Part geometry={unitCone} material={maskMaterial} position={[0, 0.16, 0.05]} rotation={[Math.PI / 2, 0, 0]} scale={[0.022, 0.035, 0.022]} />
-      <Part geometry={unitTorus} material={goldTrimMaterial} position={[0, 0.06, 0.04]} rotation={[Math.PI / 2, 0, 0]} scale={[0.035, 0.035, 0.015]} />
-      <EyeDots y={0.185} z={0.05} />
+      <Part geometry={unitBox} material={obsidianMaterial} position={[0, 0.03, 0.042]} scale={[0.1, 0.13, 0.025]} />
+      <Part geometry={unitCone} material={goldTrimMaterial} position={[-0.03, 0.23, 0.01]} rotation={[0, 0, 0.32]} scale={[0.018, 0.055, 0.018]} />
+      <Part geometry={unitCone} material={goldTrimMaterial} position={[0.03, 0.23, 0.01]} rotation={[0, 0, -0.32]} scale={[0.018, 0.055, 0.018]} />
+      <Part geometry={unitCone} material={maskMaterial} position={[0, 0.16, 0.052]} rotation={[Math.PI / 2, 0, 0]} scale={[0.024, 0.04, 0.024]} />
+      <Part geometry={unitTorus} material={goldTrimMaterial} position={[0, 0.06, 0.055]} rotation={[Math.PI / 2, 0, 0]} scale={[0.036, 0.036, 0.016]} />
+      <EyeDots y={0.185} z={0.052} />
       <group ref={wingRef} position={[-0.11, 0.08, -0.01]}>
-        <Part geometry={unitOcta} material={body} position={[-0.065, 0, 0]} rotation={[0, 0, 0.5]} scale={[0.15, 0.11, 0.015]} />
+        <Part geometry={unitOcta} material={body} position={[-0.075, 0.01, 0]} rotation={[0, 0, 0.45]} scale={[0.17, 0.12, 0.016]} />
+        <Part geometry={unitBox} material={goldTrimMaterial} position={[-0.07, 0.05, 0.005]} rotation={[0, 0, 0.45]} scale={[0.15, 0.012, 0.018]} />
       </group>
       <group ref={wingRef} position={[0.11, 0.08, -0.01]}>
-        <Part geometry={unitOcta} material={body} position={[0.065, 0, 0]} rotation={[0, 0, -0.5]} scale={[0.15, 0.11, 0.015]} />
+        <Part geometry={unitOcta} material={body} position={[0.075, 0.01, 0]} rotation={[0, 0, -0.45]} scale={[0.17, 0.12, 0.016]} />
+        <Part geometry={unitBox} material={goldTrimMaterial} position={[0.07, 0.05, 0.005]} rotation={[0, 0, -0.45]} scale={[0.15, 0.012, 0.018]} />
       </group>
     </group>
   );
 }
 
 function IxbalanqueFigure({ body }: BodyParts) {
-  const feathers = [-0.55, -0.27, 0, 0.27, 0.55];
+  const feathers = [-0.58, -0.29, 0, 0.29, 0.58];
   return (
-    <group>
+    <group scale={1.16}>
       <HumanoidBase body={body} />
+      <Part geometry={unitBox} material={obsidianMaterial} position={[0, 0.03, 0.042]} scale={[0.1, 0.13, 0.025]} />
       <EyeDots y={0.185} z={0.052} />
       {feathers.map((angle, index) => (
         <Part
           key={angle}
           geometry={unitCone}
-          material={index === 2 ? goldTrimMaterial : body}
-          position={[Math.sin(angle) * 0.03, 0.235 + Math.cos(angle) * 0.015 + (index === 2 ? 0.015 : 0), -0.01 - Math.abs(angle) * 0.01]}
-          rotation={[0.25, 0, angle]}
-          scale={[0.011, 0.068 - Math.abs(angle) * 0.03, 0.011]}
+          material={index % 2 === 0 ? goldTrimMaterial : body}
+          position={[Math.sin(angle) * 0.034, 0.24 + Math.cos(angle) * 0.018 + (index === 2 ? 0.018 : 0), -0.01 - Math.abs(angle) * 0.01]}
+          rotation={[0.22, 0, angle]}
+          scale={[0.013, 0.082 - Math.abs(angle) * 0.03, 0.013]}
         />
       ))}
-      <Part geometry={unitOcta} material={goldTrimMaterial} position={[0, 0.03, 0.058]} rotation={[0.3, 0, 0]} scale={[0.028, 0.028, 0.012]} />
+      <Part geometry={unitTorus} material={goldTrimMaterial} position={[-0.12, 0.03, 0.03]} rotation={[0, Math.PI / 3, 0]} scale={[0.052, 0.052, 0.02]} />
+      <Part geometry={unitOcta} material={goldTrimMaterial} position={[0, 0.04, 0.06]} rotation={[0.3, 0, 0]} scale={[0.03, 0.03, 0.014]} />
     </group>
   );
 }
 
 function VucubFigure({ body }: BodyParts) {
   return (
-    <group rotation={[0.1, 0, 0]}>
+    <group rotation={[0.08, 0, 0]} scale={1.16}>
       <HumanoidBase body={body} />
-      <Part geometry={unitHalfDome} material={maskMaterial} position={[0, 0.16, 0.015]} rotation={[Math.PI * 1.02, 0, 0]} scale={[0.07, 0.065, 0.05]} />
-      <Part geometry={unitSphere} material={maskMaterial} position={[-0.022, 0.182, 0.045]} scale={[0.016, 0.014, 0.008]} />
-      <Part geometry={unitSphere} material={maskMaterial} position={[0.022, 0.182, 0.045]} scale={[0.016, 0.014, 0.008]} />
-      <EyeDots y={0.182} spread={0.022} z={0.05} />
-      {[-0.095, 0.095].map((x) => (
-        <Part key={x} geometry={unitCone} material={goldTrimMaterial} position={[x, 0.105, 0]} rotation={[0, 0, x > 0 ? -0.6 : 0.6]} scale={[0.013, 0.034, 0.013]} />
+      <Part geometry={unitBox} material={obsidianMaterial} position={[0, 0.03, 0.042]} scale={[0.105, 0.13, 0.025]} />
+      <Part geometry={unitHalfDome} material={maskMaterial} position={[0, 0.16, 0.015]} rotation={[Math.PI * 1.02, 0, 0]} scale={[0.072, 0.068, 0.052]} />
+      <Part geometry={unitSphere} material={maskMaterial} position={[-0.022, 0.182, 0.046]} scale={[0.016, 0.014, 0.008]} />
+      <Part geometry={unitSphere} material={maskMaterial} position={[0.022, 0.182, 0.046]} scale={[0.016, 0.014, 0.008]} />
+      <EyeDots y={0.182} spread={0.022} z={0.052} />
+      {[-0.1, 0.1].map((x) => (
+        <Part key={x} geometry={unitCone} material={goldTrimMaterial} position={[x, 0.11, 0]} rotation={[0, 0, x > 0 ? -0.55 : 0.55]} scale={[0.015, 0.042, 0.015]} />
       ))}
+      <Part geometry={unitCapsule} material={goldTrimMaterial} position={[0.135, 0.02, 0.02]} scale={[0.009, 0.22, 0.009]} />
     </group>
   );
 }
 
 function HunCameFigure({ body }: BodyParts) {
   return (
-    <group>
-      <HumanoidBase body={body} torsoScale={[1.05, 1, 1.05]} />
-      <Part geometry={unitHalfDome} material={maskMaterial} position={[0, 0.165, 0.015]} rotation={[Math.PI * 1.02, 0, 0]} scale={[0.072, 0.066, 0.05]} />
+    <group scale={1.16}>
+      <HumanoidBase body={body} torsoScale={[1.06, 1, 1.06]} />
+      <Part geometry={unitBox} material={obsidianMaterial} position={[0, 0.03, 0.044]} scale={[0.11, 0.135, 0.026]} />
+      <Part geometry={unitHalfDome} material={maskMaterial} position={[0, 0.165, 0.015]} rotation={[Math.PI * 1.02, 0, 0]} scale={[0.074, 0.068, 0.052]} />
       <Part geometry={unitSphere} material={maskMaterial} position={[-0.023, 0.185, 0.046]} scale={[0.017, 0.015, 0.008]} />
       <Part geometry={unitSphere} material={maskMaterial} position={[0.023, 0.185, 0.046]} scale={[0.017, 0.015, 0.008]} />
-      <EyeDots y={0.185} spread={0.023} z={0.051} />
-      <Part geometry={unitCone} material={goldTrimMaterial} position={[0, 0.275, -0.005]} scale={[0.02, 0.075, 0.02]} />
-      <Part geometry={unitCone} material={body} position={[-0.035, 0.25, -0.01]} rotation={[0, 0, 0.4]} scale={[0.014, 0.05, 0.014]} />
-      <Part geometry={unitCone} material={body} position={[0.035, 0.25, -0.01]} rotation={[0, 0, -0.4]} scale={[0.014, 0.05, 0.014]} />
-      <Part geometry={unitBox} material={body} position={[0, 0.0, -0.065]} rotation={[0.15, 0, 0]} scale={[0.13, 0.22, 0.01]} />
+      <EyeDots y={0.185} spread={0.023} z={0.052} />
+      <Part geometry={unitCone} material={goldTrimMaterial} position={[0, 0.28, -0.005]} scale={[0.022, 0.082, 0.022]} />
+      <Part geometry={unitCone} material={goldTrimMaterial} position={[-0.038, 0.255, -0.01]} rotation={[0, 0, 0.4]} scale={[0.015, 0.056, 0.015]} />
+      <Part geometry={unitCone} material={goldTrimMaterial} position={[0.038, 0.255, -0.01]} rotation={[0, 0, -0.4]} scale={[0.015, 0.056, 0.015]} />
+      <Part geometry={unitBox} material={obsidianMaterial} position={[0, 0.0, -0.066]} rotation={[0.15, 0, 0]} scale={[0.145, 0.24, 0.014]} />
     </group>
   );
 }
 
 function GuardianFigure({ body }: BodyParts) {
   return (
-    <group>
-      <HumanoidBase body={body} torsoScale={[1.22, 1.06, 1.22]} />
-      <EyeDots y={0.185} spread={0.021} z={0.054} />
-      <Part geometry={unitSphere} material={goldTrimMaterial} position={[-0.118, 0.1, 0]} scale={[0.028, 0.022, 0.028]} />
-      <Part geometry={unitSphere} material={goldTrimMaterial} position={[0.118, 0.1, 0]} scale={[0.028, 0.022, 0.028]} />
-      <Part geometry={unitTorus} material={glowDotMaterial} position={[0, 0.03, 0.06]} rotation={[Math.PI / 2, 0, 0]} scale={[0.026, 0.026, 0.01]} />
-      <Part geometry={unitCone} material={goldTrimMaterial} position={[0, 0.275, 0]} scale={[0.014, 0.085, 0.03]} />
+    <group scale={1.2}>
+      <HumanoidBase body={body} torsoScale={[1.24, 1.08, 1.24]} />
+      <Part geometry={unitBox} material={obsidianMaterial} position={[0, 0.035, 0.048]} scale={[0.12, 0.14, 0.028]} />
+      <EyeDots y={0.186} spread={0.022} z={0.055} />
+      <Part geometry={unitSphere} material={goldTrimMaterial} position={[-0.122, 0.105, 0]} scale={[0.032, 0.025, 0.032]} />
+      <Part geometry={unitSphere} material={goldTrimMaterial} position={[0.122, 0.105, 0]} scale={[0.032, 0.025, 0.032]} />
+      <Part geometry={unitTorus} material={glowDotMaterial} position={[0, 0.04, 0.066]} rotation={[Math.PI / 2, 0, 0]} scale={[0.03, 0.03, 0.012]} />
+      <Part geometry={unitCone} material={goldTrimMaterial} position={[0, 0.285, 0]} scale={[0.018, 0.095, 0.034]} />
+      <Part geometry={unitTorus} material={goldTrimMaterial} position={[0, 0.21, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[0.058, 0.058, 0.012]} />
     </group>
   );
 }
@@ -224,8 +234,9 @@ function GodCore({ id, body, wingRef }: { id: AgentId; body: THREE.Material; win
   }
 }
 
-/** Templo ceremonial maya escalonado con base de obsidiana, ribetes dorados,
- * estelas laterales en el templo central y halo holográfico cian/acento. */
+/** Templo ceremonial maya escalonado: basamentos rectangulares de obsidiana
+ * con cornisas doradas alineadas, escalinata ceremonial con alfardas doradas,
+ * estelas en las esquinas del templo central y sello holográfico superior. */
 function TemplePlatform({
   color,
   active,
@@ -239,47 +250,79 @@ function TemplePlatform({
   big: boolean;
   lowDetail: boolean;
 }) {
-  const scale = big ? 1.24 : 0.94;
+  const scale = big ? 1.2 : 0.92;
   const steps = big ? (lowDetail ? 4 : 5) : lowDetail ? 3 : 4;
-  const topY = (steps - 1) * 0.075;
-  const radii = Array.from({ length: steps }, (_, index) => 0.5 - index * (0.42 / (steps + 0.5)));
+  const stepH = 0.072;
+  const topY = (steps - 1) * stepH;
+  const widths = Array.from({ length: steps }, (_, index) => 0.78 - index * (0.44 / steps));
+
   return (
     <group scale={scale}>
-      {radii.map((radius, index) => (
-        <group key={radius} position={[0, index * 0.075, 0]}>
-          <mesh>
-            <cylinderGeometry args={[radius, radius * 1.14, 0.072, 4]} />
+      {widths.map((w, index) => (
+        <group key={w} position={[0, index * stepH, 0]}>
+          <mesh geometry={unitBox} scale={[w, stepH * 0.92, w]}>
             <meshStandardMaterial
-              color={index === 0 ? "#07131a" : "#0b202b"}
+              color={index % 2 === 0 ? "#07141d" : "#0b202d"}
               emissive={color}
-              emissiveIntensity={active ? 0.35 + index * 0.06 : 0.1}
-              metalness={0.45}
-              roughness={0.42}
+              emissiveIntensity={active ? 0.26 + index * 0.05 : 0.08}
+              metalness={0.5}
+              roughness={0.4}
             />
           </mesh>
-          {/* Moldura dorada en cada nivel ceremonial */}
-          <mesh position={[0, 0.036, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
-            <ringGeometry args={[radius * 0.96, radius * 1.01, 4]} />
-            <meshBasicMaterial color="#f4b942" transparent opacity={active || selected ? 0.65 : 0.25} side={THREE.DoubleSide} />
-          </mesh>
+          {/* Cornisa dorada perfectamente alineada con el basamento rectangular */}
+          <Part
+            geometry={unitBox}
+            material={goldTrimMaterial}
+            position={[0, stepH * 0.46, 0]}
+            scale={[w * 1.02, 0.008, w * 1.02]}
+          />
         </group>
       ))}
+
+      {/* Escalinatas ceremoniales mayas con alfardas doradas */}
+      {!lowDetail && (big ? [0, Math.PI / 2, Math.PI, -Math.PI / 2] : [0]).map((rot, i) => (
+        <group key={i} rotation={[0, rot, 0]}>
+          <Part
+            geometry={unitBox}
+            material={obsidianMaterial}
+            position={[0, topY * 0.48, 0.28]}
+            rotation={[-0.62, 0, 0]}
+            scale={[0.16, 0.03, topY * 1.45 + 0.14]}
+          />
+          <Part
+            geometry={unitBox}
+            material={goldTrimMaterial}
+            position={[-0.088, topY * 0.5, 0.28]}
+            rotation={[-0.62, 0, 0]}
+            scale={[0.016, 0.042, topY * 1.45 + 0.14]}
+          />
+          <Part
+            geometry={unitBox}
+            material={goldTrimMaterial}
+            position={[0.088, topY * 0.5, 0.28]}
+            rotation={[-0.62, 0, 0]}
+            scale={[0.016, 0.042, topY * 1.45 + 0.14]}
+          />
+        </group>
+      ))}
+
       {/* Estelas mayas en las cuatro esquinas del templo del Guardián */}
       {big && !lowDetail && [
-        [-0.42, -0.42],
-        [0.42, -0.42],
-        [-0.42, 0.42],
-        [0.42, 0.42],
+        [-0.41, -0.41],
+        [0.41, -0.41],
+        [-0.41, 0.41],
+        [0.41, 0.41],
       ].map(([px, pz], idx) => (
-        <group key={idx} position={[px, 0.11, pz]}>
-          <Part geometry={unitBox} material={obsidianMaterial} scale={[0.055, 0.22, 0.055]} />
-          <Part geometry={unitOcta} material={goldTrimMaterial} position={[0, 0.14, 0]} scale={[0.026, 0.032, 0.026]} />
+        <group key={idx} position={[px, 0.12, pz]}>
+          <Part geometry={unitBox} material={obsidianMaterial} scale={[0.055, 0.24, 0.055]} />
+          <Part geometry={unitOcta} material={goldTrimMaterial} position={[0, 0.15, 0]} scale={[0.028, 0.036, 0.028]} />
         </group>
       ))}
-      {/* Anillo energético en la cúspide */}
-      <mesh position={[0, topY + 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.12, 0.23, 8]} />
-        <meshBasicMaterial color={selected ? "#eafffb" : color} transparent opacity={selected ? 0.95 : active ? 0.85 : 0.32} blending={THREE.AdditiveBlending} depthWrite={false} />
+
+      {/* Sello holográfico en la cúspide */}
+      <mesh position={[0, topY + 0.044, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.11, 0.21, 16]} />
+        <meshBasicMaterial color={selected ? "#eafffb" : color} transparent opacity={selected ? 0.95 : active ? 0.85 : 0.36} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -456,9 +499,15 @@ function CameraRig({
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
   reducedMotion: boolean;
 }) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const targetVec = useMemo(() => new THREE.Vector3(), []);
   const camVec = useMemo(() => new THREE.Vector3(), []);
+  const cameraTransition = useRef(true);
+  const compact = size.width < 480;
+
+  useEffect(() => {
+    cameraTransition.current = true;
+  }, [selected, compact]);
 
   useFrame((_, delta) => {
     const controls = controlsRef.current;
@@ -466,14 +515,19 @@ function CameraRig({
     if (selected) {
       const [x, z] = LAYOUT[selected];
       targetVec.set(x, 0.15, z);
-      camVec.set(x * 0.75, 2.2, z + 2.45);
+      camVec.set(x * 0.75, compact ? 2.8 : 2.2, z + (compact ? 3.2 : 2.45));
     } else {
       targetVec.set(0, 0, 0);
-      camVec.set(0, 3.2, 4.35);
+      camVec.set(0, compact ? 4 : 3.2, compact ? 5.5 : 4.35);
     }
     const alpha = reducedMotion ? 1 : Math.min(1, delta * 4.5);
     controls.target.lerp(targetVec, alpha);
-    if (selected) camera.position.lerp(camVec, alpha * 0.5);
+    if (cameraTransition.current) {
+      camera.position.lerp(camVec, alpha * 0.5);
+      if (camera.position.distanceToSquared(camVec) < 0.0004 && controls.target.distanceToSquared(targetVec) < 0.0004) {
+        cameraTransition.current = false;
+      }
+    }
     controls.update();
   });
   return null;
@@ -539,7 +593,9 @@ function Scene({
           const [x, z] = LAYOUT[id];
           return (
             <group key={id} position={[x, 0, z]}>
-              <TemplePlatform color={AGENT_COLOR[id]} active={real} selected={selected === id} big={false} lowDetail={lowDetail} />
+              <group rotation={[0, Math.atan2(-x, -z), 0]}>
+                <TemplePlatform color={AGENT_COLOR[id]} active={real} selected={selected === id} big={false} lowDetail={lowDetail} />
+              </group>
               <GodFigure
                 id={id}
                 color={AGENT_COLOR[id]}
@@ -665,7 +721,7 @@ export default function GodsMap3D({
         <Canvas
           frameloop={active ? "always" : "never"}
           dpr={dprRangeFor(quality)}
-          gl={{ antialias: false, alpha: true, powerPreference: "high-performance" }}
+          gl={{ antialias: !lowDetail, alpha: true, powerPreference: "high-performance" }}
           camera={{ position: [0, 3.2, 4.35], fov: 40 }}
           onPointerMissed={() => setSelected(null)}
         >

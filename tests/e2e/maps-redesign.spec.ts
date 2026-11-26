@@ -27,15 +27,23 @@ test("Rediseño de Mapas: Mapa de Investigaciones (stats, leyenda, zoom, ES/EN) 
   const godsWrap = page.locator(".gods-map-3d-wrap");
   await expect(godsWrap).toBeVisible();
   await expect(page.locator(".gods-map-3d canvas")).toBeVisible();
-  await page.waitForTimeout(1400);
+  await godsWrap.scrollIntoViewIfNeeded();
+  await expect.poll(
+    async () => Number(await page.locator(".gods-map-3d").getAttribute("data-fps")),
+    { timeout: 10_000 },
+  ).toBeGreaterThan(0);
+  await page.waitForTimeout(1_100);
   const fps = await page.locator(".gods-map-3d").getAttribute("data-fps");
   console.info(`[MEASURED GodsMap3D FPS]: ${fps}`);
   expect(Number(fps)).toBeGreaterThan(0);
 
   await page.locator(".gods-map-pill", { hasText: "IXBALANQUÉ" }).click();
   await expect(page.locator(".gods-map-info")).toContainText("IXBALANQUÉ");
-  await godsWrap.screenshot({ path: path.join(SHOTS, "after-gods-map-3d-es.png") });
+  await page.waitForTimeout(1500);
+  await godsWrap.screenshot({ path: path.join(SHOTS, "after-gods-map-3d-closeup.png") });
   await page.getByRole("button", { name: /General|Overview/i }).click();
+  await page.waitForTimeout(2000);
+  await godsWrap.screenshot({ path: path.join(SHOTS, "after-gods-map-3d-es.png") });
 
   // 2do caso relacionado + 3er caso aislado
   await page.locator("#content").fill("Confirma entrega en http://envios-mx.validacion-paquete.example.com/confirmar");

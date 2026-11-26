@@ -72,18 +72,24 @@ async function assertCloudVerdictOrDocumentBotBlock(page: Page, label: string) {
   await expect(page.locator("#content")).toBeVisible();
 }
 
-async function openNewAnalysis(page: Page, langButtonName: RegExp) {
+/**
+ * Esta batería ejercita el botón "Analizar contenido"/"Analyse content", que
+ * solo adopta esa etiqueta cuando la nube está configurada (variables de
+ * Firebase presentes). Si este spec se ejecuta fuera de su contexto previsto
+ * (p. ej. arrastrado por `playwright.config.ts` contra un build local sin
+ * esas variables), `configured` nunca es true y el botón nunca aparece con
+ * ese nombre -- antes esto colgaba el test hasta el timeout en vez de
+ * omitirse con un motivo claro (mismo patrón ya usado en cloud-ai.spec.ts).
+ */
+async function openNewAnalysis(page: Page, langButtonName: RegExp): Promise<boolean> {
   await page.goto("/");
-  // App Check (reCAPTCHA Enterprise) necesita completar su propio intercambio
-  // antes de la primera llamada real a Gemini; sin esperarlo aquí, la llamada
-  // sale con un token aún no listo y Firebase la rechaza con 401 "App Check
-  // token is invalid" -- no es un fallo del backend, es una carrera de este
-  // propio test (mismo patrón que tests/e2e/cloud-ai.spec.ts).
-  await page
+  const cloudReady = await page
     .getByText(/Nube: configurada|Cloud: configured/i)
     .waitFor({ timeout: 25_000 })
-    .catch(() => {});
+    .then(() => true)
+    .catch(() => false);
   await page.getByRole("navigation").getByRole("button", { name: langButtonName }).click();
+  return cloudReady;
 }
 
 test("Producción ES: captura fraudulenta (OTP/liga) -> OCR, IA, evidencias, agentes y semáforo rojo/amarillo", async ({ page }) => {
@@ -91,7 +97,8 @@ test("Producción ES: captura fraudulenta (OTP/liga) -> OCR, IA, evidencias, age
   page.on("console", (msg) => {
     if (msg.type() === "error") console.log("[browser console.error]", msg.text());
   });
-  await openNewAnalysis(page, /Nuevo análisis/i);
+  const cloudReady = await openNewAnalysis(page, /Nuevo análisis/i);
+  test.skip(!cloudReady, "Nube no configurada en este entorno (fuera de producción): el botón de análisis no adopta su etiqueta esperada.");
 
   const consentBox = page.locator(".consent input[type='checkbox']").first();
   await consentBox.check();
@@ -121,10 +128,12 @@ test("Producción ES: captura fraudulenta (OTP/liga) -> OCR, IA, evidencias, age
 test("Producción EN: fraudulent screenshot (OTP/link) -> OCR, AI, evidence, agents and red/yellow verdict", async ({ page }) => {
   test.setTimeout(100_000);
   await page.goto("/");
-  await page
+  const cloudReady = await page
     .getByText(/Nube: configurada|Cloud: configured/i)
     .waitFor({ timeout: 25_000 })
-    .catch(() => {});
+    .then(() => true)
+    .catch(() => false);
+  test.skip(!cloudReady, "Nube no configurada en este entorno (fuera de producción): el botón de análisis no adopta su etiqueta esperada.");
   await page.locator("button.language").click();
   await page.getByRole("navigation").getByRole("button", { name: /New analysis/i }).click();
 
@@ -150,7 +159,8 @@ test("Producción EN: fraudulent screenshot (OTP/link) -> OCR, AI, evidence, age
 
 test("Producción: captura legítima (cita confirmada) nunca sube el riesgo por encima del verde/amarillo moderado", async ({ page }) => {
   test.setTimeout(100_000);
-  await openNewAnalysis(page, /Nuevo análisis/i);
+  const cloudReady = await openNewAnalysis(page, /Nuevo análisis/i);
+  test.skip(!cloudReady, "Nube no configurada en este entorno (fuera de producción): el botón de análisis no adopta su etiqueta esperada.");
   await page.locator(".consent input[type='checkbox']").first().check();
 
   const png = await synthScreenshotPng(page, [

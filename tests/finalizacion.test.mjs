@@ -34,6 +34,7 @@ import {
   maskSensitive,
   previewOf,
   PREVIEW_LIMIT,
+  remove,
   save,
   summarize,
 } from '../lib/history.ts';
@@ -192,6 +193,14 @@ test('el historial no crece sin límite y conserva lo más reciente primero', ()
   }
   assert.equal(entries.length, HISTORY_LIMIT);
   assert.equal(entries[0].id, `id-${HISTORY_LIMIT + 6}`);
+});
+
+test('remove borra una sola entrada por id y deja las demás intactas', () => {
+  const entries = [summarize(RESULTADO, 'a'), summarize(RESULTADO, 'b'), summarize(RESULTADO, 'c')];
+  const sinB = remove(entries, 'b');
+  assert.deepEqual(sinB.map((e) => e.id), ['a', 'c']);
+  // Un id que no existe no cambia nada ni lanza.
+  assert.deepEqual(remove(entries, 'no-existe').map((e) => e.id), ['a', 'b', 'c']);
 });
 
 /** `localStorage` de mentira, para probar sin navegador. */

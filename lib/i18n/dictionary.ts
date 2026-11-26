@@ -375,6 +375,7 @@ export const es = {
       "Se guarda en este navegador, en tu dispositivo. Nunca se envía a ningún servidor.",
     sessionNote: "Se conserva mientras esta pestaña esté abierta. Al cerrarla se pierde.",
     clear: "Borrar historial",
+    deleteOne: "Eliminar este análisis",
     consent:
       "Guardar el historial en este navegador para encontrarlo la próxima vez. Se almacena solo en tu dispositivo: fecha, tipo, semáforo, nivel, confianza, cobertura y las señales principales, más un fragmento corto del texto con todo número de cuatro o más dígitos enmascarado. Al desmarcar esta casilla se borra lo guardado.",
     emptyTitle: "Nada registrado todavía",
@@ -875,6 +876,7 @@ export const en: Dictionary = {
     storedNote: "Stored in this browser, on your device. Never sent to any server.",
     sessionNote: "Kept while this tab is open. Closing it loses the history.",
     clear: "Clear history",
+    deleteOne: "Delete this analysis",
     consent:
       "Keep the history in this browser so you find it next time. It is stored on your device only: date, type, traffic light, level, confidence, coverage and the main signals, plus a short text fragment with every run of four or more digits masked. Unticking this box deletes what was stored.",
     emptyTitle: "Nothing recorded yet",

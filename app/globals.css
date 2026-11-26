@@ -366,6 +366,8 @@
 .history-row.hist-amarillo { border-left-color: #d7a842; }
 .history-row.hist-verde { border-left-color: #43b584; }
 .history-row.hist-gris { border-left-color: #4d6366; }
+.history-row-delete { flex: 0 0 auto; align-self: flex-start; background: transparent; border: 1px solid #1f3236; border-radius: 4px; color: #9fb0b3; padding: 6px; cursor: pointer; display: flex; }
+.history-row-delete:hover, .history-row-delete:focus-visible { color: #c6485c; border-color: #c6485c; }
 .history-light { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: none; background: currentColor; }
 .hist-rojo .history-light { color: #e4596e; box-shadow: 0 0 9px #e4596e88; }
 .hist-amarillo .history-light { color: #e8bb55; box-shadow: 0 0 9px #e8bb5588; }

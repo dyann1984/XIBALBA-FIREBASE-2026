@@ -25,7 +25,7 @@ import { LANG_LABEL, LANG_TAG, type Lang } from "@/lib/i18n";
 import { Activity, ArrowDownLeft, ArrowRight, AudioLines, BookOpen, ChevronDown, CircleHelp, Clock3, Download, Eye, Fingerprint, FlaskConical, Globe2, GraduationCap, LayoutDashboard, Link2, LockKeyhole, Menu, MessageSquareText, Network, ScanLine, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, WalletCards, X } from "lucide-react";
 import { agents, type Agent } from "@/lib/agents";
 import demoData from "@/data/demo-cases.json";
-import { append as appendHistory, clear as clearStoredHistory, describeWhen, load as loadStoredHistory, save as saveStoredHistory, summarize, HISTORY_LIMIT, type HistoryEntry } from "@/lib/history";
+import { append as appendHistory, clear as clearStoredHistory, describeWhen, load as loadStoredHistory, remove as removeHistoryEntry, save as saveStoredHistory, summarize, HISTORY_LIMIT, type HistoryEntry } from "@/lib/history";
 import { extractUrls } from "@/lib/analysis/audit";
 import { localizeIndicator } from "@/lib/i18n/evidence";
 import { extractPhoneNumbers } from "@/lib/analysis/phone";
@@ -101,7 +101,7 @@ const TASK_LABEL: Record<string, { es: string; en: string }> = {
 };
 
 /** Una línea del historial. Muestra el resultado, no el contenido analizado. */
-function HistoryRow({ entry, t, lang }: { entry: HistoryEntry; t: Translate; lang: Lang }) {
+function HistoryRow({ entry, t, lang, onDelete }: { entry: HistoryEntry; t: Translate; lang: Lang; onDelete: (id: string) => void }) {
  const kindKey = KIND_KEY[entry.kind];
  return <li className={`history-row hist-${entry.light}`}>
   <span className="history-light" aria-hidden="true"/>
@@ -111,6 +111,7 @@ function HistoryRow({ entry, t, lang }: { entry: HistoryEntry; t: Translate; lan
    <p className="history-meta">{t("history", "meta", { signals: entry.signals, confidence: t("verdict", CONFIDENCE_KEY[entry.confidence]), run: entry.checksRun, total: entry.checksTotal })}{entry.hadAttachments ? ` · ${t("history", "withAttachments")}` : ""}{entry.agents.length ? ` · ${entry.agents.map(id => AGENT_NAMES[id] ?? id).join(" · ")}` : ""}</p>
    {entry.topSignals.length ? <p className="history-signals">{entry.topSignals.join(" · ")}</p> : null}
   </div>
+  <button type="button" className="history-row-delete" aria-label={t("history", "deleteOne")} title={t("history", "deleteOne")} onClick={() => onDelete(entry.id)}><Trash2 size={14}/></button>
  </li>;
 }
 
@@ -236,6 +237,7 @@ export default function Dashboard() {
   if (value) saveStoredHistory(store, history); else clearStoredHistory(store);
  };
  const forgetHistory = () => { setHistory([]); clearStoredHistory(browserStorage()); };
+ const forgetOne = (id: string) => { setHistory(previous => { const next = removeHistoryEntry(previous, id); if (keepHistory) saveStoredHistory(browserStorage(), next); return next; }); };
  const clearResult = () => { setOutcome(null); setError(""); setOcr(null); setOcrEdited(false); setStage(""); setEvents([]); setLabTab("evidence"); };
  // Corrección manual del OCR: la persona edita el texto reconocido sin volver
  // a tocar la imagen. `submitText` reutiliza este texto en vez de repetir el
@@ -405,7 +407,7 @@ export default function Dashboard() {
  <section className="hero lab-texture"><div className="hero-copy"><div className="hero-kicker"><span className="pulse"/> {t("home","heroKicker")}</div><h2>{t("home","heroTitle")}<br/><em>{t("home","heroTitleEm")}</em></h2><p>{t("home","heroText")}</p><button className="primary" onClick={() => go("analizar")}><ScanLine size={17}/> {t("home","heroCta")} <ArrowRight size={16}/></button><div className="hero-note"><LockKeyhole size={13}/> {t("home","heroNote")}</div></div><div className="hero-art"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><Image src="/xibalba-logo.jpg" alt="" width={330} height={235} priority/></div><div className="hero-index">01 / 05 <span>✦</span></div></section>
  <section className="panel quick-scan" aria-label={t("home","quickTitle")}><div className="quick-scan-head"><div className="eyebrow"><span/> {t("home","quickTitle")}</div><button type="button" className="text-link" onClick={() => setQuickInput(demoCases[0] ? demoText(demoCases[0]) : "")}><FlaskConical size={13}/> {t("home","quickSample")}</button></div><div className="quick-scan-row"><input type="text" value={quickInput} onChange={e => setQuickInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && quickInput.trim()) void runQuickScan(); }} placeholder={t("home","quickPlaceholder")} aria-label={t("home","quickPlaceholder")} /><button type="button" className="primary" disabled={!quickInput.trim() || busy} onClick={() => void runQuickScan()}><ScanLine size={16}/> {t("home","quickCta")}</button></div></section>
  <div className="section-title"><div><div className="eyebrow muted">{t("home","agentsEyebrow")}</div><h2>{t("home","agentsTitle")} <span>✦</span></h2><p>{t("home","agentsText")}</p></div><button className="text-link" onClick={() => go("agentes")}>{t("home","agentsCta")} <ArrowRight size={15}/></button></div><div className="agent-grid">{agentActivity.map(({ agent: a, count }, i) => {const Icon=icons[a.icon]; const text=agentText(a); return <button className="agent-card" key={a.id} onClick={() => {setSection("agentes");setSelected(a)}}><div className="agent-top"><div className={`agent-icon ${a.color}`}><Icon size={22}/></div>{count > 0 ? <span className="agent-activity-badge">{lang === "en" ? `${count}× this session` : `${count}× esta sesión`}</span> : <span>0{i+1}</span>}</div><h3>{a.name}</h3><div className="role">{text.role}</div><p>{text.description}</p><div className="card-link">{t("home","agentCardCta")} <ArrowRight size={14}/></div></button>})}</div>
- <div className="lower-grid"><section className="panel activity"><div className="panel-head"><div><div className="eyebrow muted">{t("home","activityEyebrow")}</div><h2>{t("home","activityTitle")}</h2></div><button className="text-link" onClick={()=>go("historial")}>{t("home","activityCta")} <ArrowRight size={14}/></button></div>{history.length ? <ul className="history-list compact">{history.slice(0,3).map(entry => <HistoryRow key={entry.id} entry={entry} t={t} lang={lang}/>)}</ul> : <div className="empty-row"><div className="empty-icon"><Clock3 size={20}/></div><div><strong>{t("home","emptyTitle")}</strong><p>{t("home","emptyText")}</p></div><ArrowRight size={17}/></div>}</section><section className="panel privacy-panel"><div className="privacy-icon"><Fingerprint size={25}/></div><div><div className="eyebrow muted">{t("home","privacyEyebrow")}</div><h2>{t("home","privacyTitle")}</h2><p>{t("home","privacyText")}</p><button className="text-link" onClick={()=>go("privacidad")}>{t("home","privacyCta")} <ArrowRight size={14}/></button></div></section></div></>}
+ <div className="lower-grid"><section className="panel activity"><div className="panel-head"><div><div className="eyebrow muted">{t("home","activityEyebrow")}</div><h2>{t("home","activityTitle")}</h2></div><button className="text-link" onClick={()=>go("historial")}>{t("home","activityCta")} <ArrowRight size={14}/></button></div>{history.length ? <ul className="history-list compact">{history.slice(0,3).map(entry => <HistoryRow key={entry.id} entry={entry} t={t} lang={lang} onDelete={forgetOne}/>)}</ul> : <div className="empty-row"><div className="empty-icon"><Clock3 size={20}/></div><div><strong>{t("home","emptyTitle")}</strong><p>{t("home","emptyText")}</p></div><ArrowRight size={17}/></div>}</section><section className="panel privacy-panel"><div className="privacy-icon"><Fingerprint size={25}/></div><div><div className="eyebrow muted">{t("home","privacyEyebrow")}</div><h2>{t("home","privacyTitle")}</h2><p>{t("home","privacyText")}</p><button className="text-link" onClick={()=>go("privacidad")}>{t("home","privacyCta")} <ArrowRight size={14}/></button></div></section></div></>}
  {section === "analizar" && <div className="inner-page"><div className="eyebrow"><span/> {t("analyze","eyebrow")}</div><h1>{t("analyze","title")} <em>{t("analyze","titleEm")}</em></h1><p className="lead">{t("analyze","lead")}</p>
 <div className="lab-tabs" role="tablist" aria-label={lang === "en" ? "Forensic lab areas" : "Áreas del laboratorio forense"}>
  <button type="button" role="tab" aria-selected={labTab === "evidence"} className={labTab === "evidence" ? "lab-tab active" : "lab-tab"} onClick={() => setLabTab("evidence")}>{lang === "en" ? "A · Evidence" : "A · Evidencia"}</button>
@@ -442,7 +444,7 @@ export default function Dashboard() {
     {(["", "rojo", "amarillo", "verde", "gris"] as const).map(light => <button key={light || "all"} type="button" className={historyLightFilter === light ? "history-filter-chip active" : "history-filter-chip"} onClick={() => setHistoryLightFilter(light)}>{light ? t("verdict", LIGHT_KEY[light]) : (lang === "en" ? "All" : "Todos")}</button>)}
    </div>
   </div>}
-  {history.length ? (filteredHistory.length ? <ul className="history-list">{filteredHistory.map(entry => <HistoryRow key={entry.id} entry={entry} t={t} lang={lang}/>)}</ul> : <p className="notice">{lang === "en" ? "No history entries match this filter." : "Ningún elemento del historial coincide con este filtro."}</p>)
+  {history.length ? (filteredHistory.length ? <ul className="history-list">{filteredHistory.map(entry => <HistoryRow key={entry.id} entry={entry} t={t} lang={lang} onDelete={forgetOne}/>)}</ul> : <p className="notice">{lang === "en" ? "No history entries match this filter." : "Ningún elemento del historial coincide con este filtro."}</p>)
    : <div className="empty-row"><div className="empty-icon"><Clock3 size={20}/></div><div><strong>{t("history","emptyTitle")}</strong><p>{t("history","emptyText")}</p></div><button className="text-link" onClick={()=>go("analizar")}>{t("history","emptyCta")} <ArrowRight size={15}/></button></div>}
   <p className="notice">{t("history","note")}</p></div></div>}
  {section === "mapa" && <div className="inner-page"><div className="eyebrow"><span/> {t("map","eyebrow")}</div><h1>{t("map","title")} <em>{t("map","titleEm")}</em></h1><p className="lead">{t("map","lead")}</p><div className="panel"><InvestigationMap history={history} lang={lang}/></div></div>}

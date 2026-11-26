@@ -148,6 +148,11 @@ export function append(entries: HistoryEntry[], entry: HistoryEntry): HistoryEnt
   return [entry, ...entries].slice(0, HISTORY_LIMIT);
 }
 
+/** Quita una sola entrada por `id`. El borrado completo sigue siendo `clear`. */
+export function remove(entries: HistoryEntry[], id: string): HistoryEntry[] {
+  return entries.filter((entry) => entry.id !== id);
+}
+
 const LIGHTS = new Set<string>(['verde', 'amarillo', 'rojo', 'gris']);
 const LEVELS = new Set<string>(['bajo', 'medio', 'alto', 'no concluyente']);
 const CONFIDENCES = new Set<string>(['alta', 'media', 'baja']);

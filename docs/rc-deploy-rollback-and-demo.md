@@ -26,9 +26,9 @@
 
 ## 3. Procedimiento de Rollback en Producción
 
-- **Despliegue de Producción estable actual (referencia de reversión):** `dpl_DPhRM4ZpRTAySg2SzfFHbE5Dzcio` (`https://xibalba-firebase-2026.vercel.app`, rama `release/xibalba-2.0`, commit `c0861ef`).
-- **Rollback inmediato vía Vercel CLI:**
+- **Nota (26/11/2026):** producción fue actualizada fuera de este flujo documentado (`vercel deploy --prod` directo, sin PR) a `dpl_3XMTrXp2P2bU8XwwMvaHJW1fUM9X`, build de `release/xibalba-2.0-rc@7f7ac68` (verificado en vivo: App Check + Gemini funcionando en ES/EN). La referencia `dpl_DPhRM4ZpRTAySg2SzfFHbE5Dzcio` (commit `c0861ef`) queda obsoleta como objetivo de rollback inmediato porque es anterior a correcciones ya validadas; antes de usarla, confirmar con `vercel.cmd ls` cuál es el despliegue previo real inmediatamente anterior al actual.
+- **Rollback inmediato vía Vercel CLI (requiere autorización expresa):**
   ```powershell
-  vercel.cmd rollback dpl_DPhRM4ZpRTAySg2SzfFHbE5Dzcio --yes
+  vercel.cmd rollback <deployment-id-previo> --yes
   ```
 - **Verificación post-rollback:** Confirmar estado `READY` en `vercel.cmd ls` y respuesta `HTTP 200` en `https://xibalba-firebase-2026.vercel.app`.

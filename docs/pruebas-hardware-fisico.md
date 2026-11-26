@@ -2,6 +2,17 @@
 
 Esta guía cubre las capacidades que **no pueden validarse de forma concluyente con emulación ni stubs** y requieren ejecución en un teléfono o equipo físico con sensores reales.
 
+**Tiempo estimado: ~10 minutos** (computadora + teléfono). Hazla en
+`https://xibalba-firebase-2026.vercel.app` (producción real, no Preview).
+
+**Cómo reportar un error:** para cada paso que falle, anota (1) el número de
+sección, (2) qué esperabas vs. qué pasó realmente, (3) navegador y sistema
+operativo exactos, y (4) si es posible, abre las herramientas de desarrollo
+del navegador (F12 → Consola) y copia cualquier línea en rojo. No se
+necesita más que eso — no compartas capturas con datos personales reales;
+usa siempre contenido sintético (`example.com`, montos y nombres
+inventados).
+
 ## 1. Micrófono y dictado al Guardián
 1. Abrir la aplicación en Chrome/Edge (escritorio o Android) o Safari (iOS).
 2. Ejecutar un análisis (ej. primer caso de demostración).
@@ -26,3 +37,49 @@ Esta guía cubre las capacidades que **no pueden validarse de forma concluyente 
 3. En Android, abrir un SMS o enlace de prueba (`https://example.com`), pulsar **Compartir** y elegir **XIBALBÁ**.
 4. **Criterio de aceptación:** La PWA se abre en modo `standalone`, precarga el laboratorio con el texto/enlace compartido y limpia los parámetros de la URL sin enviar nada automáticamente sin consentimiento.
 5. **Nota iOS/Safari:** iOS Safari soporta añadir a pantalla de inicio, pero **no** soporta `share_target` de PWA de forma nativa; en iOS debe usarse el flujo manual de copiar y pegar.
+
+## 5. Análisis de una imagen real con IA en la nube (lo único que la automatización no pudo probar)
+
+Esta es la pieza que una batería automatizada (Playwright headless) no puede
+verificar en producción: reCAPTCHA Enterprise bloquea correctamente ese
+tráfico por parecer un bot, así que la interpretación real de Gemini sobre
+una imagen necesita, por diseño de seguridad, un navegador humano.
+
+1. Toma o descarga una captura de pantalla **sintética** (invéntala tú mismo:
+   un mensaje de texto con un enlace a `example.com` y un monto inventado).
+   No uses una captura real con datos de otra persona.
+2. Abre `https://xibalba-firebase-2026.vercel.app` en un navegador normal
+   (no en modo incógnito con bloqueador de terceros agresivo).
+3. **Nuevo análisis** → marca la casilla de consentimiento de nube → **Añadir
+   imagen** → selecciona la captura.
+4. Pulsa **Analizar contenido**.
+5. **Resultado esperado:** aparece "OCR" con el texto reconocido (o la nota
+   de que no se reconoció y puedes corregirlo a mano), y bajo "Interpretación
+   de IA" aparece **Motor: NUBE** con una lectura del modelo — no "SIN
+   VERIFICAR" ni un error de App Check.
+6. **Cómo reportar:** si el motor se queda en "SIN VERIFICAR" o aparece un
+   error, abre la consola del navegador (F12) y copia el texto exacto del
+   error (suele empezar con `[xibalba] interpretación de IA falló:`).
+
+## 6. Funcionamiento sin conexión
+
+1. Con la aplicación ya abierta una vez (para que el *service worker* se
+   registre), activa el modo avión o desconecta la red.
+2. Recarga la página.
+3. **Resultado esperado:** la aplicación sigue abriendo (no "sin conexión" en
+   blanco de Chrome) y puedes ejecutar **Auditar solo en este dispositivo**
+   con un caso de demostración; el botón que requiere la nube debe
+   indicar claramente que no hay conexión, no fallar en silencio.
+
+## 7. Interacción con los mapas 3D
+
+1. Ejecuta cualquier análisis y entra a la **Mesa de Investigación**
+   (mapa ceremonial de los 5 agentes) o a **Mapa de relaciones**.
+2. En el mapa ceremonial: toca un templo distinto a "General" y confirma que
+   la cámara se mueve con una animación suave hacia ese agente, mostrando su
+   nombre y duración real en ms; vuelve a "General" y confirma que regresa.
+3. En el mapa de relaciones: usa dos dedos (teléfono) o la rueda del mouse
+   (escritorio) para hacer zoom, y arrastra para desplazarte (pan).
+4. **Resultado esperado:** ambos mapas responden sin saltos bruscos ni
+   errores en consola; en un teléfono de gama media, el framerate puede bajar
+   pero no debe congelarse por completo.

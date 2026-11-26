@@ -120,3 +120,49 @@ test("IA en la nube en inglés y recuperación limpia si se revoca el consentimi
   await page.locator(".consent input[type='checkbox']").first().uncheck();
   await expect(page.getByRole("button", { name: /Audit on this device only/i })).toBeVisible();
 });
+
+test("IA en la nube real con captura de pantalla sintética (OCR + Gemini) y medición de latencia", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  const cloudReady = await page
+    .getByText(/Nube: configurada|Cloud: configured/i)
+    .waitFor({ timeout: 25_000 })
+    .then(() => true)
+    .catch(() => false);
+  test.skip(!cloudReady, "App Check no entregó un token de depuración en 25s (sin red o sin cuota disponible ahora mismo).");
+
+  await page.locator("button.language").click();
+  await page.getByRole("navigation").getByRole("button", { name: /New analysis/i }).click();
+  await page.locator(".consent input[type='checkbox']").first().check();
+
+  // Genera una captura PNG sintética con texto fraudulento en inglés
+  const pngBuffer = await page.evaluate(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 720;
+    canvas.height = 240;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#111111";
+    ctx.font = "bold 28px Arial";
+    ctx.fillText("BANK ALERT: Account suspended in 2 hours.", 24, 80);
+    ctx.fillText("Verify OTP now at https://bbva.alert.example.com/login", 24, 140);
+    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+    return Array.from(new Uint8Array(await blob.arrayBuffer()));
+  });
+
+  await page.locator("#photo").setInputFiles({
+    name: "phishing-en-screenshot.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(pngBuffer),
+  });
+
+  const startedAt = Date.now();
+  await page.getByRole("button", { name: /Analyse content/i }).click();
+  await expect(page.getByRole("button", { name: /Analyse content/i })).toBeEnabled({ timeout: 75_000 });
+  const elapsedMs = Date.now() - startedAt;
+  console.info(`[CLOUD AI IMAGE+OCR LATENCY]: ${elapsedMs} ms`);
+
+  await expect(page.locator(".inference b")).toContainText(/CLOUD/i);
+  await expect(page.locator(".verdict-rojo, .verdict-amarillo").first()).toBeVisible({ timeout: 15_000 });
+});

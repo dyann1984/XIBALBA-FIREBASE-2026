@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { describeAgents, errorKey, type AnalysisResult } from "@/lib/analysis/analyze";
+import { DEFAULT_AI_TIMEOUT_MS, describeAgents, errorKey, withTimeout, type AnalysisResult } from "@/lib/analysis/analyze";
 import { VERIFIED_CLASSES } from "@/lib/analysis/risk";
 import { useI18n } from "@/components/LanguageProvider";
 import { localizeIndicator, localizePending } from "@/lib/i18n/evidence";
@@ -111,8 +111,15 @@ export default function Guardian({
   const micTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setSttSupported(Boolean(getSpeechRecognitionCtor()));
-    setTtsSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setSttSupported(Boolean(getSpeechRecognitionCtor()));
+      setTtsSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const light = outcome?.risk.light ?? "gris";
@@ -169,8 +176,15 @@ export default function Guardian({
   }, [lang, outcome, t]);
 
   useEffect(() => {
-    setTurns([]);
-    setQuestion("");
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setTurns([]);
+      setQuestion("");
+    });
+    return () => {
+      active = false;
+    };
   }, [outcome]);
 
   // Selección de voz TTS según idioma actual (es-MX / en-US).
@@ -308,7 +322,13 @@ export default function Guardian({
       .filter((i) => i.status === "sospechoso")
       .slice(0, 3)
       .map((i) => localizeIndicator(i, lang));
-    if (/primer|first|revis|check|señal|signal/i.test(asked) && suspicious.length) {
+    if (/agent|agente|quien|who|particip/i.test(asked)) {
+      const names = describeAgents(outcome.contributing.length ? outcome.contributing : outcome.selection.agents);
+      return lang === "en"
+        ? `Active agents in this analysis: ${names}. Detected ${suspicious.length} suspicious signal(s).`
+        : `Agentes activos en este análisis: ${names}. Se detectaron ${suspicious.length} señal(es) sospechosa(s).`;
+    }
+    if (/hacer|paso|step|sos|ayuda|help|revis|first|primer|señal|signal/i.test(asked) && suspicious.length) {
       const first = suspicious[0];
       return lang === "en"
         ? `Start by reviewing “${first.indicator}”: ${first.evidence} Recommendation: ${first.recommendation}`
@@ -378,7 +398,7 @@ export default function Guardian({
           : []),
         `<pregunta_no_confiable>\n${JSON.stringify(asked)}\n</pregunta_no_confiable>`,
       ].join("\n");
-      const response = await model.generateContent(prompt);
+      const response = await withTimeout(model.generateContent(prompt), DEFAULT_AI_TIMEOUT_MS);
       const text = response.response.text();
       setTurns((previous) => [
         ...previous,
@@ -396,14 +416,19 @@ export default function Guardian({
       setQuestion("");
       speak(text);
     } catch (e) {
+      const fallback = buildLocalReply(asked);
+      const errNote = t("guardian", "answerFailed", { error: t("errors", errorKey(e)) });
+      const combined = `${errNote} ${fallback}`;
       setTurns((previous) => [
         ...previous,
         {
           question: asked,
-          answer: t("guardian", "answerFailed", { error: t("errors", errorKey(e)) }),
-          source: "",
+          answer: combined,
+          source: t("guardian", "sourceLocal"),
         },
       ]);
+      setQuestion("");
+      speak(fallback);
     } finally {
       setAsking(false);
     }

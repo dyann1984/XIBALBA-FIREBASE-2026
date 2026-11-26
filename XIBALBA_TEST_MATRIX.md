@@ -1,14 +1,17 @@
 # Matriz de pruebas — revisión del 25 de noviembre de 2026
 
-## Actualización — 26 de noviembre de 2026 (candidato `b415ae8`)
+## Actualización — 26 de noviembre de 2026 (candidato definitivo `08001ee`)
 
-Sobre el commit candidato de cierre, sin repetir lo ya verificado abajo:
+Sobre el commit candidato de cierre, sin repetir lo ya verificado abajo.
+`08001ee` es solo un fix de robustez del arnés de pruebas (ver fila de
+`production-image-analysis.spec.ts` más abajo); no toca producto.
 
 | Verificación | Estado | Evidencia exacta |
 | --- | --- | --- |
 | TypeScript / ESLint / build (Node `v24.22.3`) | **PASS** | `tsc --noEmit` 0 errores · `eslint .` 0 errores · `next build` compiló 7 páginas/6 rutas. |
 | Pruebas unitarias e integración | **PASS** | **240/240** (antes `237/237`; +3 por el fix de prompt injection y el borrado individual de historial). |
 | Análisis de imágenes contra producción real (`setInputFiles`, no localhost) | **PASS** | `5/5` en `tests/e2e/production-image-analysis.spec.ts` (ES/EN fraudulento, legítimo, archivo incompatible, archivo >4MB). |
+| Regresión local completa (`playwright.config.ts`, sin nube configurada) | **PASS** | `46 passed`, `3 skipped` (`cloud-ai.spec.ts`) + ahora `3 skipped` adicionales en `production-image-analysis.spec.ts` (se omiten con motivo explícito en vez de colgar 100s cada uno: ese spec depende de variables de Firebase que no existen en el build local), `0 failed`. |
 | Inferencia real de Gemini sobre imágenes en producción, bajo automatización headless | **BLOCKED (por diseño, no es un defecto)** | reCAPTCHA Enterprise rechaza el tráfico automatizado (401); reproducido igual con solo texto. Verificación humana pendiente: [`docs/pruebas-hardware-fisico.md`](docs/pruebas-hardware-fisico.md) §5. |
 | CSP `connect-src` con `blob:` (OCR nativo del navegador) | **FIXED** | `tests/e2e/csp.spec.ts` actualizado; no desplegado a producción todavía. |
 | Borrado individual del historial | **FIXED** | Prueba unitaria en `tests/finalizacion.test.mjs` + verificación manual en navegador. |

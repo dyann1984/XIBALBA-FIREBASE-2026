@@ -1,9 +1,14 @@
 # XIBALBÁ 2.0 — Informe consolidado final
 
-**Commit definitivo validado:** `a25d620`
+**Commit definitivo validado:** `08001ee`
 **Rama:** `release/xibalba-2.0-rc` (publicada en GitHub, fast-forward, sin force-push)
 **Producción (sin cambios):** `https://xibalba-firebase-2026.vercel.app`
-**URL Preview:** no se creó ninguna en esta sesión (ver sección 6).
+**URL Preview:** `dpl_EtNqzwZwsoxTECQJkFh6t553cHjX` — ver sección 6.
+
+Commits posteriores a `a25d620` ya incluidos en este cierre: `2783ff9`,
+`b415ae8`, `275cfe0` (de la sesión anterior, documentación) y `08001ee`
+(este turno: ver sección 2, punto 5). Ver [`XIBALBA_TEST_MATRIX.md`](XIBALBA_TEST_MATRIX.md)
+para el detalle fila por fila más reciente.
 
 ---
 
@@ -37,6 +42,12 @@
 2. `8a35243` — Borrado individual del historial.
 3. `2783ff9` — Fix de prompt injection (delimitador falsificable).
 4. `a25d620` — Material de jueces (EN, arquitectura, Q&A) y guía física ampliada.
+5. `08001ee` — Fix de robustez en `tests/e2e/production-image-analysis.spec.ts`:
+   los 3 tests que dependen del botón "Analizar contenido"/"Analyse content"
+   ahora se omiten con motivo explícito (`test.skip`) cuando la nube no está
+   configurada, en vez de colgar 100s cada uno al correr dentro de la
+   regresión local general. No cambia nada del producto; `tsc --noEmit`,
+   `eslint .` y `240/240` pruebas unitarias siguen en verde.
 
 Todos publicados en `release/xibalba-2.0-rc` en GitHub. Ninguno tocó producción.
 
@@ -72,25 +83,30 @@ Todos publicados en `release/xibalba-2.0-rc` en GitHub. Ninguno tocó producció
    completo, incluida la sección 5 (imagen real con IA en la nube desde un
    navegador humano) — es la única pieza que la automatización no puede
    certificar por diseño de seguridad (anti-bot).
-2. **Revisar y, si estás de acuerdo, autorizar:**
-   - Crear un Preview actualizado en Vercel desde `a25d620`.
-   - Promover a producción (`vercel deploy --prod`) — **solo si decides
-     hacerlo**; no se tocó producción en esta sesión.
-   - Crear el tag `v2.0.0` sobre el commit `a25d620` (o el que definas como
-     definitivo, si hay más commits de la otra sesión en paralelo que
-     quieras incluir primero).
-3. **Consolidar con la otra sesión en paralelo:** hay archivos de capturas sin
-   commitear en `artifacts/` que no generé yo (ver sección 4). Antes de
-   taguear, conviene confirmar si esa sesión ya terminó y si su trabajo debe
-   incorporarse al mismo commit definitivo.
+2. **Revisar y, si estás de acuerdo, autorizar** (ninguna se ejecutó sin tu
+   autorización expresa, según lo pedido):
+   - Promover a producción el commit `08001ee` (`vercel deploy --prod`), o
+     generar primero un Preview fresco desde ese commit si prefieres
+     revisarlo antes.
+   - Crear el tag `v2.0.0` sobre `08001ee`.
+   - Crear el GitHub Release correspondiente al tag.
+3. **Consolidar con la otra sesión en paralelo:** al cierre de este turno
+   siguen apareciendo como modificados (sin commitear por mí) varios archivos
+   de capturas en `artifacts/` (p. ej. `artifacts/xibalba-2.0/*.png`,
+   `artifacts/xibalba-3-phase2/*.png`, `artifacts/xibalba-global-defense/*.png`,
+   entre otros) — son binarios de otra sesión en paralelo, no se tocaron ni se
+   incluyeron en `08001ee`. Antes de taguear, confirma si esa sesión ya
+   terminó y si esas capturas deben entrar al mismo commit definitivo.
 
 ---
 
 ## 6. Preparación para publicación oficial
 
-El commit `a25d620` está verificado (typecheck, lint, 240/240 pruebas,
-`npm audit` limpio, E2E de producción con imágenes reales) y publicado en
-GitHub. Está **listo para que tú decidas** el siguiente paso: generar Preview,
-promover a producción, y/o crear el tag `v2.0.0` — ninguna de esas tres
-acciones se ejecutó de forma autónoma, conforme a la restricción explícita de
-no modificar producción ni taguear sin tu autorización expresa.
+El commit `08001ee` está verificado (`tsc --noEmit` 0 errores, `eslint .` 0
+errores, `240/240` pruebas unitarias, `npm audit` limpio, regresión E2E local
+46 passed/6 skipped/0 failed, y antes de este fix de arnés la batería de
+producción real ya dio `5/5`) y publicado en GitHub (fast-forward, sin
+force-push). Está **listo para que tú decidas** el siguiente paso: promover a
+producción, crear el tag `v2.0.0` y/o crear el GitHub Release — ninguna de
+esas tres acciones se ejecutó de forma autónoma, conforme a la restricción
+explícita de no modificar producción ni taguear sin tu autorización expresa.

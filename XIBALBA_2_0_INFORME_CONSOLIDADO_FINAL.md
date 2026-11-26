@@ -102,11 +102,19 @@ Todos publicados en `release/xibalba-2.0-rc` en GitHub. Ninguno tocó producció
 
 ## 6. Preparación para publicación oficial
 
-El commit `08001ee` está verificado (`tsc --noEmit` 0 errores, `eslint .` 0
+## 7. Publicación oficial realizada (con tu autorización expresa)
+
+| Acción | Resultado |
+|---|---|
+| Deployment candidato probado como Preview | `dpl_FSv3NVVUuCAfg13D8o9Bc6cuSCut`, build verificado (CSP `connect-src` con `blob:` confirmado en cabeceras reales, `200 OK`). |
+| Deployment anterior conservado para rollback | `dpl_3XMTrXp2P2bU8XwwMvaHJW1fUM9X` — `https://xibalba-firebase-2026-pisvlc8j1-dyann1984s-projects.vercel.app`. |
+| Promoción a producción | `vercel promote` del Preview ya verificado (sin rebuild) → `dpl_3jQoC4Fa6MQDcENUk5DjtDnpwu1D`, alias `https://xibalba-firebase-2026.vercel.app` confirmado `200 OK`, sin autenticación de Vercel. |
+| E2E real contra producción, tras promover | **5/5** en `tests/e2e/production-image-analysis.spec.ts` (ES/EN fraudulento, legítima, incompatible, >4MB). Inferencia de Gemini bajo automatización headless sigue bloqueada por reCAPTCHA Enterprise (401), comportamiento ya documentado como anti-abuso correcto, no un defecto. |
+| Tag | `v2.0.0` sobre el commit `194da7e`, publicado en GitHub. |
+| GitHub Release | https://github.com/dyann1984/XIBALBA-FIREBASE-2026/releases/tag/v2.0.0 |
+
+El commit `194da7e` quedó verificado (`tsc --noEmit` 0 errores, `eslint .` 0
 errores, `240/240` pruebas unitarias, `npm audit` limpio, regresión E2E local
-46 passed/6 skipped/0 failed, y antes de este fix de arnés la batería de
-producción real ya dio `5/5`) y publicado en GitHub (fast-forward, sin
-force-push). Está **listo para que tú decidas** el siguiente paso: promover a
-producción, crear el tag `v2.0.0` y/o crear el GitHub Release — ninguna de
-esas tres acciones se ejecutó de forma autónoma, conforme a la restricción
-explícita de no modificar producción ni taguear sin tu autorización expresa.
+46 passed/6 skipped/0 failed) antes de promoverlo. No se declaró aprobada
+ninguna prueba física (micrófono, cámara, bocinas, PWA): siguen **NOT
+TESTED** hasta que las ejecutes tú con `docs/pruebas-hardware-fisico.md`.

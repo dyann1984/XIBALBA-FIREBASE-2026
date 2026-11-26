@@ -75,7 +75,18 @@ const csp = [
   // en "No disponible" pese a que App Check y la llamada en la nube ya
   // funcionaban. No amplía a qué host puede hablar la página: el dato ya
   // vive en memoria del propio navegador: no sale a ningún servidor.
-  `connect-src 'self' data: https://www.google.com ${FIREBASE_ENDPOINTS.join(" ")}`,
+  //
+  // `blob:` aquí (no solo en `img-src`/`media-src`): el detector de texto
+  // nativo del navegador (`TextDetector`, OCR sin IA en `images.ts`) hace
+  // `fetch(image.previewUrl)` sobre la URL de objeto local (`blob:`) para
+  // obtener el bitmap a inspeccionar. Sin `blob:` en `connect-src`, esa
+  // lectura la bloquea el propio navegador con un error de CSP — confirmado
+  // en vivo en producción el 2026-11-26 con `setInputFiles` real: el OCR
+  // nativo nunca llegaba a intentarlo y caía siempre al OCR WASM (Tesseract),
+  // más lento, sin que hubiera ninguna razón real para descartar el nativo
+  // cuando el navegador sí lo ofrece. El dato no sale del dispositivo: sigue
+  // siendo una URL de objeto generada localmente.
+  `connect-src 'self' data: blob: https://www.google.com ${FIREBASE_ENDPOINTS.join(" ")}`,
   // reCAPTCHA Enterprise, proveedor de App Check.
   "frame-src https://www.google.com https://recaptcha.google.com",
   "worker-src 'self' blob:",

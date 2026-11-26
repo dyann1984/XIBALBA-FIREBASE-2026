@@ -14,7 +14,15 @@ import { test, expect } from "@playwright/test";
 //      bloquea esa llamada con "Failed to fetch" y la interpretación de IA
 //      queda en "No disponible" (encontrado y corregido el 21 de noviembre
 //      de 2026, probando un análisis real con imagen en la Preview).
-//   3. La política sigue siendo una lista cerrada de orígenes concretos: ni
+//   3. `connect-src` permite `blob:` — el detector de texto nativo del
+//      navegador (`TextDetector`, OCR sin IA en `lib/analysis/images.ts`)
+//      hace `fetch()` sobre la URL de objeto local de la imagen adjunta para
+//      leer su bitmap; sin `blob:` aquí esa lectura la bloquea el propio
+//      navegador con un error de CSP y el OCR nativo nunca se intenta,
+//      aunque el navegador lo ofrezca (encontrado y corregido el 26 de
+//      noviembre de 2026, probando un análisis real con imagen en
+//      producción mediante `setInputFiles`).
+//   4. La política sigue siendo una lista cerrada de orígenes concretos: ni
 //      comodín (`*`), ni `'unsafe-eval'` fuera de desarrollo, ni ningún
 //      origen fuera de los que el proyecto documenta y necesita.
 
@@ -27,6 +35,7 @@ function directive(csp: string, name: string): string[] {
 const EXPECTED_CONNECT_ORIGINS = [
   "'self'",
   "data:",
+  "blob:",
   "https://www.google.com",
   "https://firebaseappcheck.googleapis.com",
   "https://content-firebaseappcheck.googleapis.com",
@@ -57,7 +66,7 @@ test("CSP: connect-src permite reCAPTCHA Enterprise y sigue siendo una lista cer
   // (sin subdominio) que abriría cualquier servicio de Google, no solo los
   // que este proyecto usa de verdad.
   for (const origin of connectSrc) {
-    if (origin === "'self'" || origin === "data:") continue;
+    if (origin === "'self'" || origin === "data:" || origin === "blob:") continue;
     expect(origin.startsWith("https://"), `${origin} debe ser HTTPS explícito`).toBe(true);
   }
 

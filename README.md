@@ -6,12 +6,16 @@ Proyecto independiente para **#BuildHybridAI 2026**.
 > ### ▶ Pruébalo: <https://xibalba-firebase-2026.vercel.app>
 >
 > Sin instalar nada y sin registrarse. El recorrido de evaluación, con qué
-> mirar en cada pantalla, está en **[`docs/jueces.md`](docs/jueces.md)**.
+> mirar en cada pantalla, está en **[`docs/jueces.md`](docs/jueces.md)**; el
+> material completo para jueces (guion de 3 min ES/EN, arquitectura, Q&A y
+> limitaciones) está en
+> **[`docs/material-jueces-final.md`](docs/material-jueces-final.md)**.
 >
-> La aplicación muestra «IA · SIN CONFIGURAR» a propósito: la clave de App Check
-> no está cargada en el despliegue, así que la interpretación de IA no se activa
-> y se dice en pantalla en lugar de disimularlo. Lo que funciona —y es la mayor
-> parte— es la auditoría determinista, entera en tu dispositivo.
+> La auditoría determinista se ejecuta siempre en el dispositivo. En este
+> despliegue, App Check y Firebase AI Logic ya están configurados: con tu
+> consentimiento explícito, la interpretación de IA (Gemini) también se activa
+> — nunca puede rebajar un veredicto que el motor determinista ya calificó de
+> riesgo alto.
 
 XIBALBÁ analiza un mensaje, un enlace, una transcripción de llamada o una
 solicitud de dinero y responde con un semáforo, la evidencia que lo sostiene y
@@ -38,7 +42,9 @@ Abre <http://localhost:3000>. **La aplicación funciona sin configurar Firebase*
 sin claves se ejecuta la auditoría local completa y la interfaz lo dice
 («IA · SIN CONFIGURAR»). Para habilitar la interpretación de IA, rellena
 `.env.local` con los datos de tu proyecto de Firebase; cada variable está
-explicada en [`.env.example`](.env.example).
+explicada en [`.env.example`](.env.example). El despliegue público de
+producción ya tiene esas variables configuradas (ver
+[`docs/app-check.md`](docs/app-check.md)).
 
 Verificaciones:
 
@@ -50,14 +56,16 @@ npm run build
 
 ## Demostración
 
-La sección **Nuevo análisis** trae seis casos de demostración cargables con un
-clic ([`data/demo-cases.json`](data/demo-cases.json)). Todo en ellos es
-inventado: las CLABE se construyeron con su dígito verificador a partir de
-dígitos de relleno, la tarjeta es el número público de prueba y los dominios
-usan `example.com`, reservado para documentación. Uno de los casos es un
-**control negativo**: un mensaje normal que la herramienta no pinta de rojo.
+La sección **Nuevo análisis** trae ocho casos de demostración bilingües
+cargables con un clic ([`data/demo-cases.json`](data/demo-cases.json)). Todo en
+ellos es inventado: las CLABE se construyeron con su dígito verificador a
+partir de dígitos de relleno, la tarjeta es el número público de prueba y los
+dominios usan `example.com`, reservado para documentación. Uno de los casos es
+un **control negativo**: un mensaje normal que la herramienta no pinta de rojo.
 
-El guion de la demostración está en [`docs/guion-video.md`](docs/guion-video.md).
+El guion de demostración de 3 minutos (ES/EN) para jueces está en
+[`docs/material-jueces-final.md`](docs/material-jueces-final.md) y
+[`docs/demo-3min-jueces.md`](docs/demo-3min-jueces.md).
 
 ## Qué hay dentro
 
@@ -70,7 +78,7 @@ El guion de la demostración está en [`docs/guion-video.md`](docs/guion-video.m
 | `lib/security/` | Verificación real de los tokens de Firebase App Check |
 | `lib/history.ts` | Historial local: guarda el resultado, nunca el contenido |
 | `data/` | Catálogo RDAP y casos de demostración |
-| `tests/` | 175 pruebas con `node --test` |
+| `tests/` | 240 pruebas con `node --test` + batería E2E con Playwright |
 
 Los cinco agentes —CAMAZOTZ (llamadas), IXBALANQUÉ (mensajes), VUCUB CAMÉ
 (dinero), HUN CAMÉ (enlaces) y EL GUARDIÁN (coordinación)— están descritos con
@@ -97,21 +105,21 @@ credencial al repositorio.
 
 | Documento | De qué trata |
 |---|---|
-| [`docs/jueces.md`](docs/jueces.md) | Recorrido de evaluación para el jurado |
-| [`docs/integracion-release-2026.md`](docs/integracion-release-2026.md) | Cómo se integraron las dos ramas de finalización |
-| [`docs/auditoria-finalizacion.md`](docs/auditoria-finalizacion.md) | Matriz de funcionalidades con su estado real |
+| [`XIBALBA_2_0_INFORME_CONSOLIDADO_FINAL.md`](XIBALBA_2_0_INFORME_CONSOLIDADO_FINAL.md) | Estado real más reciente: PASS/FAIL/BLOCKED/NOT TESTED por área |
+| [`docs/jueces.md`](docs/jueces.md) | Recorrido de evaluación autoguiado para el jurado |
+| [`docs/material-jueces-final.md`](docs/material-jueces-final.md) | Guion 3 min ES/EN, arquitectura, agentes, diferenciadores, Q&A y limitaciones |
+| [`docs/demo-3min-jueces.md`](docs/demo-3min-jueces.md) | Guion minuto a minuto en español |
+| [`docs/rc-deploy-rollback-and-demo.md`](docs/rc-deploy-rollback-and-demo.md) | Flujo de demo, despliegue y procedimiento de rollback |
+| [`docs/pruebas-hardware-fisico.md`](docs/pruebas-hardware-fisico.md) | Guía de ~10 min para validar micrófono, cámara, PWA y offline en hardware real |
 | [`docs/architecture.md`](docs/architecture.md) | Arquitectura y capas de análisis |
 | [`docs/fase5-agentes.md`](docs/fase5-agentes.md) | Los cinco agentes y sus límites |
 | [`docs/auditoria-fase3.md`](docs/auditoria-fase3.md) | Reglas del semáforo y clases de evidencia |
-| [`docs/historial.md`](docs/historial.md) | Historial local y diseño del historial en la nube |
+| [`docs/historial.md`](docs/historial.md) | Historial local (borrado individual y completo) y diseño del historial en la nube |
 | [`docs/app-check.md`](docs/app-check.md) | Cómo activar la IA en el despliegue (clave de App Check) |
 | [`docs/seguridad-endpoint.md`](docs/seguridad-endpoint.md) | App Check, CSRF y límites del endpoint |
 | [`docs/seguridad-dependencias.md`](docs/seguridad-dependencias.md) | Avisos de dependencias y por qué se fijaron |
 | [`docs/node-dependencias.md`](docs/node-dependencias.md) | Node 24, `engines` y compatibilidad de dependencias |
-| [`docs/despliegue.md`](docs/despliegue.md) | Cómo desplegar (nada desplegado todavía) |
-| [`docs/informe-lanzamiento.md`](docs/informe-lanzamiento.md) | Qué está comprobado y qué falta para lanzar |
-| [`docs/pruebas-finalizacion.md`](docs/pruebas-finalizacion.md) | Pruebas ejecutadas y sus resultados reales |
-| [`docs/pendientes-hackathon.md`](docs/pendientes-hackathon.md) | Lo que falta antes de presentar |
+| [`docs/despliegue.md`](docs/despliegue.md) | Procedimiento de despliegue a Preview y producción |
 | [`docs/devpost.md`](docs/devpost.md) | Descripción para Devpost |
 
 ## Licencia

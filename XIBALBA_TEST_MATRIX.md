@@ -1,5 +1,24 @@
 # Matriz de pruebas — revisión del 25 de noviembre de 2026
 
+## Actualización — 26 de noviembre de 2026 (candidato `b415ae8`)
+
+Sobre el commit candidato de cierre, sin repetir lo ya verificado abajo:
+
+| Verificación | Estado | Evidencia exacta |
+| --- | --- | --- |
+| TypeScript / ESLint / build (Node `v24.22.3`) | **PASS** | `tsc --noEmit` 0 errores · `eslint .` 0 errores · `next build` compiló 7 páginas/6 rutas. |
+| Pruebas unitarias e integración | **PASS** | **240/240** (antes `237/237`; +3 por el fix de prompt injection y el borrado individual de historial). |
+| Análisis de imágenes contra producción real (`setInputFiles`, no localhost) | **PASS** | `5/5` en `tests/e2e/production-image-analysis.spec.ts` (ES/EN fraudulento, legítimo, archivo incompatible, archivo >4MB). |
+| Inferencia real de Gemini sobre imágenes en producción, bajo automatización headless | **BLOCKED (por diseño, no es un defecto)** | reCAPTCHA Enterprise rechaza el tráfico automatizado (401); reproducido igual con solo texto. Verificación humana pendiente: [`docs/pruebas-hardware-fisico.md`](docs/pruebas-hardware-fisico.md) §5. |
+| CSP `connect-src` con `blob:` (OCR nativo del navegador) | **FIXED** | `tests/e2e/csp.spec.ts` actualizado; no desplegado a producción todavía. |
+| Borrado individual del historial | **FIXED** | Prueba unitaria en `tests/finalizacion.test.mjs` + verificación manual en navegador. |
+| Prompt injection (delimitador falsificable) | **FIXED** | Dos pruebas nuevas en `tests/phase1.test.mjs` reproducen el payload antes/después del fix. |
+| Dependencias (`npm audit`) | **PASS** | `0` vulnerabilidades. |
+| Secretos en el historial completo de git | **PASS** | Sin coincidencias (claves Google/privadas/Anthropic). |
+
+Detalle completo, correcciones y acciones pendientes del usuario:
+[`XIBALBA_2_0_INFORME_CONSOLIDADO_FINAL.md`](XIBALBA_2_0_INFORME_CONSOLIDADO_FINAL.md).
+
 ## Resultados verificados tras la última edición
 
 | Verificación | Estado | Evidencia exacta |

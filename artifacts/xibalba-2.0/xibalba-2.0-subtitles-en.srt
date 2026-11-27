@@ -1,0 +1,47 @@
+1
+00:00:00,500 --> 00:00:08,500
+Digital scams combine urgency, lookalike bank links, and deceptive phone numbers.
+
+2
+00:00:08,800 --> 00:00:18,000
+Meet XIBALBÁ 2.0: a Maya-inspired multi-agent AI platform that verifies fraud signals on-device.
+
+3
+00:00:18,500 --> 00:00:28,000
+From the home screen, users can paste any suspicious message, URL, or phone number immediately.
+
+4
+00:00:28,500 --> 00:00:38,000
+Let's run a real scam analysis on a fake bank alert requesting urgent verification.
+
+5
+00:00:38,500 --> 00:00:52,000
+The 3D Holographic Jaguar reacts in real time—shifting from idle to active alert upon detecting threats.
+
+6
+00:00:52,500 --> 00:01:06,000
+It explains the verdict clearly and supports follow-up questions via text or explicit microphone input.
+
+7
+00:01:06,500 --> 00:01:20,000
+On the 3D Ceremonial Map, five Maya agents coordinate: CAMAZOTZ, IXBALANQUÉ, VUCUB CAMÉ, HUN CAMÉ, and THE GUARDIAN.
+
+8
+00:01:20,500 --> 00:01:34,000
+Only agents that actually contributed light up and connect—clicking any figure reveals real execution metrics.
+
+9
+00:01:34,500 --> 00:01:48,000
+Hybrid AI architecture: deterministic checks run locally first; Firebase AI + Gemini is optional under explicit consent.
+
+10
+00:01:48,500 --> 00:02:02,000
+Verified facts (A), unverified AI estimates (B), and pending external checks (C) are never mixed. Reports export to MD, JSON, or PDF.
+
+11
+00:02:02,500 --> 00:02:14,000
+Persistent masked history correlates scam campaigns locally, with full ES/EN support and responsive mobile PWA design.
+
+12
+00:02:14,500 --> 00:02:24,000
+XIBALBÁ 2.0 — Intelligence that protects you. 3D base model: Google Data Arts Team (CC BY 3.0).

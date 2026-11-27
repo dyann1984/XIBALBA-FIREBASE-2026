@@ -1,0 +1,63 @@
+1
+00:00:00,300 --> 00:00:07,569
+Every day, scams exploit urgent texts, cloned bank links, and fake calls.
+
+2
+00:00:07,669 --> 00:00:15,678
+Meet XIBALBÁ 2.0: Maya-inspired multi-agent digital fraud protection.
+
+3
+00:00:16,278 --> 00:00:21,724
+Our 3D Holographic Jaguar Guardian stays in idle watch,
+
+4
+00:00:21,824 --> 00:00:27,857
+reacting strictly to real system events with zero fake animations.
+
+5
+00:00:28,457 --> 00:00:34,417
+Right from home, users paste any suspicious message with no friction.
+
+6
+00:00:34,517 --> 00:00:41,107
+Let's test a fake bank alert demanding urgent account verification.
+
+7
+00:00:41,707 --> 00:00:47,477
+Upon detecting critical threats, the 3D Jaguar shifts to red ALERT,
+
+8
+00:00:47,577 --> 00:00:53,961
+explaining verified findings via text or explicit microphone input.
+
+9
+00:00:54,561 --> 00:01:01,436
+On the 3D Ceremonial Map, five Maya agents coordinate live.
+
+10
+00:01:01,536 --> 00:01:09,118
+Only agents that actually contributed light up and connect.
+
+11
+00:01:09,718 --> 00:01:17,036
+Red traffic light: High Risk, High Confidence, 35/42 checks.
+
+12
+00:01:17,136 --> 00:01:25,197
+Verified deterministic facts (A) stay strictly apart from AI (B) and pending checks (C).
+
+13
+00:01:25,797 --> 00:01:33,959
+Transparent note: with cloud keys unset here (IA · SIN CONFIGURAR),
+
+14
+00:01:34,059 --> 00:01:43,034
+the local engine still catches the scam; Firebase + Gemini adds hybrid AI under consent.
+
+15
+00:01:43,634 --> 00:01:51,592
+Masked history, campaign correlation, MD/JSON/PDF export, ES/EN & PWA.
+
+16
+00:01:51,692 --> 00:02:00,447
+XIBALBÁ 2.0 — 3D base model: Google Data Arts Team (CC BY 3.0).

@@ -3,9 +3,10 @@
 **Fecha:** 27 de noviembre de 2026
 **Presentación:** 28 de noviembre de 2026
 **Rama:** `fix/mobile-image-upload-i18n-audit`
-**Commit desplegado en producción:** `d7170f7`
-**Despliegue de producción:** `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq` — **https://xibalba-firebase-2026.vercel.app**
-**Punto de restauración:** etiqueta `restore-point-20261127` (sobre `release/xibalba-2.0-rc`, commit `867ec09`)
+**Commit desplegado en producción:** `3513774`
+**Despliegue de producción:** `dpl_H86yHu2SfJLBQwUhd9yiDCDMjue2` — **https://xibalba-firebase-2026.vercel.app**
+**Puntos de restauración:** etiqueta `restore-point-prod-d7170f7` (producción anterior) y
+`restore-point-20261127` (sobre `release/xibalba-2.0-rc`, commit `867ec09`)
 
 ---
 
@@ -22,11 +23,13 @@ Lo que respalda este veredicto, todo ejecutado hoy:
 
 - Gemini real en producción, en ambos idiomas: barra de estado en `IA · NUBE` / `AI · CLOUD`,
   `tieneIA: true`, `iaFallida: false`.
-- Las 8 pruebas móviles (Chromium móvil + WebKit/iPhone 13) **contra producción por HTTPS**, bajo la
-  CSP completa: 8 pasadas, 0 fallidas.
+- Las 18 pruebas móviles (Chromium móvil + WebKit/iPhone 13) **contra el despliegue por HTTPS**,
+  bajo la CSP completa: 18 pasadas, 0 fallidas.
 - Cero errores de consola en producción; Service Worker activo con la caché `xibalba-shell-v3`.
-- 243 pruebas unitarias, 61 E2E y las 4 de IA real en la nube, con las cifras exactas de la
+- 243 pruebas unitarias, 71 E2E y las 4 de IA real en la nube, con las cifras exactas de la
   sección 3.
+- **Limpieza del caso activo** (sección 4b): «Nuevo caso» y «Limpiar análisis», verificados en
+  producción en escritorio y en WebKit móvil, con el historial intacto.
 
 Quedan dos desviaciones conocidas, ambas documentadas y ninguna crítica: el nombre del quinto
 agente no se traduce (**P2-01**) y, si se cambia de idioma *después* de analizar, el texto que
@@ -40,13 +43,14 @@ muy simple para la demostración: **elegir el idioma antes de analizar**.
 | Elemento | Valor |
 |---|---|
 | **URL pública funcional** | **https://xibalba-firebase-2026.vercel.app** |
-| Commit desplegado | `d7170f7` |
-| Despliegue de producción | `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq` (`target: production`, `readyState: READY`) |
+| Commit desplegado | `3513774` |
+| Despliegue de producción | `dpl_H86yHu2SfJLBQwUhd9yiDCDMjue2` (`target: production`, `readyState: READY`) |
 | Rama publicada | `fix/mobile-image-upload-i18n-audit` (en `origin`) |
-| Preview (alias estable) | https://xibalba-rc-preview.vercel.app (protegido de nuevo; ver sección 9) |
-| Despliegue anterior, para rollback | `dpl_3jQoC4Fa6MQDcENUk5DjtDnpwu1D` (`xibalba-firebase-2026-5l26o5wk1`, 26-nov 15:06) |
+| Preview validado | `dpl_F2muWSJXQZ134gJzFUhYEJwiAbKd`, alias https://xibalba-rc-preview.vercel.app (protegido de nuevo; ver sección 9) |
+| Despliegue anterior, para rollback | `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq` (commit `d7170f7`, etiqueta `restore-point-prod-d7170f7`) |
 | Capturas del Preview | `artifacts/preview-20261127/` |
 | Capturas de producción | `artifacts/produccion-20261127/` |
+| Capturas de la limpieza de caso | `artifacts/limpieza-caso-20261127/` |
 
 ### Para probar desde el celular
 
@@ -68,10 +72,10 @@ secreto se revocó al terminar las validaciones (sección 9).
 | ESLint 9 | **limpio**, 0 errores, 0 avisos |
 | `npm run build` (producción) | **correcto**, 7 rutas generadas |
 | Unitarias (`node --test`) | **243 pasadas / 0 fallidas / 0 omitidas** |
-| E2E local (`playwright.config.ts`) | **61 pruebas: 54 pasadas, 7 omitidas, 0 fallidas** |
+| E2E local (`playwright.config.ts`) | **71 pruebas: 64 pasadas, 7 omitidas, 0 fallidas** |
 | IA real en la nube, en local (`playwright.cloud.config.ts`) | **4 pasadas / 0 fallidas** |
-| Móvil contra el **Preview** (`playwright.preview.config.ts`) | **8 pasadas / 0 fallidas** |
-| Móvil contra **producción** (`playwright.preview.config.ts`) | **8 pasadas / 0 fallidas** |
+| Móvil contra el **Preview** (`playwright.preview.config.ts`) | **18 pasadas / 0 fallidas** |
+| Móvil contra **producción** (`playwright.preview.config.ts`) | **8 pasadas / 0 fallidas** (ejecución del despliegue anterior) |
 
 Las 7 pruebas omitidas en la batería local no son fallos encubiertos: son las de
 `cloud-ai.spec.ts` (4) y `production-image-analysis.spec.ts` (3), que se saltan por diseño cuando se
@@ -138,6 +142,50 @@ de imagen con metadatos, OCR y lectura del modelo; carga de imagen en WebKit mó
 
 **Importante:** el token de depuración local no se usó como evidencia del funcionamiento en el
 despliegue. Las ejecuciones locales y las de despliegue se reportan por separado.
+
+---
+
+## 4b. Limpieza del caso activo («Nuevo caso» / «Limpiar análisis»)
+
+Antes no había forma de cerrar un caso: el veredicto, las evidencias, las recomendaciones, el OCR y
+la actividad de los cinco agentes se quedaban en pantalla hasta que se editaba la evidencia, así que
+una demostración encadenada podía mostrar restos del caso anterior. Dos botones lo resuelven, con el
+mismo marcado en escritorio y en móvil (44 px de alto bajo 700 px):
+
+| Botón | Qué borra | Qué conserva |
+|---|---|---|
+| **Limpiar análisis** / *Clear analysis* | Resultado, evidencias, recomendaciones, OCR, cronología y actividad de los cinco agentes; el Guardián holográfico vuelve a reposo | Lo que ya se adjuntó (texto, imágenes, audio), para volver a analizarlo |
+| **Nuevo caso** / *New case* | Todo lo anterior **y** la evidencia del caso activo; libera las URLs de vista previa (`releaseImage` / `releaseAudio`) | Nada del caso |
+
+Ninguno de los dos toca el **historial**, el **idioma** ni el consentimiento de IA.
+
+**Respuestas de IA que llegan tarde.** Cada ejecución de `submitText` toma un número de `runIdRef` y
+solo escribe estado mientras ese número siga vigente. Limpiar o empezar otro caso sube el número, así
+que una respuesta de Gemini que llega después se descarta por completo: no repuebla la pantalla ni
+entra en el historial. Lo mismo para `onEvent`, `onAiStage`, el OCR del modelo y la transcripción.
+
+### Verificado en producción (`artifacts/limpieza-caso-20261127/`)
+
+| Comprobación | Escritorio (Chromium 1440×900) | WebKit / iPhone 13 |
+|---|---|---|
+| Caso con veredicto: Guardián en `alerta`, semáforo `verdict-rojo` | ✔ | ✔ |
+| Tras **Limpiar análisis**: Guardián `reposo`, 0 veredictos, 0 bloques de evidencia, texto conservado | ✔ | ✔ |
+| Tras **Nuevo caso**: Guardián `reposo`, texto vacío, 0 imágenes | ✔ | ✔ |
+| Historial conservado después de ambos | ✔ (1 entrada) | ✔ (1 entrada) |
+| Errores de consola | **0** | **0** |
+
+Además, con **Gemini real en la nube** desde un navegador normal sobre producción: con el resultado en
+pantalla la barra marcaba `IA · NUBE` y el Guardián `alerta`; tras «Limpiar análisis» pasó a
+`IA · SIN VERIFICAR` y `reposo`, con el aviso «Análisis limpiado. La evidencia adjunta sigue
+disponible.». En inglés, «New case» y «Clear analysis» con el aviso «Case cleared: nothing is left
+from the previous investigation.».
+
+### Tres investigaciones consecutivas sin contaminación
+
+La prueba `3c.4` encadena tres casos —estafa bancaria, mensaje inocuo, premio falso— separados por
+«Nuevo caso», y comprueba que el segundo no hereda el veredicto rojo del primero, que ninguna señal
+del caso anterior aparece en la evaluación del siguiente, y que el historial termina con las tres
+entradas. Pasa en Chromium móvil y en WebKit.
 
 ---
 
@@ -302,6 +350,11 @@ de análisis rápido. No se reprodujo en el despliegue ni en el build de producc
 6. **Exclusión de `.next-webkit-dev` en ESLint**, que analizaba código generado (143 errores y 2954
    avisos, ninguno del proyecto).
 
+7. **Limpieza del caso activo** (sección 4b): los botones «Nuevo caso» y «Limpiar análisis», el
+   descarte de respuestas de IA que llegan tarde, diez claves nuevas de diccionario en ES y EN, y el
+   bloque de pruebas `3c` con cinco casos que corren en Chromium móvil y en WebKit porque el `grep`
+   de ambos proyectos pasó a `/3[bc]\./`.
+
 ---
 
 ## 9. Seguridad: qué NO se tocó
@@ -314,9 +367,10 @@ de análisis rápido. No se reprodujo en el despliegue ni en el build de producc
   `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`.
 - Protección del Preview: **siguió activa todo el tiempo**. El acceso se dio con un secreto de bypass
   revocable, con tu autorización, no desactivando la protección.
-- **Secreto temporal revocado al terminar las validaciones**, como pediste. Verificado: el Preview
-  con ese secreto responde **302** (redirección al login de Vercel), es decir, ya no da acceso. El
-  otro secreto de bypass, que es preexistente del proyecto y está ligado a una variable de entorno,
+- **Secretos temporales revocados al terminar cada ronda de validaciones**, como pediste. Se usaron
+  dos, uno por ronda, y los dos están revocados. Verificado en ambos casos: el Preview con ese
+  secreto responde **302** (redirección al login de Vercel), es decir, ya no da acceso. El otro
+  secreto de bypass, que es preexistente del proyecto y está ligado a una variable de entorno,
   **no se tocó**.
 - Ningún secreto se escribió en el repositorio.
 
@@ -327,8 +381,10 @@ de análisis rápido. No se reprodujo en el despliegue ni en el build de producc
 Producción está en `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq` (commit `d7170f7`). El despliegue anterior
 sigue disponible y es el objetivo de rollback:
 
-**Despliegue anterior:** `dpl_3jQoC4Fa6MQDcENUk5DjtDnpwu1D`
-(`xibalba-firebase-2026-5l26o5wk1-dyann1984s-projects.vercel.app`, creado el 26-nov a las 15:06)
+**Despliegue anterior:** `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq`
+(`xibalba-firebase-2026-dv90orhlw-dyann1984s-projects.vercel.app`, commit `d7170f7`, etiqueta de git
+`restore-point-prod-d7170f7`). Es la versión publicada y verificada antes de añadir los botones de
+limpieza de caso.
 
 Desde el panel de Vercel: Deployments → ese despliegue → **Promote to Production**. Es instantáneo y
 no requiere build.
@@ -336,7 +392,7 @@ no requiere build.
 Desde la terminal:
 
 ```powershell
-vercel rollback xibalba-firebase-2026-5l26o5wk1-dyann1984s-projects.vercel.app
+vercel rollback xibalba-firebase-2026-dv90orhlw-dyann1984s-projects.vercel.app
 ```
 
 Para deshacer el trabajo de esta rama en local:
@@ -372,6 +428,9 @@ producción.
 
 1. **Elegir el idioma antes de ejecutar cada análisis** en vivo (P2-02). Así el párrafo de Gemini
    sale directamente en el idioma del jurado.
+1b. **Entre un caso y el siguiente, pulsar «Nuevo caso»** (sección 4b). Deja la pantalla en limpio,
+   devuelve al Guardián a reposo y conserva el historial, así que las investigaciones encadenadas de
+   la demostración no se contaminan entre sí.
 2. **Probar desde tu celular** con `https://xibalba-firebase-2026.vercel.app`: seleccionar una foto
    de la galería, ver la vista previa, correr el análisis y comprobar el menú lateral. Es lo único
    que no se puede verificar sin el dispositivo físico.
@@ -381,6 +440,6 @@ producción.
 
 ---
 
-*Informe generado el 27 de noviembre de 2026 sobre el commit `d7170f7`, desplegado en producción.
+*Informe generado el 27 de noviembre de 2026 sobre el commit `3513774`, desplegado en producción.
 Todas las cifras de esta página provienen de ejecuciones reales registradas en esta sesión; ninguna
 prueba se eliminó, desactivó ni se dio por buena sin ejecutarla.*

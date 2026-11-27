@@ -26,7 +26,7 @@ if (!baseURL) {
 export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/xibalba.spec.ts",
-  grep: /3b\./,
+  grep: /3[bc]\./,
   timeout: 90_000,
   fullyParallel: false,
   retries: 1,

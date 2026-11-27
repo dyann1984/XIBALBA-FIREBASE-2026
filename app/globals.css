@@ -935,6 +935,44 @@ footer { border-top-color: var(--line); color: var(--muted); }
    Tableta (701–1099px): apiladas en una sola columna, todas visibles —
    hay espacio vertical de sobra y ocultar contenido no aporta nada.
    Móvil (≤700px): una sola área a la vez, elegida con las pestañas. */
+/* Acciones del caso activo: «Nuevo caso» y «Limpiar análisis». Visibles en
+   escritorio y en móvil con el mismo marcado; en móvil ocupan la fila completa
+   para que el objetivo táctil llegue a 44px. */
+.case-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0 2px;
+}
+.case-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 7px;
+  border: 1px solid #2b4e50;
+  background: #0d1d24;
+  color: #cbe2dc;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  transition: border-color .18s, background .18s, color .18s;
+}
+.case-action:hover {
+  border-color: var(--gold);
+  color: #fff6dc;
+  background: #142830;
+}
+.case-action-new { border-color: var(--jade, #2fd697); color: #d8fff0; }
+.case-action-new:hover { border-color: var(--jade, #2fd697); background: rgba(47, 214, 151, .12); color: #eafff7; }
+.case-cleared { margin-top: 8px; }
+
+@media (max-width: 700px) {
+  .case-actions { gap: 8px; }
+  .case-action { flex: 1 1 46%; justify-content: center; min-height: 44px; }
+}
+
 .lab-tabs { display: none; }
 .lab-grid { grid-template-columns: 1.1fr 1fr 1fr; align-items: start; }
 .lab-area { min-width: 0; }

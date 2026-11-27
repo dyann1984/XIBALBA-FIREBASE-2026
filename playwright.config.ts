@@ -75,7 +75,8 @@ export default defineConfig({
     // viewport), no solo un viewport angosto en Chromium.
     {
       name: "webkit-mobile-images",
-      grep: /3b\./,
+      // 3b. carga de imágenes en móvil; 3c. limpieza del caso activo.
+      grep: /3[bc]\./,
       use: {
         ...devices["iPhone 13"],
         baseURL: `http://127.0.0.1:${webkitPort}`,

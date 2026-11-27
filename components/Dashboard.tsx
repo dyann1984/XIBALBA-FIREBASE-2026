@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { analyze, analyzeLocally, describeAgents, modelTranscriber, modelImageText, type AnalysisResult } from "@/lib/analysis/analyze";
 import { errorKey } from "@/lib/analysis/errors";
 import { type AgentKind } from "@/lib/analysis/guardian";
 import { AGENT_NAMES, type AgentEvent } from "@/lib/analysis/coordinator";
-import { recognizeImageText, type PreparedImage, type OcrResult } from "@/lib/analysis/images";
+import { recognizeImageText, releaseImage, type PreparedImage, type OcrResult } from "@/lib/analysis/images";
 import { TRANSCRIPTION_PENDING, releaseAudio, transcribeAudio, type PreparedAudio, type Transcription } from "@/lib/analysis/audio";
 import Guardian from "@/components/Guardian";
 import AgentOperationsBoard from "@/components/AgentOperationsBoard";
@@ -22,7 +22,7 @@ import Academy from "@/components/Academy";
 import { recommendedLessonsFor } from "@/lib/academy/lessons";
 import { useI18n } from "@/components/LanguageProvider";
 import { LANG_LABEL, LANG_TAG, type Lang } from "@/lib/i18n";
-import { Activity, ArrowDownLeft, ArrowRight, AudioLines, BookOpen, ChevronDown, CircleHelp, Clock3, Download, Eye, Fingerprint, FlaskConical, Globe2, GraduationCap, LayoutDashboard, Link2, LockKeyhole, Menu, MessageSquareText, Network, ScanLine, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, WalletCards, X } from "lucide-react";
+import { Activity, ArrowDownLeft, ArrowRight, AudioLines, BookOpen, ChevronDown, CircleHelp, Clock3, Download, Eraser, Eye, FilePlus2, Fingerprint, FlaskConical, Globe2, GraduationCap, LayoutDashboard, Link2, LockKeyhole, Menu, MessageSquareText, Network, ScanLine, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, WalletCards, X } from "lucide-react";
 import { agents, type Agent } from "@/lib/agents";
 import demoData from "@/data/demo-cases.json";
 import { append as appendHistory, clear as clearStoredHistory, describeWhen, load as loadStoredHistory, remove as removeHistoryEntry, save as saveStoredHistory, summarize, HISTORY_LIMIT, type HistoryEntry } from "@/lib/history";
@@ -133,6 +133,7 @@ export default function Dashboard() {
  const [transcription, setTranscription] = useState<Transcription | null>(null);
  const [configured, setConfigured] = useState(false);
  const [section, setSection] = useState<Section>("inicio"); const [selected, setSelected] = useState<Agent | null>(null); const [input, setInput] = useState(""); const [menu, setMenu] = useState(false);
+ const [quickInput, setQuickInput] = useState("");
  // Historial: vive en memoria mientras la pestaña está abierta. Solo se copia a
  // este navegador si la persona lo autoriza, y nunca sale del dispositivo.
  const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -147,6 +148,14 @@ export default function Dashboard() {
  // la API nativa de reconocimiento de texto, o el respaldo WASM que siempre
  // está disponible porque se sirve desde el propio origen.
  const [ocrCapability, setOcrCapability] = useState<"checking" | "native" | "wasm">("checking");
+ // Confirmación visible de la limpieza, para que no quede duda de que el caso
+ // anterior se fue. Es solo un aviso: no forma parte de ningún resultado.
+ const [cleared, setCleared] = useState<"" | "case" | "analysis">("");
+ // Identificador del análisis en curso. Cada ejecución toma un número y solo
+ // escribe estado mientras ese número siga siendo el vigente: así una respuesta
+ // de Gemini que llega tarde —después de limpiar o de empezar otro caso— se
+ // descarta en vez de repoblar la pantalla con el caso anterior.
+ const runIdRef = useRef(0);
  useEffect(() => {
   let active = true;
   queueMicrotask(() => { if (active) setOcrCapability("TextDetector" in window ? "native" : "wasm"); });
@@ -238,7 +247,44 @@ export default function Dashboard() {
  };
  const forgetHistory = () => { setHistory([]); clearStoredHistory(browserStorage()); };
  const forgetOne = (id: string) => { setHistory(previous => { const next = removeHistoryEntry(previous, id); if (keepHistory) saveStoredHistory(browserStorage(), next); return next; }); };
- const clearResult = () => { setOutcome(null); setError(""); setOcr(null); setOcrEdited(false); setStage(""); setEvents([]); setLabTab("evidence"); };
+ const clearResult = () => { setOutcome(null); setError(""); setOcr(null); setOcrEdited(false); setStage(""); setEvents([]); setLabTab("evidence"); setCleared(""); };
+ // Abandona el análisis en vuelo, si lo hay: sube el número de ejecución, con
+ // lo que las respuestas pendientes dejan de poder escribir estado.
+ const abandonRun = () => { runIdRef.current += 1; return runIdRef.current; };
+ /**
+  * «Limpiar análisis»: borra el resultado de la investigación anterior
+  * —veredicto, evidencias, recomendaciones, OCR, cronología y actividad de los
+  * cinco agentes, con lo que el Guardián holográfico vuelve a reposo— y
+  * conserva la evidencia que ya se adjuntó para poder volver a analizarla.
+  */
+ const clearAnalysis = () => {
+  abandonRun();
+  setBusy(false);
+  setOutcome(null); setError(""); setOcr(null); setOcrEdited(false); setStage(""); setEvents([]);
+  setTranscription(null);
+  setSelected(null);
+  setLabTab("evidence");
+  setCleared("analysis");
+ };
+ /**
+  * «Nuevo caso»: además de lo anterior, retira la evidencia del caso activo
+  * (texto, imágenes, audio y su consentimiento) y libera las URLs de vista
+  * previa. No toca el historial, el idioma ni el consentimiento de IA.
+  */
+ const newCase = () => {
+  abandonRun();
+  setBusy(false);
+  setOutcome(null); setError(""); setOcr(null); setOcrEdited(false); setStage(""); setEvents([]);
+  setSelected(null);
+  setInput(""); setQuickInput("");
+  images.forEach(releaseImage);
+  setImages([]);
+  if (audio) releaseAudio(audio);
+  setAudio(null); setAudioConsent(false); setTranscription(null);
+  setSection("analizar"); setMenu(false);
+  setLabTab("evidence");
+  setCleared("case");
+ };
  // Corrección manual del OCR: la persona edita el texto reconocido sin volver
  // a tocar la imagen. `submitText` reutiliza este texto en vez de repetir el
  // OCR mientras `ocrEdited` sea verdadero.
@@ -260,12 +306,14 @@ export default function Dashboard() {
  const hasImages = images.length > 0;
  const hasContent = Boolean(input.trim()) || hasImages || Boolean(audio);
  const imageOnly = hasImages && !input.trim() && !audio;
- const [quickInput, setQuickInput] = useState("");
  const submitText = async (overrideText?: string, overrideKind?: AgentKind) => {
   if (busy) return;
   const activeKind = overrideKind ?? kind;
   const activeInput = overrideText ?? input;
-  setBusy(true); setError(""); setOutcome(null); setEvents([]);
+  // Esta ejecución solo puede escribir estado mientras siga siendo la vigente.
+  const myRun = abandonRun();
+  const live = () => runIdRef.current === myRun;
+  setBusy(true); setError(""); setOutcome(null); setEvents([]); setCleared("");
   // En móvil, donde solo cabe un área del laboratorio a la vez, se sigue el
   // trabajo real: primero la investigación en curso y, al terminar, la
   // evaluación. En escritorio las tres áreas ya están visibles y esto no
@@ -289,6 +337,7 @@ export default function Dashboard() {
      ? (ocrEdited && ocr ? Promise.resolve(ocr) : recognizeImageText(activeImages))
      : Promise.resolve<OcrResult | null>(null),
    ]);
+   if (!live()) return;
    setTranscription(state);
    // 2. El texto analizado es lo que escribió la persona y, si existe, la
    //    transcripción automática, señalada como tal para no pasar por cita.
@@ -301,6 +350,7 @@ export default function Dashboard() {
      const modelText = await modelImageText(activeImages.map(image => ({ mimeType: image.mimeType, data: image.base64 })));
      if (modelText) { ocrResult = { text: modelText, status: 'available' }; ocrSource = 'model'; }
     } catch { /* La falta de lectura permanece explícita. */ }
+    if (!live()) return;
    }
    const baseText = [activeInput.trim(), recognised && `[Transcripción automática del audio adjunto]\n${recognised}`].filter(Boolean).join("\n\n");
    const ocrPrefix = "[Texto reconocido automáticamente en la imagen; puede contener errores]\n";
@@ -314,19 +364,24 @@ export default function Dashboard() {
     audio: activeAudio ? { name: activeAudio.name, mimeType: activeAudio.mimeType, size: activeAudio.size, durationSeconds: activeAudio.durationSeconds } : null,
     transcription: activeAudio ? (state ?? TRANSCRIPTION_PENDING) : undefined,
     containsOcr: Boolean(ocrExcerpt),
-    onEvent: (event: AgentEvent) => setEvents(previous => [...previous, event]),
+    onEvent: (event: AgentEvent) => { if (live()) setEvents(previous => [...previous, event]); },
     onAiStage: (stage: "ondevice" | "cloud-fallback") => {
+     if (!live()) return;
      if (stage === "cloud-fallback") setStage(lang === "en" ? "Local AI is taking too long: switching to the cloud" : "La IA local tarda demasiado: cambiando a la nube");
     },
    };
    const attachments = Boolean(activeImages.length || activeAudio);
    setStage(lang === "en" ? "Running coordinated audit" : "Ejecutando auditoría coordinada");
    // Sin consentimiento o sin configuración, la auditoría local se ejecuta igual.
-   if (!consent || !configured) { const local = analyzeLocally(payload); setOutcome(local); record(local, text, attachments); setLabTab("evaluation"); return; }
+   if (!consent || !configured) { const local = analyzeLocally(payload); if (!live()) return; setOutcome(local); record(local, text, attachments); setLabTab("evaluation"); return; }
    void import("@/lib/firebase").then(({ getServices }) => getServices().model.initializeDeviceModel().catch(() => {}));
    const result = await analyze(payload);
+   // La respuesta de la nube puede llegar después de «Limpiar análisis» o de
+   // «Nuevo caso». En ese caso se descarta por completo: no repuebla la
+   // pantalla ni entra en el historial.
+   if (!live()) return;
    setOutcome(result); record(result, text, attachments); setLabTab("evaluation");
-  } catch (e) { setError(t("errors", errorKey(e))); setLabTab("evidence"); } finally { setBusy(false); }
+  } catch (e) { if (live()) { setError(t("errors", errorKey(e))); setLabTab("evidence"); } } finally { if (live()) setBusy(false); }
  };
  const submit = () => submitText();
  const runQuickScan = async () => {
@@ -409,6 +464,11 @@ export default function Dashboard() {
  <div className="section-title"><div><div className="eyebrow muted">{t("home","agentsEyebrow")}</div><h2>{t("home","agentsTitle")} <span>✦</span></h2><p>{t("home","agentsText")}</p></div><button className="text-link" onClick={() => go("agentes")}>{t("home","agentsCta")} <ArrowRight size={15}/></button></div><div className="agent-grid">{agentActivity.map(({ agent: a, count }, i) => {const Icon=icons[a.icon]; const text=agentText(a); return <button className="agent-card" key={a.id} onClick={() => {setSection("agentes");setSelected(a)}}><div className="agent-top"><div className={`agent-icon ${a.color}`}><Icon size={22}/></div>{count > 0 ? <span className="agent-activity-badge">{lang === "en" ? `${count}× this session` : `${count}× esta sesión`}</span> : <span>0{i+1}</span>}</div><h3>{a.name}</h3><div className="role">{text.role}</div><p>{text.description}</p><div className="card-link">{t("home","agentCardCta")} <ArrowRight size={14}/></div></button>})}</div>
  <div className="lower-grid"><section className="panel activity"><div className="panel-head"><div><div className="eyebrow muted">{t("home","activityEyebrow")}</div><h2>{t("home","activityTitle")}</h2></div><button className="text-link" onClick={()=>go("historial")}>{t("home","activityCta")} <ArrowRight size={14}/></button></div>{history.length ? <ul className="history-list compact">{history.slice(0,3).map(entry => <HistoryRow key={entry.id} entry={entry} t={t} lang={lang} onDelete={forgetOne}/>)}</ul> : <div className="empty-row"><div className="empty-icon"><Clock3 size={20}/></div><div><strong>{t("home","emptyTitle")}</strong><p>{t("home","emptyText")}</p></div><ArrowRight size={17}/></div>}</section><section className="panel privacy-panel"><div className="privacy-icon"><Fingerprint size={25}/></div><div><div className="eyebrow muted">{t("home","privacyEyebrow")}</div><h2>{t("home","privacyTitle")}</h2><p>{t("home","privacyText")}</p><button className="text-link" onClick={()=>go("privacidad")}>{t("home","privacyCta")} <ArrowRight size={14}/></button></div></section></div></>}
  {section === "analizar" && <div className="inner-page"><div className="eyebrow"><span/> {t("analyze","eyebrow")}</div><h1>{t("analyze","title")} <em>{t("analyze","titleEm")}</em></h1><p className="lead">{t("analyze","lead")}</p>
+<div className="case-actions" aria-label={t("analyze","caseActionsLabel")}>
+ <button type="button" className="case-action case-action-new" onClick={newCase} title={t("analyze","newCaseHint")}><FilePlus2 size={15}/> {t("analyze","newCase")}</button>
+ <button type="button" className="case-action" onClick={clearAnalysis} title={t("analyze","clearAnalysisHint")}><Eraser size={15}/> {t("analyze","clearAnalysis")}</button>
+</div>
+{cleared && <p className="notice case-cleared" role="status">{cleared === "case" ? t("analyze","caseCleared") : t("analyze","analysisCleared")}</p>}
 <div className="lab-tabs" role="tablist" aria-label={lang === "en" ? "Forensic lab areas" : "Áreas del laboratorio forense"}>
  <button type="button" role="tab" aria-selected={labTab === "evidence"} className={labTab === "evidence" ? "lab-tab active" : "lab-tab"} onClick={() => setLabTab("evidence")}>{lang === "en" ? "A · Evidence" : "A · Evidencia"}</button>
  <button type="button" role="tab" aria-selected={labTab === "investigation"} className={labTab === "investigation" ? "lab-tab active" : "lab-tab"} onClick={() => setLabTab("investigation")}>{lang === "en" ? "B · Investigation" : "B · Investigación"}{busy && <span className="lab-tab-dot" aria-hidden="true"/>}</button>

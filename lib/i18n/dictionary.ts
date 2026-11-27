@@ -153,6 +153,15 @@ export const es = {
       "No se reconoció texto. Puedes transcribirlo aquí a mano; que no haya texto reconocido no significa que la imagen sea segura.",
     ocrRetry: "Descartar corrección y volver a leer la imagen",
     ocrEditedBadge: "· editado a mano",
+    caseActionsLabel: "Caso activo",
+    newCase: "Nuevo caso",
+    newCaseHint:
+      "Borra todo el caso activo —texto, imágenes, audio, OCR, evidencias y recomendaciones— y reinicia los cinco agentes y el Guardián. El historial y el idioma se conservan.",
+    clearAnalysis: "Limpiar análisis",
+    clearAnalysisHint:
+      "Borra el resultado, las evidencias, las recomendaciones y la actividad de los agentes, y conserva lo que ya adjuntaste para volver a analizarlo.",
+    caseCleared: "Caso limpiado: no queda nada de la investigación anterior.",
+    analysisCleared: "Análisis limpiado. La evidencia adjunta sigue disponible.",
   },
   verdict: {
     ariaLabel: "Resultado del análisis",
@@ -659,6 +668,15 @@ export const en: Dictionary = {
       "No text was recognised. You can transcribe it here by hand; the absence of recognised text does not mean the image is safe.",
     ocrRetry: "Discard correction and re-read the image",
     ocrEditedBadge: "· edited by hand",
+    caseActionsLabel: "Active case",
+    newCase: "New case",
+    newCaseHint:
+      "Clears the whole active case — text, images, audio, OCR, evidence and recommendations — and resets the five agents and the Guardian. History and language are kept.",
+    clearAnalysis: "Clear analysis",
+    clearAnalysisHint:
+      "Clears the result, the evidence, the recommendations and the agent activity, and keeps what you already attached so you can analyse it again.",
+    caseCleared: "Case cleared: nothing is left from the previous investigation.",
+    analysisCleared: "Analysis cleared. The attached evidence is still available.",
   },
   verdict: {
     ariaLabel: "Analysis result",

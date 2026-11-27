@@ -292,6 +292,185 @@ test.describe("3b. Carga de imágenes en viewport móvil (390×844)", () => {
   });
 });
 
+/**
+ * Limpieza del caso activo: «Nuevo caso» y «Limpiar análisis».
+ *
+ * Se ejecuta en viewport móvil (390×844) para que el proyecto WebKit también
+ * la cubra, pero lo que comprueba no es específico de móvil: los dos botones
+ * usan el mismo marcado en escritorio. La prueba 3c.5 verifica el escritorio
+ * de forma explícita.
+ *
+ * El riesgo real que cubre es la contaminación entre investigaciones: que el
+ * veredicto, las evidencias, el OCR o la actividad de los cinco agentes de un
+ * caso sobrevivan al siguiente. El historial, en cambio, SÍ debe sobrevivir.
+ */
+test.describe("3c. Limpieza del caso activo (Nuevo caso / Limpiar análisis)", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  const SCAM =
+    "BBVA informa bloqueo de cuenta. Entra a https://bbva-soporte.example.com y confirma tu NIP ahora.";
+
+  async function openLab(page: import("@playwright/test").Page) {
+    await page.goto("/");
+    await openMobileNavIfPresent(page);
+    await newAnalysisButton(page).click();
+  }
+
+  function analyseButton(page: import("@playwright/test").Page) {
+    return page.getByRole("button", {
+      name: /Auditar solo en este dispositivo|Analizar contenido|Audit on this device only|Analyse content/i,
+    });
+  }
+
+  function newCaseButton(page: import("@playwright/test").Page) {
+    return page.getByRole("button", { name: /^(Nuevo caso|New case)$/i });
+  }
+
+  function clearAnalysisButton(page: import("@playwright/test").Page) {
+    return page.getByRole("button", { name: /^(Limpiar análisis|Clear analysis)$/i });
+  }
+
+  async function runAnalysis(page: import("@playwright/test").Page, text: string) {
+    await page.getByRole("tab", { name: /A · Evidencia|A · Evidence/i }).click();
+    await page.locator("#content").fill(text);
+    await analyseButton(page).click();
+    await expect(page.locator(".verdict")).toBeVisible({ timeout: 20_000 });
+  }
+
+  test("3c.1 los dos botones existen y son utilizables en móvil", async ({ page }) => {
+    await openLab(page);
+    for (const button of [newCaseButton(page), clearAnalysisButton(page)]) {
+      await expect(button).toBeVisible();
+      await expect(button).toBeInViewport();
+      // Objetivo táctil suficiente: el CSS fija 44px de alto en ≤700px.
+      const box = await button.boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(40);
+    }
+  });
+
+  test("3c.2 «Limpiar análisis» borra el resultado y conserva la evidencia adjunta", async ({
+    page,
+  }) => {
+    await openLab(page);
+    const image = await syntheticTextImage(page, "BBVA: verifica tu codigo ahora");
+    await page.locator("#photo").setInputFiles({ name: "estafa.jpg", mimeType: "image/jpeg", buffer: image });
+    await expect(page.locator(".thumbs li")).toHaveCount(1);
+    await runAnalysis(page, SCAM);
+
+    // Estado contaminable antes de limpiar.
+    await expect(page.locator("[data-guardian-state]")).toHaveAttribute("data-guardian-state", "alerta");
+    await expect(page.locator(".agent-reasons li").first()).toBeVisible();
+
+    await clearAnalysisButton(page).click();
+
+    // Resultado, evidencias, recomendaciones y actividad de agentes: fuera.
+    await expect(page.locator(".verdict")).toHaveCount(0);
+    await expect(page.locator(".agent-reasons")).toHaveCount(0);
+    await expect(page.locator(".investigation-agents")).toHaveCount(0);
+    await expect(page.locator(".timeline")).toHaveCount(0);
+    await expect(page.locator(".ocr-evidence")).toHaveCount(0);
+    await expect(page.locator(".error-notice")).toHaveCount(0);
+    // Guardián holográfico restablecido.
+    await expect(page.locator("[data-guardian-state]")).toHaveAttribute("data-guardian-state", "reposo");
+    // Y la evidencia que ya se adjuntó sigue ahí, que es la diferencia con
+    // «Nuevo caso».
+    await expect(page.locator(".thumbs li")).toHaveCount(1);
+    await expect(page.locator("#content")).toHaveValue(SCAM);
+    await expect(page.locator(".case-cleared")).toBeVisible();
+  });
+
+  test("3c.3 «Nuevo caso» borra texto, imágenes, OCR, evidencias y recomendaciones", async ({
+    page,
+  }) => {
+    await openLab(page);
+    const image = await syntheticTextImage(page, "BBVA: verifica tu codigo ahora");
+    await page.locator("#photo").setInputFiles({ name: "estafa.jpg", mimeType: "image/jpeg", buffer: image });
+    await runAnalysis(page, SCAM);
+    await expect(page.locator("[data-guardian-state]")).toHaveAttribute("data-guardian-state", "alerta");
+
+    await newCaseButton(page).click();
+
+    await expect(page.locator(".verdict")).toHaveCount(0);
+    await expect(page.locator(".agent-reasons")).toHaveCount(0);
+    await expect(page.locator(".investigation-agents")).toHaveCount(0);
+    await expect(page.locator(".ocr-evidence")).toHaveCount(0);
+    await expect(page.locator("[data-guardian-state]")).toHaveAttribute("data-guardian-state", "reposo");
+    // La evidencia del caso activo también se va.
+    await page.getByRole("tab", { name: /A · Evidencia|A · Evidence/i }).click();
+    await expect(page.locator("#content")).toHaveValue("");
+    await expect(page.locator(".thumbs li")).toHaveCount(0);
+    await expect(page.locator(".case-cleared")).toBeVisible();
+    // Y se puede empezar de cero: el botón de analizar vuelve a pedir contenido.
+    await expect(analyseButton(page)).toBeDisabled();
+  });
+
+  test("3c.4 tres investigaciones consecutivas sin contaminación, con el historial intacto", async ({
+    page,
+  }) => {
+    await openLab(page);
+
+    // 1) Estafa clara -> rojo o amarillo.
+    await runAnalysis(page, SCAM);
+    const first = await page.locator(".verdict").getAttribute("class");
+    expect(first).toMatch(/verdict-(rojo|amarillo)/);
+
+    // 2) Nuevo caso, mensaje inocuo -> no puede heredar el veredicto anterior.
+    await newCaseButton(page).click();
+    await runAnalysis(page, "Hola, nos vemos el jueves en la cafeteria de siempre. Llevo yo el cafe.");
+    const second = await page.locator(".verdict").getAttribute("class");
+    expect(second).not.toMatch(/verdict-rojo/);
+    // Ninguna señal del caso 1 sobrevive en la evaluación del caso 2.
+    await expect(page.locator(".lab-area-evaluation")).not.toContainText(/bbva-soporte\.example\.com/i);
+
+    // 3) Nuevo caso, otra estafa distinta -> vuelve a evaluarse por sí misma.
+    await newCaseButton(page).click();
+    await runAnalysis(
+      page,
+      "Felicidades, ganaste un premio. Paga 500 pesos de envio a https://premio-sorteo.example.net para reclamarlo.",
+    );
+    const third = await page.locator(".verdict").getAttribute("class");
+    expect(third).toMatch(/verdict-(rojo|amarillo)/);
+    await expect(page.locator(".lab-area-evaluation")).not.toContainText(/cafeteria de siempre/i);
+
+    // El historial conserva las tres investigaciones: limpiar el caso activo
+    // no es borrar el historial.
+    await openMobileNavIfPresent(page);
+    await historyNavButton(page).click();
+    await expect(page.locator(".history-list .history-row")).toHaveCount(3);
+  });
+
+  test("3c.5 en escritorio y en inglés: etiquetas traducidas y limpieza efectiva", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    // Cambio de idioma antes de analizar.
+    await page.getByRole("button", { name: /Idioma actual|Current language/i }).click();
+    await expect(page.getByRole("button", { name: /^New analysis$/i }).first()).toBeVisible();
+    await newAnalysisButton(page).click();
+
+    // Etiquetas en inglés, sin resto de español.
+    await expect(page.getByRole("button", { name: /^New case$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Clear analysis$/i })).toBeVisible();
+    await expect(page.locator(".case-actions")).not.toContainText(/Nuevo caso|Limpiar análisis/);
+
+    await page.locator("#content").fill(SCAM);
+    await analyseButton(page).click();
+    await expect(page.locator(".verdict")).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole("button", { name: /^Clear analysis$/i }).click();
+    await expect(page.locator(".verdict")).toHaveCount(0);
+    await expect(page.locator(".case-cleared")).toContainText(/Analysis cleared/i);
+    // El idioma se mantiene tras limpiar.
+    await expect(page.getByRole("button", { name: /^New case$/i })).toBeVisible();
+
+    await page.getByRole("button", { name: /^New case$/i }).click();
+    await expect(page.locator("#content")).toHaveValue("");
+    await expect(page.locator(".case-cleared")).toContainText(/Case cleared/i);
+    await expect(page.getByRole("button", { name: /^Clear analysis$/i })).toBeVisible();
+  });
+});
+
 test("4. Manejo de errores de entrada y endpoint App Check sin token", async ({ page, request }) => {
   await page.goto("/");
   await newAnalysisButton(page).click();

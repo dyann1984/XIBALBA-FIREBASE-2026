@@ -17,7 +17,7 @@ export default function HelpButton({ onOpenDirectory }: { onOpenDirectory: () =>
     <div className="help-floating">
       {open && (
         <div className="help-panel" role="dialog" aria-label={t("globalShield", "helpPanelTitle")}>
-          <button type="button" className="help-panel-close" aria-label="Cerrar" onClick={() => setOpen(false)}>
+          <button type="button" className="help-panel-close" aria-label={t("globalShield", "helpPanelClose")} onClick={() => setOpen(false)}>
             <X size={15} />
           </button>
           <h3>{t("globalShield", "helpPanelTitle")}</h3>

@@ -1,6 +1,7 @@
 node_modules/
 .next/
 .next-phase2/
+.next-webkit-dev/
 test-results/
 .env*
 !.env.example

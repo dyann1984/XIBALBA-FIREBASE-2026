@@ -185,7 +185,7 @@ export default function ImageAttachments({
         id="photo"
         className="visually-hidden"
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         multiple
         disabled={disabled}
         onChange={(event) => {

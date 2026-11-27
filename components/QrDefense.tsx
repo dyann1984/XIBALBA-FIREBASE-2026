@@ -153,7 +153,7 @@ export default function QrDefense({
           setPayload(e.target.value);
           setResult(null);
         }}
-        placeholder="https://ejemplo.example.com/pago"
+        placeholder={lang === "en" ? "https://sample.example.com/payment" : "https://ejemplo.example.com/pago"}
       />
       <div className="qr-actions">
         <button

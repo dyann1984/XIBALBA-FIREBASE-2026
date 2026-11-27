@@ -176,6 +176,122 @@ test("3. Subida de imágenes PNG y WebP, cámara real simulada, historial persis
   await expect(page.locator(".history-row")).toHaveCount(2);
 });
 
+/** En viewport móvil el `<nav>` queda fuera de pantalla (trasladado por CSS,
+ * no oculto) hasta abrir el menú hamburguesa (botón "Abrir menú"/"Open
+ * menu"); en escritorio ese botón no existe y el nav ya es visible.
+ *
+ * Un elemento trasladado fuera de pantalla con `transform` sigue siendo
+ * "visible" para Playwright (tiene tamaño, no tiene `display:none`), así
+ * que `.click()` no espera a que el menú termine de abrirse: en WebKit esto
+ * hacía que el clic en "Nuevo análisis" cayera fuera de la pantalla real y
+ * no navegara, sin que la prueba lanzara ningún error en ese punto. Por eso
+ * se espera `toBeInViewport()` del propio botón del nav antes de usarlo. */
+async function openMobileNavIfPresent(page: import("@playwright/test").Page) {
+  const toggle = page.getByRole("button", { name: /Abrir menú|Open menu/i });
+  if (await toggle.isVisible().catch(() => false)) {
+    await toggle.click();
+    // El panel desliza con `transition: left .2s` (ver `.sidebar` en
+    // globals.css). Esperar la clase `.open` confirma que React ya aplicó
+    // el nuevo estado; el margen fijo deja que la transición de posición
+    // termine antes de intentar el siguiente clic — en WebKit, un clic
+    // disparado a mitad de esa transición no estaba produciendo la
+    // navegación (sin lanzar error), aunque el botón ya estuviera dentro
+    // del viewport en ese instante.
+    await expect(page.locator(".sidebar.open")).toBeVisible();
+    await page.waitForTimeout(250);
+    await expect(newAnalysisButton(page)).toBeInViewport();
+  }
+}
+
+test.describe("3b. Carga de imágenes en viewport móvil (390×844)", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("el input de fotos acepta cualquier image/* (no filtra HEIC fuera del picker de iOS)", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await openMobileNavIfPresent(page);
+    await newAnalysisButton(page).click();
+    // Regresión: un `accept` enumerado (image/jpeg,image/png,image/webp) hace
+    // que Safari en iOS oculte del picker las fotos que siguen en HEIC (el
+    // formato por defecto de la cámara), dejando la galería vacía para esas
+    // personas. `image/*` deja que iOS resuelva/convierta y nuestra propia
+    // validación (`describeImageRejection`) sigue rechazando con un mensaje
+    // claro lo que de verdad no soportamos.
+    await expect(page.locator("#photo")).toHaveAttribute("accept", "image/*");
+  });
+
+  test("una foto HEIC sin convertir muestra un mensaje claro en vez de no hacer nada", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await openMobileNavIfPresent(page);
+    await newAnalysisButton(page).click();
+    await page.locator("#photo").setInputFiles({
+      name: "IMG_3301.HEIC",
+      mimeType: "image/heic",
+      buffer: Buffer.from(new Uint8Array(32)),
+    });
+    await expect(page.locator(".error-notice")).toContainText(/HEIC.*no es JPEG|HEIC.*is not JPEG/i);
+    await expect(page.locator(".thumbs li")).toHaveCount(0);
+  });
+
+  test("una foto JPEG con MIME vacío (quirk de WebView en Android) sí se adjunta", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await openMobileNavIfPresent(page);
+    await newAnalysisButton(page).click();
+    await page.locator("#photo").setInputFiles({
+      name: "IMG_2026.jpg",
+      mimeType: "",
+      buffer: TINY_PNG,
+    });
+    await expect(page.locator(".thumbs li")).toHaveCount(1);
+  });
+
+  test("recorrido completo en móvil: galería -> vista previa -> OCR -> veredicto -> reemplazo -> segundo análisis", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await openMobileNavIfPresent(page);
+    await newAnalysisButton(page).click();
+
+    // El texto del cuerpo, no el OCR, es lo que de forma fiable dispara las
+    // señales de phishing en esta prueba (igual que en la prueba 3); la
+    // imagen viaja como evidencia adjunta real.
+    await page.locator("#content").fill(
+      "BBVA informa bloqueo de cuenta. Entra a https://bbva-soporte.example.com y confirma tu NIP ahora.",
+    );
+    const fraudImage = await syntheticTextImage(page, "BBVA: verifica tu codigo ahora o bloqueamos tu cuenta");
+    await page.locator("#photo").setInputFiles({ name: "estafa.jpg", mimeType: "image/jpeg", buffer: fraudImage });
+    // Vista previa real, no solo el nombre del archivo.
+    await expect(page.locator(".thumbs li img")).toHaveAttribute("src", /^blob:/);
+
+    await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+    // Al terminar, la app salta sola a la pestaña C (veredicto); en móvil las
+    // otras pestañas quedan ocultas por CSS hasta que se tocan a propósito.
+    await expect(page.locator(".verdict-rojo, .verdict-amarillo")).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("tab", { name: /A · Evidencia|A · Evidence/i }).click();
+    await expect(page.locator(".ocr-evidence")).toBeVisible();
+
+    // Elimina la imagen adjunta y confirma que desaparece de la vista previa.
+    await page.getByRole("button", { name: /Quitar estafa\.jpg|Remove estafa\.jpg/i }).click();
+    await expect(page.locator(".thumbs li")).toHaveCount(0);
+
+    // Reemplaza por una imagen limpia y confirma que se puede repetir el
+    // análisis (segundo análisis tras finalizar el primero).
+    const benignImage = await syntheticTextImage(page, "Nos vemos el jueves en la cafeteria");
+    await page.locator("#photo").setInputFiles({ name: "limpio.jpg", mimeType: "image/jpeg", buffer: benignImage });
+    await expect(page.locator(".thumbs li")).toHaveCount(1);
+    await page.locator("#content").fill("");
+    await page.getByRole("button", { name: /Auditar solo en este dispositivo|Analizar contenido/i }).click();
+    await expect(page.locator(".verdict")).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("tab", { name: /A · Evidencia|A · Evidence/i }).click();
+    await expect(page.locator(".ocr-evidence")).toBeVisible();
+  });
+});
+
 test("4. Manejo de errores de entrada y endpoint App Check sin token", async ({ page, request }) => {
   await page.goto("/");
   await newAnalysisButton(page).click();

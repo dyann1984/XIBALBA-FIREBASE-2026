@@ -3,29 +3,35 @@
 **Fecha:** 27 de noviembre de 2026
 **Presentación:** 28 de noviembre de 2026
 **Rama:** `fix/mobile-image-upload-i18n-audit`
-**Commit definitivo:** `9fd820a`
+**Commit desplegado en producción:** `d7170f7`
+**Despliegue de producción:** `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq` — **https://xibalba-firebase-2026.vercel.app**
 **Punto de restauración:** etiqueta `restore-point-20261127` (sobre `release/xibalba-2.0-rc`, commit `867ec09`)
 
 ---
 
 ## 1. Veredicto
 
-**GO CONDICIONADO.**
+**GO.**
 
-La aplicación está estable, es bilingüe completa, funciona en móvil (Chromium y WebKit reales) y
-conserva intactas todas sus protecciones. El fallo de carga de imágenes en móvil que originó esta
-auditoría está corregido y verificado contra el despliegue real, no solo en local.
+El candidato está publicado en producción y verificado ahí mismo con pruebas reales. La condición
+que dejaba el informe anterior en "GO condicionado" —el dominio del Preview sin autorizar en la
+clave de reCAPTCHA Enterprise— **está resuelta**, y Gemini responde de verdad en español y en
+inglés, con texto y con imágenes, tanto en el Preview como en producción.
 
-La condición es una sola y **no es un defecto del código**: la clave de reCAPTCHA Enterprise que
-respalda App Check no tiene autorizado el dominio del Preview, así que desde el Preview no hay
-interpretación de Gemini. La demostración debe hacerse sobre un dominio cuya clave sí esté
-autorizada (el de producción ya lo está), o bien autorizar el dominio del Preview antes de la
-presentación. Detalle y procedimiento exacto en la sección 7, hallazgo **P1-01**.
+Lo que respalda este veredicto, todo ejecutado hoy:
 
-Sin IA en la nube la aplicación **no se rompe ni inventa resultados**: el motor determinista emite
-el veredicto, los cinco agentes trabajan, y la tarjeta de IA dice con todas sus letras
-"No hay interpretación de IA disponible: Firebase rechazó la solicitud". Esa degradación honesta
-está capturada como evidencia.
+- Gemini real en producción, en ambos idiomas: barra de estado en `IA · NUBE` / `AI · CLOUD`,
+  `tieneIA: true`, `iaFallida: false`.
+- Las 8 pruebas móviles (Chromium móvil + WebKit/iPhone 13) **contra producción por HTTPS**, bajo la
+  CSP completa: 8 pasadas, 0 fallidas.
+- Cero errores de consola en producción; Service Worker activo con la caché `xibalba-shell-v3`.
+- 243 pruebas unitarias, 61 E2E y las 4 de IA real en la nube, con las cifras exactas de la
+  sección 3.
+
+Quedan dos desviaciones conocidas, ambas documentadas y ninguna crítica: el nombre del quinto
+agente no se traduce (**P2-01**) y, si se cambia de idioma *después* de analizar, el texto que
+escribió Gemini se queda en el idioma original (**P2-02**). La segunda tiene una indicación de uso
+muy simple para la demostración: **elegir el idioma antes de analizar**.
 
 ---
 
@@ -33,29 +39,24 @@ está capturada como evidencia.
 
 | Elemento | Valor |
 |---|---|
-| Commit final | `9fd820a` |
+| **URL pública funcional** | **https://xibalba-firebase-2026.vercel.app** |
+| Commit desplegado | `d7170f7` |
+| Despliegue de producción | `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq` (`target: production`, `readyState: READY`) |
 | Rama publicada | `fix/mobile-image-upload-i18n-audit` (en `origin`) |
-| Preview (alias estable) | **https://xibalba-rc-preview.vercel.app** |
-| Preview (URL del despliegue) | https://xibalba-firebase-2026-fjobb0gcs-dyann1984s-projects.vercel.app |
-| Producción actual (sin tocar) | `xibalba-firebase-2026-5l26o5wk1-...vercel.app` |
+| Preview (alias estable) | https://xibalba-rc-preview.vercel.app (protegido de nuevo; ver sección 9) |
+| Despliegue anterior, para rollback | `dpl_3jQoC4Fa6MQDcENUk5DjtDnpwu1D` (`xibalba-firebase-2026-5l26o5wk1`, 26-nov 15:06) |
 | Capturas del Preview | `artifacts/preview-20261127/` |
+| Capturas de producción | `artifacts/produccion-20261127/` |
 
-### URL para probar desde tu celular
-
-El Preview conserva su protección de acceso (Vercel Authentication). Para entrar desde el celular
-sin iniciar sesión, abre **una vez** este enlace; deja una cookie y después puedes navegar normal:
+### Para probar desde el celular
 
 ```
-https://xibalba-rc-preview.vercel.app/?x-vercel-protection-bypass=<SECRETO>&x-vercel-set-bypass-cookie=true
+https://xibalba-firebase-2026.vercel.app
 ```
 
-`<SECRETO>` es el valor de *Protection Bypass for Automation*, generado con tu autorización.
-**A propósito no se escribe en este archivo**, para no dejar una credencial en el repositorio: se
-entregó por separado y puedes consultarlo o rotarlo en Vercel → Project Settings → Deployment
-Protection → Protection Bypass for Automation.
-
-Ese secreto **no desactiva la protección**: el resto del mundo sigue viendo el login. Es revocable
-en cualquier momento desde esa misma pantalla.
+Producción **no tiene protección de acceso**: se abre directamente en cualquier teléfono, sin
+secretos ni cookies. El enlace con secreto de bypass que daba el informe anterior ya no existe: ese
+secreto se revocó al terminar las validaciones (sección 9).
 
 ---
 
@@ -68,19 +69,20 @@ en cualquier momento desde esa misma pantalla.
 | `npm run build` (producción) | **correcto**, 7 rutas generadas |
 | Unitarias (`node --test`) | **243 pasadas / 0 fallidas / 0 omitidas** |
 | E2E local (`playwright.config.ts`) | **61 pruebas: 54 pasadas, 7 omitidas, 0 fallidas** |
-| IA real en la nube (`playwright.cloud.config.ts`) | **4 pasadas / 0 fallidas** |
-| Móvil contra el Preview (`playwright.preview.config.ts`) | **8 pasadas / 0 fallidas** (4 pruebas × 2 motores) |
+| IA real en la nube, en local (`playwright.cloud.config.ts`) | **4 pasadas / 0 fallidas** |
+| Móvil contra el **Preview** (`playwright.preview.config.ts`) | **8 pasadas / 0 fallidas** |
+| Móvil contra **producción** (`playwright.preview.config.ts`) | **8 pasadas / 0 fallidas** |
 
 Las 7 pruebas omitidas en la batería local no son fallos encubiertos: son las de
-`cloud-ai.spec.ts` (4) y `production-image-analysis.spec.ts` (3), que se saltan por diseño cuando
-se ejecutan sin la configuración de nube. Las 4 de `cloud-ai.spec.ts` se ejecutaron aparte y
-pasaron; las 3 de producción-imagen requieren un despliegue con App Check operativo y quedan
-pendientes por el hallazgo P1-01.
+`cloud-ai.spec.ts` (4) y `production-image-analysis.spec.ts` (3), que se saltan por diseño cuando se
+ejecutan sin la configuración de nube. Las 4 de `cloud-ai.spec.ts` se ejecutaron aparte, en local
+con token de depuración, y pasaron. Las 3 de `production-image-analysis.spec.ts` **no pueden
+ejecutarse contra un despliegue real, y no es un defecto**: ver P1-02.
 
-### Carga de imágenes en móvil — contra el Preview real (HTTPS + CSP de producción)
+### Carga de imágenes en móvil — contra producción (HTTPS + CSP de producción)
 
 Las cuatro pruebas corrieron en **Chromium móvil** y en **WebKit real (iPhone 13)**, apuntando al
-despliegue, no a un servidor local:
+despliegue de producción:
 
 | Prueba | Chromium móvil | WebKit / iPhone 13 |
 |---|---|---|
@@ -89,46 +91,53 @@ despliegue, no a un servidor local:
 | Una foto JPEG con MIME vacío (quirk de WebView Android) sí se adjunta | PASS | PASS |
 | Recorrido completo: galería → vista previa → OCR → veredicto → reemplazo → segundo análisis | PASS | PASS |
 
-Comprobación directa sobre el Preview en WebKit: `#photo` tiene `accept="image/*"`.
+Las mismas cuatro, contra el Preview, también en verde (8/8). Comprobación directa en WebKit:
+`#photo` tiene `accept="image/*"` y la vista previa es un `blob:`.
 
 ---
 
 ## 4. Evidencia de Gemini e IA real
 
-### En local, con App Check operativo — FUNCIONA
+### En producción — FUNCIONA, verificado hoy desde un navegador real
 
-`playwright.cloud.config.ts`, 4/4 pasadas, con llamadas reales a Firebase + Gemini:
+Análisis en **español** sobre `https://xibalba-firebase-2026.vercel.app`:
 
-- Interpretación de IA en la nube real nunca baja un veredicto determinista — PASS
-- Holograma del Guardián en estado de seguridad (verde) con IA real — PASS
-- **IA en la nube en inglés** y recuperación limpia si se revoca el consentimiento — PASS
-- IA real con captura sintética (OCR + Gemini), **latencia medida: 4253 ms** — PASS
+| Señal | Valor leído del DOM |
+|---|---|
+| Barra de estado | `IA · NUBE` |
+| Estado del Guardián | `alerta` |
+| Veredicto | `verdict verdict-rojo` |
+| Bloque de interpretación de IA presente | `true` |
+| IA fallida | `false` |
+| Motor | `Engine: CLOUD · On-device AI: unavailable` |
 
-Esto demuestra que la ruta de código completa —App Check → Firebase AI Logic → Gemini → parseo
-del JSON → evidencias y recomendaciones— funciona de verdad, en ambos idiomas.
+Cambio a **inglés** sobre el mismo resultado: la barra pasa a `AI · CLOUD`, el bloque de IA en
+inglés está presente, no queda texto español en la interfaz, y el veredicto y el estado del Guardián
+se conservan. El volcado completo de la página confirma que interfaz, evidencias, recomendaciones,
+limitaciones, fuentes, "Why this result" y "Pending external verification" están **todos en
+inglés**, con el **contenido original en español intacto** bajo "CONTENT TO REVIEW".
 
-### Desde el Preview — BLOQUEADO (no por el código)
+### En el Preview — FUNCIONA, tras resolver P1-01
 
-La página de diagnóstico propia de la aplicación (`/diagnostico-app-check`) comprueba cada etapa
-por separado, sin inferir ninguna de otra. Resultado en el Preview:
+La página de diagnóstico propia (`/diagnostico-app-check`) comprueba cada etapa por separado, sin
+inferir ninguna de otra. Resultado en el Preview una vez autorizado el dominio:
 
 | Etapa | Resultado |
 |---|---|
 | 1. SDK disponible | ✔ ok |
 | 2. Servicio configurado (`initializeApp` + App Check) | ✔ ok |
-| 3. **Autenticación exitosa (App Check)** | ✖ **fallo — `AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error)`** |
-| 4. Llamada real ejecutada (Gemini) | pendiente (bloqueada por la 3) |
-| 5. Respuesta real obtenida | pendiente |
-| 6. Llamada forzada a la nube (`ONLY_IN_CLOUD`) | pendiente |
+| 3. Autenticación exitosa (App Check) | ✔ ok |
+| 4. Llamada real ejecutada (Gemini) | ✔ ok |
+| 5. Respuesta real obtenida | ✔ ok |
+| 6. Llamada forzada a la nube (`ONLY_IN_CLOUD`) | ✔ ok |
 | 7. Persistencia (Firestore) | no aplica — el proyecto no lee ni escribe en Firestore a propósito |
 
-Las variables de entorno **sí** están configuradas para el entorno Preview en Vercel
-(`NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY`, `..._API_KEY`, `..._APP_ID`, `..._PROJECT_ID`,
-`..._AUTH_DOMAIN`), y la interfaz lo refleja: "Inferencia de IA · Nube: configurada". El fallo es
-de dominio, no de configuración de la app. Ver P1-01.
+Evidencia adicional capturada contra el Preview real (`artifacts/preview-20261127/`): Gemini
+respondiendo en español y en inglés con lectura dinámica propia del contenido enviado; análisis real
+de imagen con metadatos, OCR y lectura del modelo; carga de imagen en WebKit móvil.
 
 **Importante:** el token de depuración local no se usó como evidencia del funcionamiento en el
-despliegue. Las dos situaciones se reportan por separado, como corresponde.
+despliegue. Las ejecuciones locales y las de despliegue se reportan por separado.
 
 ---
 
@@ -137,41 +146,38 @@ despliegue. Las dos situaciones se reportan por separado, como corresponde.
 - **Paridad estructural garantizada por el compilador:** `dictionary.ts` declara
   `type Dictionary = typeof es` y `export const en: Dictionary`, así que a una clave que falte en
   inglés no la deja pasar el `tsc`.
-- **Nueva prueba automática** `tests/i18n-parity.test.mjs`: igualdad de conjuntos de claves,
-  ausencia de traducciones vacías y ausencia de traducciones idénticas, con listas de excepciones
-  explícitas y justificadas. Pasa.
+- **Prueba automática** `tests/i18n-parity.test.mjs`: igualdad de conjuntos de claves, ausencia de
+  traducciones vacías y ausencia de traducciones idénticas, con excepciones explícitas. Pasa.
 - **Dos huecos reales encontrados y corregidos** en esta sesión:
   - `HelpButton` tenía `aria-label="Cerrar"` fijo en español → ahora usa `t()`.
   - `QrDefense` tenía el placeholder de ejemplo fijo en español → ahora depende del idioma.
   - Clave nueva `globalShield.helpPanelClose` en ES y EN.
-- **Verificado en vivo sobre el Preview en inglés** (captura
-  `04-preview-veredicto-en-desktop.png`): el veredicto, el nivel de riesgo, la confianza, la
-  cobertura de auditoría, el "WHY THIS RESULT", las evidencias verificadas, las recomendaciones,
-  las limitaciones y las fuentes aparecen **todos en inglés**, mientras que
-  **el contenido original en español se conserva intacto como evidencia** — que es exactamente el
-  comportamiento pedido.
+- **Verificado en vivo en producción en inglés:** veredicto, nivel de riesgo, confianza, cobertura de
+  auditoría, "Why this result", evidencias verificadas, recomendaciones, limitaciones y fuentes
+  aparecen **todos en inglés**, mientras que **el contenido original en español se conserva intacto
+  como evidencia** — que es exactamente el comportamiento pedido.
 - **Nombres propios respetados:** CAMAZOTZ, IXBALANQUÉ, VUCUB CAMÉ y HUN CAMÉ no se traducen.
   "XIBALBÁ AI" se conserva como marca.
-- **Desviación conocida:** "EL GUARDIÁN" sigue apareciendo así en inglés. Ver P2-01.
+- **Desviaciones conocidas:** P2-01 ("EL GUARDIÁN") y P2-02 (texto de Gemini al cambiar de idioma
+  después de analizar).
 
 ---
 
 ## 6. Guardián, voz y mapas 3D
 
 Verificado por pruebas automáticas (todas en verde en la batería local) y confirmado en vivo sobre
-el Preview:
+el despliegue:
 
-- Holograma del Guardián: estados reposo y alerta reales. En el Preview, tras un análisis de
-  riesgo alto, `data-guardian-state` = **`alerta`** (captura `03-preview-guardian-alerta.png`).
+- Holograma del Guardián: estados reposo y alerta reales. Tras un análisis de riesgo alto,
+  `data-guardian-state` = **`alerta`**.
 - `hologram-3d.spec.ts`: escritorio, móvil, selección de agente, **cero errores de consola** — PASS.
 - Fallback seguro sin WebGL: muestra el JaguarAvatar 2.5D y el antifraude sigue usable — PASS.
 - `maps-redesign.spec.ts`: Mapa de Investigaciones (estadísticas, leyenda, zoom, ES/EN) y Mapa 3D
-  Maya (templos, FPS, móvil) — PASS. FPS medido de `GodsMap3D`: 7 en el entorno de prueba
-  headless (ver P3-03).
+  Maya (templos, FPS, móvil) — PASS. FPS medido de `GodsMap3D`: 7 en entorno headless (ver P3-03).
 - Micrófono, voz TTS y preguntas al Guardián con cambio de idioma — PASS.
-- Cambio de idioma ES/EN **después** de analizar actualiza veredicto, evidencias y Guardián sin
-  volver a llamar a la nube — PASS.
-- En el Preview, el modelo 3D `/guardian/models/black-panther-base.glb` se sirve con **200**.
+- El modelo 3D `/guardian/models/black-panther-base.glb` se sirve con **200** en el despliegue.
+- Service Worker activo en producción (`sw.js`), caché versionada `xibalba-shell-v3`.
+- **Cero errores de consola** en producción.
 
 ---
 
@@ -183,26 +189,32 @@ el Preview:
 
 ### P1 — Altos
 
-#### P1-01 · App Check falla en el dominio del Preview (`appCheck/recaptcha-error`)
+#### P1-01 · App Check fallaba en el dominio del Preview — **RESUELTO**
 
-- **Qué pasa:** desde el Preview, App Check no consigue token y Firebase rechaza la petición, así
-  que no hay interpretación de Gemini. El veredicto determinista y los cinco agentes siguen
-  funcionando; la app lo dice explícitamente en vez de simular un resultado.
-- **Causa:** la clave de reCAPTCHA Enterprise sólo tiene autorizados los dominios registrados en
-  Google Cloud. El dominio del Preview no está en esa lista. No es un defecto del código ni de la
-  configuración de Vercel: las variables de entorno del Preview están completas.
-- **Por qué no afecta a producción:** el dominio de producción ya está autorizado; por eso la
-  versión v2.0.0 publicada funciona con Gemini.
-- **Cómo resolverlo (requiere tu acceso a Google Cloud):**
-  1. Google Cloud Console → Security → reCAPTCHA Enterprise → la clave usada por App Check.
-  2. En la lista de dominios, añadir: `xibalba-rc-preview.vercel.app`
-  3. Guardar y esperar un par de minutos.
-  4. Volver a abrir `https://xibalba-rc-preview.vercel.app/diagnostico-app-check` y pulsar
-     "Comprobar con una llamada real a Gemini". Las etapas 3 a 6 deben pasar a ✔.
-- **Por qué el alias:** se asignó el alias estable `xibalba-rc-preview.vercel.app` precisamente
-  para que autorices **un solo dominio** y siga sirviendo en futuros despliegues del candidato, en
-  vez de una URL distinta cada vez.
-- **No se tocó ninguna protección** para rodear esto.
+- **Qué pasaba:** desde el Preview, App Check no conseguía token
+  (`AppCheck: ReCAPTCHA error. (appCheck/recaptcha-error)`) y Firebase rechazaba la petición, así que
+  no había interpretación de Gemini.
+- **Causa:** la clave de reCAPTCHA Enterprise sólo autoriza los dominios registrados en Google
+  Cloud, y el del Preview no estaba en la lista. No era un defecto del código ni de la configuración
+  de Vercel.
+- **Resolución aplicada hoy:** en Google Cloud Console → proyecto `xibalba-ai-2026` → reCAPTCHA
+  Enterprise → la clave usada por App Check, se añadió el dominio `xibalba-rc-preview.vercel.app`.
+  **Todos los dominios existentes se conservaron** y **no se desactivó ninguna protección.**
+- **Verificación:** tras la propagación, las 6 etapas del diagnóstico pasan a ✔ y Gemini responde en
+  el Preview en ambos idiomas, con texto y con imágenes.
+
+#### P1-02 · reCAPTCHA Enterprise rechaza navegadores automatizados — comportamiento esperado
+
+- **Qué pasa:** las pruebas Playwright que necesitan IA en la nube (`cloud-ai.spec.ts`,
+  `production-image-analysis.spec.ts`) **no consiguen token de App Check contra un despliegue real**,
+  aunque el mismo despliegue sirve Gemini sin problema desde un navegador normal.
+- **Por qué:** es exactamente lo que hace un antibot. reCAPTCHA Enterprise detecta la automatización
+  y no emite token. Está documentado con tres capturas comparativas
+  (`artifacts/preview-20261127/30-32-playwright-recaptcha-bloquea-automatizacion-*`): Gemini funciona
+  desde un navegador real en el mismo despliegue en el que Playwright no obtiene token.
+- **Consecuencia:** la cobertura automatizada de IA en la nube sólo puede correr **en local con el
+  token de depuración**, y la verificación en el despliegue se hace **desde un navegador real**, como
+  se hizo hoy (sección 4). No es un defecto y no se rodeó desactivando nada.
 
 ### P2 — Medios
 
@@ -210,13 +222,24 @@ el Preview:
 
 - **Qué pasa:** en inglés, el quinto agente sigue apareciendo como "EL GUARDIÁN". Los rótulos del
   panel sí están traducidos ("GUARDIAN", "Guardian and explanation"), pero el nombre del agente no.
-- **Por qué no se cambió hoy:** el nombre es un dato en `lib/agents.ts` que además usa el
-  coordinador (`lib/analysis/coordinator.ts`) como etiqueta de actividad, y hay **18 referencias en
-  pruebas** que lo afirman. Hacerlo dependiente del idioma obliga a pasar `lang` al motor de
-  análisis y a reescribir esas pruebas: es un cambio invasivo en el motor determinista la víspera
-  de la presentación, justo lo que pediste congelar.
-- **Recomendación:** dejarlo para después del concurso, o decidirlo tú explícitamente y lo aplico
-  con sus pruebas.
+- **Por qué no se cambió:** el nombre es un dato en `lib/agents.ts` que además usa el coordinador
+  (`lib/analysis/coordinator.ts`) como etiqueta de actividad, y hay **18 referencias en pruebas** que
+  lo afirman. Hacerlo dependiente del idioma obliga a pasar `lang` al motor de análisis y a
+  reescribir esas pruebas: un cambio invasivo en el motor determinista la víspera de la presentación,
+  justo lo que pediste congelar.
+- **Recomendación:** dejarlo para después del concurso, o decidirlo tú y lo aplico con sus pruebas.
+
+#### P2-02 · Al cambiar de idioma *después* de analizar, el texto de Gemini se queda en el original
+
+- **Qué pasa:** toda la interfaz, las evidencias, las recomendaciones, las limitaciones y las fuentes
+  **sí** se traducen al cambiar de idioma sobre un resultado ya calculado. Lo que no cambia es el
+  párrafo que escribió Gemini: si analizaste en español y luego pasas a inglés, ese bloque sigue en
+  español.
+- **Por qué:** traducirlo exigiría **volver a llamar a Gemini** al cambiar de idioma, que es
+  precisamente lo que se prohibió para no gastar llamadas ni rehacer el análisis con un clic de
+  idioma.
+- **Indicación para la demostración:** **elegir el idioma antes de analizar.** Hecho así, el bloque
+  de IA sale directamente en el idioma elegido, verificado hoy en producción en ambos.
 
 ### P3 — Bajos
 
@@ -224,8 +247,8 @@ el Preview:
 
 Consola del Preview: `Loading the script 'https://vercel.live/_next-live/feedback/feedback.js'
 violates ... script-src`. Es la barra de feedback que Vercel inyecta **solo en despliegues de
-Preview**; no forma parte de la aplicación y no afecta a ninguna función. En producción no
-aparece. En realidad es evidencia de que la CSP está haciendo su trabajo.
+Preview**; no forma parte de la aplicación y no afecta a ninguna función. En producción no aparece,
+confirmado hoy: cero errores de consola. En realidad es evidencia de que la CSP está funcionando.
 
 #### P3-02 · Aviso de `Feature-Policy` duplicada
 
@@ -234,24 +257,25 @@ Vercel añade su propia cabecera `Feature-Policy` con `camera`, que coexiste con
 
 #### P3-03 · FPS bajo del mapa 3D en entorno de prueba
 
-`GodsMap3D` midió 7 FPS bajo Playwright headless sin aceleración por GPU. No es representativo de
-un equipo o teléfono real con GPU. No se midió en hardware físico.
+`GodsMap3D` midió 7 FPS bajo Playwright headless sin aceleración por GPU. No es representativo de un
+equipo o teléfono real con GPU. No se midió en hardware físico.
 
 #### P3-04 · Aviso de hidratación de React en modo desarrollo
 
-Observado únicamente con `next dev` (servidor del proyecto WebKit), sobre el `style={{}}` del
-input de análisis rápido. No se reprodujo en el Preview ni en el build de producción.
+Observado únicamente con `next dev` (servidor del proyecto WebKit), sobre el `style={{}}` del input
+de análisis rápido. No se reprodujo en el despliegue ni en el build de producción.
 
 ---
 
-## 8. Qué se corrigió en este commit
+## 8. Qué se corrigió en esta rama
 
 1. **Carga de imágenes en móvil (la causa raíz del fallo del 26-nov).**
    `ImageAttachments` enumeraba `accept="image/jpeg,image/png,image/webp"`. El selector de fotos de
    Safari en iOS **oculta las fotos que siguen en HEIC** —el formato por defecto de la cámara del
-   iPhone— cuando se le da una lista enumerada en vez de `image/*`, dejando la galería
-   aparentemente vacía. Ahora es `image/*`, e `describeImageRejection` sigue rechazando con mensaje
-   bilingüe claro lo que de verdad no se soporta. Cubierto por 4 pruebas nuevas en dos motores.
+   iPhone— cuando se le da una lista enumerada en vez de `image/*`, dejando la galería aparentemente
+   vacía. Ahora es `image/*`, e `describeImageRejection` sigue rechazando con mensaje bilingüe claro
+   lo que de verdad no se soporta. Cubierto por 4 pruebas nuevas en dos motores, verificadas contra
+   el Preview y contra producción.
 
 2. **Dos huecos de internacionalización** (sección 5) más la prueba automática de paridad ES/EN.
 
@@ -261,39 +285,59 @@ input de análisis rápido. No se reprodujo en el Preview ni en el build de prod
    **WebKit aplica esa directiva también a `127.0.0.1`** y reescribe todas las subpeticiones (JS,
    CSS, imágenes) a `https://`, que el servidor de pruebas local no habla — `SSL connect error` en
    cada una, página sin estilos ni JavaScript. Chromium no reescribe sobre loopback, por eso el
-   problema sólo se veía en WebKit. La corrección es un servidor propio en modo `next dev` (donde
-   la CSP omite esa directiva) con su propio `distDir`. **La CSP de producción quedó intacta**, y
-   las pruebas contra el Preview por HTTPS confirman que bajo la CSP real todo carga.
+   problema sólo se veía en WebKit. La corrección es un servidor propio en modo `next dev` (donde la
+   CSP omite esa directiva) con su propio `distDir`. **La CSP de producción quedó intacta**, y las
+   pruebas contra el despliegue por HTTPS confirman que bajo la CSP real todo carga.
 
-4. **Corrección de un diagnóstico previo equivocado.** Se había puesto `workers: 1` creyendo que
-   los fallos intermitentes al escribir capturas eran una colisión entre pruebas. Se reprodujo el
-   mismo error con un solo worker, sobre un archivo nuevo y único: no era colisión, sino un bloqueo
+4. **Corrección de un diagnóstico previo equivocado.** Se había puesto `workers: 1` creyendo que los
+   fallos intermitentes al escribir capturas eran una colisión entre pruebas. Se reprodujo el mismo
+   error con un solo worker, sobre un archivo nuevo y único: no era colisión, sino un bloqueo
    transitorio de Windows sobre el archivo recién creado. Se revirtió a ejecución paralela con
    `retries: 1`, que es la corrección real y ~6× más rápida.
+
+5. **`playwright.preview.config.ts`**, nueva configuración que corre el bloque móvil contra un
+   despliegue real por HTTPS en Chromium móvil y WebKit, bajo la CSP de producción completa. La URL y
+   el secreto se leen de variables de entorno: **ninguna credencial en el repositorio**.
+
+6. **Exclusión de `.next-webkit-dev` en ESLint**, que analizaba código generado (143 errores y 2954
+   avisos, ninguno del proyecto).
 
 ---
 
 ## 9. Seguridad: qué NO se tocó
 
 - CSP de producción: **intacta**, incluido `upgrade-insecure-requests`. Verificada en vivo sobre el
-  Preview (cabecera completa recibida con HTTP 200).
-- App Check y reCAPTCHA Enterprise: **sin desactivar**, ni para pasar pruebas ni para desbloquear
-  el Preview.
-- Cabeceras de seguridad en el Preview, comprobadas: `Content-Security-Policy`,
-  `Permissions-Policy`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`,
-  `X-Frame-Options: DENY`.
-- Protección del despliegue: **sigue activa**. El acceso se dio con un secreto de bypass revocable,
-  con tu autorización, no desactivando la protección.
-- Ningún secreto se escribió en el repositorio: `playwright.preview.config.ts` lee la URL y el
-  secreto de variables de entorno.
-- No se promovió nada a producción.
+  despliegue (cabecera completa recibida con HTTP 200).
+- App Check y reCAPTCHA Enterprise: **sin desactivar**, ni para pasar pruebas ni para desbloquear el
+  Preview. En la clave de reCAPTCHA sólo se **añadió** un dominio; los existentes se conservaron.
+- Cabeceras de seguridad comprobadas: `Content-Security-Policy`, `Permissions-Policy`,
+  `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`.
+- Protección del Preview: **siguió activa todo el tiempo**. El acceso se dio con un secreto de bypass
+  revocable, con tu autorización, no desactivando la protección.
+- **Secreto temporal revocado al terminar las validaciones**, como pediste. Verificado: el Preview
+  con ese secreto responde **302** (redirección al login de Vercel), es decir, ya no da acceso. El
+  otro secreto de bypass, que es preexistente del proyecto y está ligado a una variable de entorno,
+  **no se tocó**.
+- Ningún secreto se escribió en el repositorio.
 
 ---
 
 ## 10. Procedimiento de rollback
 
-**Si algo sale mal con el candidato, producción no se ve afectada:** nada se promovió. La versión
-v2.0.0 publicada sigue siendo la que está en línea.
+Producción está en `dpl_7wBSvznLfpAQ4fzTNJHNAfgoWfiq` (commit `d7170f7`). El despliegue anterior
+sigue disponible y es el objetivo de rollback:
+
+**Despliegue anterior:** `dpl_3jQoC4Fa6MQDcENUk5DjtDnpwu1D`
+(`xibalba-firebase-2026-5l26o5wk1-dyann1984s-projects.vercel.app`, creado el 26-nov a las 15:06)
+
+Desde el panel de Vercel: Deployments → ese despliegue → **Promote to Production**. Es instantáneo y
+no requiere build.
+
+Desde la terminal:
+
+```powershell
+vercel rollback xibalba-firebase-2026-5l26o5wk1-dyann1984s-projects.vercel.app
+```
 
 Para deshacer el trabajo de esta rama en local:
 
@@ -302,18 +346,10 @@ git checkout release/xibalba-2.0-rc
 git reset --hard restore-point-20261127
 ```
 
-Para retirar el Preview y el acceso:
-
-```powershell
-vercel alias rm xibalba-rc-preview.vercel.app
-```
-
-El secreto de bypass se revoca en Vercel → Project Settings → Deployment Protection → Protection
-Bypass for Automation.
-
-Si en algún momento se promoviera a producción y hubiera que volver atrás, el despliegue de
-producción actual es `xibalba-firebase-2026-5l26o5wk1-dyann1984s-projects.vercel.app`, y se
-restaura con *Promote to Production* sobre él desde el panel de Vercel.
+Nota sobre por qué se usó `vercel deploy --prod` y no *promote* del Preview: las variables
+`NEXT_PUBLIC_*` se incrustan **en tiempo de build**, así que un artefacto construido para el entorno
+Preview arrastraría los valores del Preview a producción. Se reconstruyó con el entorno de
+producción.
 
 ---
 
@@ -321,28 +357,30 @@ restaura con *Promote to Production* sobre él desde el panel de Vercel.
 
 | Elemento | Estado |
 |---|---|
-| Gemini desde el Preview | **BLOQUEADO** por P1-01 (dominio sin autorizar en reCAPTCHA Enterprise) |
-| Gemini en producción | **NO PROBADO en esta sesión** — funciona según la publicación de v2.0.0, pero no se reverificó hoy |
-| Celular físico (Android / iPhone) | **NO PROBADO** — requiere tu dispositivo; la URL está en la sección 2 |
-| Service Worker: actualización en dispositivo real | **NO PROBADO en hardware** — auditado por código: red primero para documentos, caché sólo para recursos con hash, purga de cachés viejas al activar, nunca cachea `/api/*` |
+| Gemini en producción | **VERIFICADO hoy** desde navegador real, ES y EN, texto e imagen |
+| Gemini desde el Preview | **VERIFICADO hoy** (P1-01 resuelto) |
+| Pruebas automatizadas de IA en la nube contra un despliegue | **IMPOSIBLES por diseño del antibot** (P1-02); corren en local con token de depuración |
+| Celular físico (Android / iPhone) | **NO PROBADO en hardware** — sí verificado en WebKit/iPhone 13 y Chromium móvil reales contra producción por HTTPS. URL en la sección 2 |
+| Service Worker: actualización en dispositivo real | **NO PROBADO en hardware** — activo y verificado en producción (`xibalba-shell-v3`); auditado por código: red primero para documentos, caché sólo para recursos con hash, purga de cachés viejas al activar, nunca cachea `/api/*` |
 | FPS de los mapas 3D en hardware real | **NO MEDIDO** (ver P3-03) |
-| `production-image-analysis.spec.ts` (3 pruebas) | **OMITIDAS** — requieren despliegue con App Check operativo |
 | Traducción de "EL GUARDIÁN" | **DESVIACIÓN CONSCIENTE** (P2-01) |
+| Texto de Gemini al cambiar de idioma tras analizar | **DESVIACIÓN CONSCIENTE** (P2-02) — elegir idioma antes de analizar |
 
 ---
 
-## 12. Lo que necesito de ti antes de la presentación
+## 12. Recomendaciones para la presentación
 
-1. **Autorizar el dominio `xibalba-rc-preview.vercel.app`** en la clave de reCAPTCHA Enterprise
-   (sección 7, P1-01). Es lo único que separa al candidato de un GO sin condiciones.
-2. **Probar desde tu celular** con el enlace de la sección 2, en Android y en iPhone si es posible:
-   seleccionar una foto de la galería, ver la vista previa, correr el análisis y comprobar que el
-   menú lateral y la navegación responden.
-3. **Decidir sobre P2-01** ("EL GUARDIÁN" → "THE GUARDIAN"): dejarlo o aplicarlo con sus pruebas.
-4. **Decidir la promoción a producción**, que sigue sin autorizar y no se hizo.
+1. **Elegir el idioma antes de ejecutar cada análisis** en vivo (P2-02). Así el párrafo de Gemini
+   sale directamente en el idioma del jurado.
+2. **Probar desde tu celular** con `https://xibalba-firebase-2026.vercel.app`: seleccionar una foto
+   de la galería, ver la vista previa, correr el análisis y comprobar el menú lateral. Es lo único
+   que no se puede verificar sin el dispositivo físico.
+3. **Decidir sobre P2-01** ("EL GUARDIÁN" → "THE GUARDIAN"): dejarlo o aplicarlo con sus pruebas
+   después del concurso.
+4. Si algo sale mal, el rollback de la sección 10 es un clic y no requiere build.
 
 ---
 
-*Informe generado el 27 de noviembre de 2026 sobre el commit `9fd820a`. Todas las cifras de esta
-página provienen de ejecuciones reales registradas en esta sesión; ninguna prueba se eliminó,
-desactivó ni se dio por buena sin ejecutarla.*
+*Informe generado el 27 de noviembre de 2026 sobre el commit `d7170f7`, desplegado en producción.
+Todas las cifras de esta página provienen de ejecuciones reales registradas en esta sesión; ninguna
+prueba se eliminó, desactivó ni se dio por buena sin ejecutarla.*
